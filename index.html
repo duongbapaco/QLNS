@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Hồ Sơ Nhân Sự & Quyển Lương Đám Mây - VINAPACO</title>
+    <title>Hệ Thống Hồ Sơ Nhân Sự, Quản Lý Chấm Công & Phiếu Lương Điện Tử - VINAPACO</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome Icons -->
@@ -14,14 +14,13 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
         
-        /* CẤU HÌNH IN ẤN CHUẨN VĂN BẢN HÀNH CHÍNH VINAPACO */
+        /* CẤU HÌNH IN ẤN CHUẨN VĂN BẢN HÀNH CHÍNH & PHIẾU LƯƠNG */
         @media print {
             .no-print { display: none !important; }
             body { background: white; padding: 0; margin: 0; font-size: 10pt; color: #000; }
             .print-container { width: 100% !important; margin: 0 !important; padding: 10mm 5mm !important; box-shadow: none !important; border: none !important; }
             table { border-collapse: collapse !important; width: 100% !important; }
             th, td { border: 1px solid #000 !important; padding: 4px 3px !important; font-size: 8.5pt !important; }
-            .page-break { page-break-before: always; }
         }
     </style>
 </head>
@@ -33,7 +32,7 @@
             <div>
                 <h1 class="text-xl md:text-2xl font-black text-emerald-800 flex items-center gap-2">
                     <i class="fa-solid fa-cloud-arrow-up text-emerald-600"></i>
-                    QUẢN LÝ HỒ SƠ NHÂN SỰ & QUYỂN LƯƠNG - VINAPACO
+                    QUẢN LÝ HỒ SƠ NHÂN SỰ & PHIẾU LƯƠNG ĐIỆN TỬ - VINAPACO
                 </h1>
                 <p class="text-xs md:text-sm text-slate-500 mt-1" id="syncStatus">
                     <i class="fa-solid fa-circle-notch fa-spin text-blue-600"></i> Đang khởi tạo hệ thống...
@@ -51,9 +50,9 @@
                     <input type="file" id="fileInput" accept=".xlsx, .xls, .csv, .json" class="hidden" onchange="handleFileUpload(event)">
                 </label>
 
-                <label for="attendanceFileInput" class="bg-amber-600 hover:bg-amber-700 text-white text-xs md:text-sm font-bold px-3.5 py-2.5 rounded-xl cursor-pointer flex items-center gap-2 transition shadow-sm">
+                <label for="attendanceFileInput" class="bg-amber-600 hover:bg-amber-700 text-white text-xs md:text-sm font-bold px-3.5 py-2.5 rounded-xl cursor-pointer flex items-center gap-2 transition shadow-sm" title="Tải file máy chấm công để tự động tính lương cả đơn vị">
                     <i class="fa-solid fa-clock-rotate-left"></i>
-                    <span>Nhập File Chấm Công</span>
+                    <span>Nhập File Chấm Công Đơn Vị</span>
                     <input type="file" id="attendanceFileInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleAttendanceFileUpload(event)">
                 </label>
 
@@ -76,7 +75,7 @@
         <!-- THỐNG KÊ TỔNG QUAN -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
             <div class="bg-emerald-50/60 border border-emerald-200 p-3 rounded-xl">
-                <div class="text-xs text-emerald-700 font-semibold">Tổng nhân sự</div>
+                <div class="text-xs text-emerald-700 font-semibold">Tổng nhân sự hệ thống</div>
                 <div class="text-xl font-black text-emerald-900" id="statTotal">0</div>
             </div>
             <div class="bg-blue-50/60 border border-blue-200 p-3 rounded-xl">
@@ -137,8 +136,8 @@
                             <th class="p-3">Số CCCD</th>
                             <th class="p-3">Đơn vị công tác</th>
                             <th class="p-3">Chức danh công việc</th>
-                            <th class="p-3 text-center">Số công TG</th>
-                            <th class="p-3 text-center">Thao tác</th>
+                            <th class="p-3 text-center">Công TG</th>
+                            <th class="p-3 text-center">Phiếu Lương / Zalo</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody" class="divide-y divide-slate-100"></tbody>
@@ -147,7 +146,7 @@
         </div>
     </main>
 
-    <!-- MODAL: IN BẢNG LƯƠNG CHUẨN VĂN BẢN HÀNH CHÍNH VINAPACO -->
+    <!-- MODAL 1: IN BẢNG LƯƠNG CHUẨN VĂN BẢN HÀNH CHÍNH VINAPACO -->
     <div id="payrollReportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto">
         <div class="bg-white rounded-2xl max-w-7xl w-full max-h-[95vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 relative">
             
@@ -181,7 +180,6 @@
 
             <!-- NỘI DUNG VĂN BẢN HÀNH CHÍNH CHUẨN ĐỂ IN -->
             <div id="payrollReportPrintArea" class="print-container bg-white p-2">
-                <!-- QUỐC HIỆU / TIÊU NGỮ / TÊN TỔNG CÔNG TY -->
                 <div class="grid grid-cols-2 text-center text-xs font-bold mb-4 uppercase">
                     <div>
                         <p class="tracking-wider">TỔNG CÔNG TY GIẤY VIỆT NAM</p>
@@ -195,25 +193,18 @@
                     </div>
                 </div>
 
-                <!-- TIÊU ĐỀ BẢNG LƯƠNG -->
                 <div class="text-center mb-4">
                     <h2 class="text-base md:text-lg font-black uppercase tracking-wide" id="printTitleText">BẢNG LƯƠNG THANH TOÁN HÀNG THÁNG</h2>
                     <p class="text-xs italic text-slate-600 mt-0.5" id="printSubTitle">Kỳ thanh toán: Tháng 5 năm 2026 - Áp dụng Quy chế Lương Tổng Công Ty Giấy Việt Nam</p>
                 </div>
 
-                <!-- BẢNG CHI TIẾT LƯƠNG -->
                 <div class="overflow-x-auto mb-6">
                     <table class="w-full border-collapse border border-slate-800 text-[8.5pt]">
-                        <thead id="payrollReportThead">
-                            <!-- Rendered by JS -->
-                        </thead>
-                        <tbody id="payrollReportTbody" class="divide-y divide-slate-800">
-                            <!-- Rendered by JS -->
-                        </tbody>
+                        <thead id="payrollReportThead"></thead>
+                        <tbody id="payrollReportTbody" class="divide-y divide-slate-800"></tbody>
                     </table>
                 </div>
 
-                <!-- KHU VỰC CHỮ KÝ PHÒNG BAN (ĐỂ TRỐNG PHÒNG NHÂN SỰ & THỦ TRƯỞNG ĐƠN VỊ KÝ TAY) -->
                 <div class="grid grid-cols-3 text-center text-xs font-bold gap-4 pt-4 mt-6 border-t border-slate-300">
                     <div>
                         <p class="uppercase font-extrabold mb-1">NGƯỜI LẬP BIỂU</p>
@@ -238,6 +229,14 @@
         </div>
     </div>
 
+    <!-- MODAL 2: PHIẾU LƯƠNG ĐIỆN TỬ CÁ NHÂN & GỬI ZALO -->
+    <div id="paySlipModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[95vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 relative">
+            <button onclick="closePaySlipModal()" class="absolute top-4 right-4 bg-slate-100 hover:bg-slate-200 text-slate-700 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm z-10 no-print"><i class="fa-solid fa-xmark"></i></button>
+            <div id="paySlipModalContent"></div>
+        </div>
+    </div>
+
     <!-- MODAL EDIT / ADD -->
     <div id="editModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto no-print">
         <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 relative">
@@ -258,7 +257,7 @@
                         <div><label class="font-semibold block mb-1">Tên gọi</label><input type="text" id="inputShortName" class="w-full border rounded-lg p-2 font-bold"></div>
                         <div><label class="font-semibold block mb-1">Giới tính</label><select id="inputGender" class="w-full border rounded-lg p-2 bg-white font-semibold"><option value="Nam">Nam</option><option value="Nữ">Nữ</option></select></div>
                         <div><label class="font-semibold block mb-1">Ngày sinh</label><input type="text" id="inputDob" class="w-full border rounded-lg p-2"></div>
-                        <div><label class="font-bold block mb-1 text-emerald-800">Số điện thoại</label><input type="text" id="inputPhone" class="w-full border border-emerald-400 rounded-lg p-2 font-mono font-bold text-emerald-900 bg-emerald-50/30"></div>
+                        <div><label class="font-bold block mb-1 text-emerald-800">Số điện thoại *</label><input type="text" id="inputPhone" class="w-full border border-emerald-400 rounded-lg p-2 font-mono font-bold text-emerald-900 bg-emerald-50/30"></div>
                         <div><label class="font-semibold block mb-1">Số CCCD</label><input type="text" id="inputCccd" class="w-full border rounded-lg p-2 font-mono font-bold"></div>
                         <div><label class="font-semibold block mb-1">Mã đơn vị</label><input type="text" id="inputUnitCode" class="w-full border rounded-lg p-2 font-bold text-blue-900 border-blue-300"></div>
                         
@@ -367,7 +366,7 @@
         </div>
     </div>
 
-    <!-- MODAL XEM CHI TIẾT -->
+    <!-- MODAL XEM CHI TIẾT CÁ NHÂN -->
     <div id="profileModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto no-print">
         <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 p-2 relative">
             <button onclick="closeModal()" class="absolute top-4 right-4 bg-slate-100 hover:bg-slate-200 text-slate-700 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm z-10"><i class="fa-solid fa-xmark"></i></button>
@@ -612,7 +611,6 @@
                 status: String(findVal(['tình trạng công tác', 'trạng thái']) || 'Đang làm việc').trim(),
                 education: String(findVal(['trình độ chuyên môn', 'trình độ']) || 'Đại học').trim(),
                 
-                // CÁC THÔNG SỐ CÔNG & TÍNH LƯƠNG CHUẨN VĂN PHÒNG TCT
                 workDays: String(findVal(['ngày công thời gian', 'thời gian', 'số công', 'ngày công']) || '20').trim(),
                 leaveDays: String(findVal(['lễ, vr', 'phép', 'ngày lễ']) || '1').trim(),
                 salaryCoeff: String(findVal(['hệ số lương cơ bản', 'hệ số lcb', 'salarycoeff']) || '1.94').trim(),
@@ -631,12 +629,11 @@
         }
 
         // =========================================================================
-        // TÍNH LƯƠNG CHUẨN CHO ĐƠN VỊ CÓ FILE MẪU CHUẨN (VĂN PHÒNG TCT)
+        // TÍNH LƯƠNG CHUẨN CHO CÁC ĐƠN VỊ CÓ FILE MẪU CHUẨN (VĂN PHÒNG TCT)
         // =========================================================================
         function calculateEmployeePayroll(emp) {
             const unit = cleanUnitName(emp.unit);
             
-            // Nếu đơn vị không phải Văn phòng TCT và chưa có file cấu hình chi tiết -> trả về null để hiển thị [Chờ bổ sung]
             if (unit !== 'Văn phòng TCT') {
                 return null;
             }
@@ -678,7 +675,7 @@
             };
         }
 
-        // TỰ ĐỘNG CẬP NHẬT CHẤM CÔNG TỪ FILE MÁY CHẤM CÔNG TRÍCH XUẤT
+        // TỰ ĐỘNG LẤY ĐƠN VỊ TỪ FILE MÁY CHẤM CÔNG & TÍNH LƯƠNG TOÀN BỘ ĐƠN VỊ ĐÓ
         function handleAttendanceFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -689,23 +686,31 @@
                     const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
                     
                     let updatedCount = 0;
+                    let detectedUnit = "";
+
                     rows.forEach(r => {
                         const id = String(r['Mã NV'] || r['ID'] || r['STT'] || '').trim();
                         const name = String(r['Họ và tên'] || r['Tên NV'] || '').trim().toLowerCase();
                         const côngTG = String(r['Số công'] || r['Ngày công'] || r['Thời gian'] || '').trim();
                         const côngLễ = String(r['Công lễ'] || r['Phép'] || r['Lễ, VR'] || '0').trim();
+                        const rowUnit = cleanUnitName(r['Tên đơn vị'] || r['Đơn vị'] || r['Phòng ban'] || '');
 
                         const emp = rawEmployees.find(e => (id && e.stt === id) || (name && e.fullName.toLowerCase() === name));
                         if (emp) {
                             if (côngTG) emp.workDays = côngTG;
                             if (côngLễ) emp.leaveDays = côngLễ;
+                            if (!detectedUnit) detectedUnit = cleanUnitName(emp.unit);
                             updatedCount++;
                         }
                     });
 
+                    if (detectedUnit) {
+                        document.getElementById('unitFilter').value = detectedUnit;
+                    }
+
                     initSystem();
                     await saveToCloud();
-                    alert(`Đã cập nhật tự động số công làm việc từ máy chấm công cho ${updatedCount} nhân sự!`);
+                    alert(`Đã nạp file chấm công thành công cho đơn vị: ${detectedUnit || 'Toàn bộ'}\nCập nhật tính lương cho ${updatedCount} nhân sự!`);
                 } catch(err) { alert("Lỗi đọc file chấm công: " + err.message); }
             };
             reader.readAsArrayBuffer(file);
@@ -716,6 +721,100 @@
             const val = document.getElementById('inputPreparerName').value.trim();
             document.getElementById('printSignerPreparer').innerText = val || 'Trần Bình Dương';
         }
+
+        function switchProfileTab(stt, tabName) {
+            document.querySelectorAll(`.tab-btn-${stt}`).forEach(b => {
+                b.className = b.dataset.tab === tabName 
+                    ? "px-4 py-2 font-black text-xs border-b-2 border-emerald-600 text-emerald-800 bg-white" 
+                    : "px-4 py-2 font-bold text-xs text-slate-500 hover:text-slate-800 bg-slate-50";
+            });
+            document.getElementById(`tab-content-lylich-${stt}`).classList.toggle('hidden', tabName !== 'lylich');
+            document.getElementById(`tab-content-luong-${stt}`).classList.toggle('hidden', tabName !== 'luong');
+        }
+
+        // PHIẾU LƯƠNG ĐIỆN TỬ CÁ NHÂN & GỬI ZALO TỰ ĐỘNG
+        function openPaySlipModal(stt) {
+            const emp = rawEmployees.find(e => e.stt === String(stt));
+            if (!emp) return;
+            const pay = calculateEmployeePayroll(emp);
+            const modalContent = document.getElementById('paySlipModalContent');
+
+            if (!pay) {
+                modalContent.innerHTML = `
+                <div class="p-6 text-center space-y-4">
+                    <div class="text-amber-600 font-extrabold text-base"><i class="fa-solid fa-triangle-exclamation"></i> Đơn vị chưa có dữ liệu bảng lương chi tiết!</div>
+                    <p class="text-xs text-slate-500">Đơn vị "${emp.unit}" hiện chưa có file mẫu bảng lương chi tiết trong hệ thống.</p>
+                    <button onclick="closePaySlipModal()" class="px-4 py-2 bg-slate-200 text-slate-700 font-bold text-xs rounded-xl">Đóng</button>
+                </div>`;
+            } else {
+                const phoneClean = emp.phone.replace(/[^0-9]/g, '');
+                const formattedPhone = phoneClean.startsWith('0') ? '84' + phoneClean.slice(1) : phoneClean;
+                
+                const zaloMessage = encodeURIComponent(
+`[PHIẾU LƯƠNG ĐIỆN TỬ THÁNG 05/2026 - VINAPACO]
+Kính gửi Anh/Chị: ${emp.fullName}
+Chức danh: ${emp.title} (${emp.unit})
+--------------------------------
+• Ngày công thời gian: ${emp.workDays} ngày
+• Tổng Lương Cơ Bản Thực Tế: ${pay.tongTienCB.toLocaleString('vi-VN')} đ
+• Tổng Lương Công Việc Thực Tế: ${pay.luongCV_ThucTe.toLocaleString('vi-VN')} đ
+• Trừ BHTN (1%): -${pay.bhtn.toLocaleString('vi-VN')} đ
+• Trừ BHXH + BHYT (9.5%): -${pay.bhxh_bhyt.toLocaleString('vi-VN')} đ
+• Trừ Tạm Ứng Lương: -${pay.tamUng.toLocaleString('vi-VN')} đ
+--------------------------------
+=> THỰC LĨNH LƯƠNG CUỐI CÙNG: ${pay.tongThucLinhCuoiCung.toLocaleString('vi-VN')} VNĐ
+
+Mọi thắc mắc vui lòng liên hệ Phòng Nhân sự / Người lập biểu: Trần Bình Dương.`
+                );
+
+                modalContent.innerHTML = `
+                <div class="space-y-4 text-xs">
+                    <div class="text-center border-b pb-3">
+                        <p class="font-extrabold text-emerald-900 text-xs">TỔNG CÔNG TY GIẤY VIỆT NAM - ${emp.unit.toUpperCase()}</p>
+                        <h2 class="font-black text-emerald-800 text-base md:text-lg mt-1">PHIẾU LƯƠNG ĐIỆN TỬ THÁNG 5/2026</h2>
+                        <p class="text-slate-500 italic text-[9pt]">Mã NV: #${emp.stt} • Họ tên: <span class="font-bold text-slate-800">${emp.fullName}</span></p>
+                    </div>
+
+                    <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2">
+                        <div class="flex justify-between border-b pb-1"><span>Chức danh công việc:</span><span class="font-bold">${emp.title}</span></div>
+                        <div class="flex justify-between border-b pb-1"><span>Số điện thoại nhận Zalo:</span><span class="font-bold font-mono text-blue-700">${emp.phone}</span></div>
+                        <div class="flex justify-between border-b pb-1"><span>Số ngày công làm việc:</span><span class="font-bold font-mono text-amber-800">${emp.workDays} ngày</span></div>
+                    </div>
+
+                    <div class="bg-purple-50/50 p-3.5 rounded-xl border border-purple-200 space-y-2">
+                        <div class="flex justify-between"><span>Lương Hợp Đồng Lao Động:</span><span class="font-mono font-semibold">${pay.luongHDLD.toLocaleString('vi-VN')} đ</span></div>
+                        <div class="flex justify-between font-bold text-slate-800"><span>1. Lương Cơ Bản Thực Tế:</span><span class="font-mono">${pay.tongTienCB.toLocaleString('vi-VN')} đ</span></div>
+                        <div class="flex justify-between font-bold text-indigo-900"><span>2. Lương Công Việc Thực Tế:</span><span class="font-mono">${pay.luongCV_ThucTe.toLocaleString('vi-VN')} đ</span></div>
+                        <div class="flex justify-between text-rose-700"><span>- Trừ BHTN (1%):</span><span class="font-mono">-${pay.bhtn.toLocaleString('vi-VN')} đ</span></div>
+                        <div class="flex justify-between text-rose-700"><span>- Trừ BHXH + BHYT (9.5%):</span><span class="font-mono">-${pay.bhxh_bhyt.toLocaleString('vi-VN')} đ</span></div>
+                        <div class="flex justify-between text-rose-800"><span>- Trừ Khoản Tạm Ứng Lương:</span><span class="font-mono">-${pay.tamUng.toLocaleString('vi-VN')} đ</span></div>
+                        <div class="flex justify-between bg-emerald-100 p-2.5 rounded-lg border border-emerald-300 font-black text-emerald-900 text-sm mt-2">
+                            <span>THỰC LĨNH CUỐI CÙNG:</span>
+                            <span class="font-mono text-base">${pay.tongThucLinhCuoiCung.toLocaleString('vi-VN')} VNĐ</span>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap justify-between items-center gap-2 pt-2 border-t no-print">
+                        <button onclick="window.print()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl flex items-center gap-1.5">
+                            <i class="fa-solid fa-print"></i> In Phiếu Lương
+                        </button>
+
+                        <div class="flex gap-2">
+                            <a href="https://zalo.me/${phoneClean}" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-sm">
+                                <i class="fa-solid fa-comment-dots"></i> Mở Zalo (${emp.phone})
+                            </a>
+                            <a href="https://zalo.me/${phoneClean}?text=${zaloMessage}" target="_blank" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-sm">
+                                <i class="fa-solid fa-paper-plane"></i> Gửi Phiếu Lương Qua Zalo
+                            </a>
+                        </div>
+                    </div>
+                </div>`;
+            }
+
+            document.getElementById('paySlipModal').classList.remove('hidden');
+            document.getElementById('paySlipModal').classList.add('flex');
+        }
+        function closePaySlipModal() { document.getElementById('paySlipModal').classList.add('hidden'); document.getElementById('paySlipModal').classList.remove('flex'); }
 
         // BẢNG BÁO CÁO IN LƯƠNG CHUẨN VĂN BẢN HÀNH CHÍNH
         function openPayrollReportModal() {
@@ -748,12 +847,10 @@
                 return;
             }
 
-            // KIỂM TRA XEM ĐƠN VỊ NÀY CÓ MẪU LƯƠNG CHI TIẾT CHƯA
             const isVP = (selectedUnit === 'Văn phòng TCT');
 
             if (!isVP) {
-                // Đơn vị chưa có file mẫu lương chi tiết -> Để trống phần bảng tính lương
-                document.getElementById('printTitleText').innerText = `BẢNG LƯƠNG CÔNG TÁC ĐƠN VỊ ${selectedUnit.toUpperCase()}`;
+                document.getElementById('printTitleText').innerText = `BẢNG DANH SÁCH CÔNG TÁC ĐƠN VỊ ${selectedUnit.toUpperCase()}`;
                 thead.innerHTML = `
                 <tr class="bg-slate-100 font-bold text-center uppercase">
                     <th class="border p-2">STT</th>
@@ -769,12 +866,11 @@
                     <td class="p-2 font-bold">${emp.fullName}</td>
                     <td class="p-2">${emp.title}</td>
                     <td class="text-center p-2 font-mono">${emp.workDays}</td>
-                    <td class="text-center p-2 text-slate-400 font-italic">[Đơn vị chưa bổ sung mẫu bảng lương chi tiết]</td>
+                    <td class="text-center p-2 text-slate-400 font-italic">[Bỏ trống - Đơn vị chưa có mẫu bảng lương]</td>
                 </tr>`).join('');
                 return;
             }
 
-            // NẾU LÀ VĂN PHÒNG TCT -> IN ĐẦY ĐỦ THEO FILE MẪU CHUẨN
             if (reportType === 'TONG_HOP') {
                 document.getElementById('printTitleText').innerText = "BẢNG TỔNG HỢP THANH TOÁN LƯƠNG HÀNG THÁNG";
                 thead.innerHTML = `
@@ -1050,48 +1146,72 @@
                         <h2 class="font-extrabold text-base md:text-lg tracking-wide uppercase">${emp.fullName}</h2>
                         ${emp.shortName ? `<span class="text-xs bg-emerald-700/80 px-2 py-0.5 rounded text-emerald-100">(${emp.shortName})</span>` : ''}
                     </div>
-                    <div class="no-print flex gap-2">
+                    <div class="no-print flex items-center gap-2">
+                        <button onclick="openPaySlipModal('${emp.stt}')" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition shadow-sm"><i class="fa-solid fa-receipt"></i> Phiếu Lương / Zalo</button>
                         <button onclick="openEditModal('${emp.stt}')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition shadow-sm"><i class="fa-solid fa-pen"></i> Chỉnh sửa</button>
                         <button onclick="deleteEmployee('${emp.stt}')" class="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition shadow-sm"><i class="fa-solid fa-trash"></i> Xóa</button>
                     </div>
                 </div>
 
-                <div class="p-6 space-y-5">
-                    <div>
-                        <h3 class="font-black text-emerald-800 uppercase mb-2 pb-1 border-b border-slate-100 flex items-center gap-2 text-xs">
-                            <i class="fa-solid fa-user text-emerald-600"></i> 1. THÔNG TIN CÁ NHÂN & VỊ TRÍ CÔNG TÁC
-                        </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-2.5 bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
-                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Họ và tên:</span><span class="font-extrabold text-slate-800">${emp.fullName}</span></div>
-                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Tên gọi:</span><span class="font-bold text-slate-700">${emp.shortName || '---'}</span></div>
-                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Giới tính:</span><span class="font-bold text-purple-700">${emp.gender}</span></div>
-                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Ngày sinh:</span><span class="font-extrabold text-rose-700 font-mono">${emp.dob}</span></div>
-                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Số điện thoại:</span><span class="font-bold text-emerald-700 font-mono">${emp.phone}</span></div>
-                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Số CCCD:</span><span class="font-bold font-mono">${emp.cccd}</span></div>
-                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Đơn vị công tác:</span><span class="font-extrabold text-emerald-900">${emp.unit}</span></div>
-                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Mã đơn vị:</span><span class="font-bold text-blue-800 font-mono">${emp.unitCode || '---'}</span></div>
-                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Tình trạng công tác:</span><span class="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">${emp.status}</span></div>
-                            <div class="md:col-span-2 flex justify-between"><span class="text-slate-500 font-medium">Chức danh công việc:</span><span class="font-bold text-slate-800">${emp.title}</span></div>
-                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Trình độ:</span><span class="font-bold text-slate-700">${emp.education}</span></div>
-                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Ngày công thực tế:</span><span class="font-black text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded font-mono">${emp.workDays} ngày</span></div>
+                <div class="flex border-b border-slate-200 bg-slate-100/80 px-6 pt-2 gap-2 no-print">
+                    <button onclick="switchProfileTab('${emp.stt}', 'lylich')" data-tab="lylich" class="tab-btn-${emp.stt} px-4 py-2 font-black text-xs border-b-2 border-emerald-600 text-emerald-800 bg-white rounded-t-lg transition">
+                        <i class="fa-solid fa-id-card mr-1.5"></i> Tab 1: Lý Lịch Cá Nhân Chi Tiết
+                    </button>
+                    <button onclick="switchProfileTab('${emp.stt}', 'luong')" data-tab="luong" class="tab-btn-${emp.stt} px-4 py-2 font-bold text-xs text-slate-500 hover:text-slate-800 bg-slate-50 rounded-t-lg transition">
+                        <i class="fa-solid fa-calculator mr-1.5"></i> Tab 2: Tính Lương Chi Tiết
+                    </button>
+                </div>
+
+                <div class="p-6">
+                    <div id="tab-content-lylich-${emp.stt}" class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-3 bg-slate-50/70 p-4 rounded-xl border border-slate-200">
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Họ và tên:</span><span class="font-extrabold text-slate-800">${emp.fullName}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Tên gọi / Tên ngắn:</span><span class="font-bold text-slate-700">${emp.shortName || '---'}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Giới tính:</span><span class="font-bold text-purple-700">${emp.gender}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Ngày sinh:</span><span class="font-extrabold text-rose-700 font-mono">${emp.dob}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Số điện thoại:</span><span class="font-bold text-emerald-700 font-mono">${emp.phone}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Số CCCD:</span><span class="font-bold font-mono">${emp.cccd}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Đơn vị công tác:</span><span class="font-extrabold text-emerald-900">${emp.unit}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Mã đơn vị:</span><span class="font-bold text-blue-800 font-mono">${emp.unitCode || '---'}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Chức danh công việc:</span><span class="font-bold text-slate-800">${emp.title}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Trình độ chuyên môn:</span><span class="font-bold text-slate-700">${emp.education}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Tình trạng công tác:</span><span class="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">${emp.status}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Thời gian vào TCT:</span><span class="font-bold font-mono">${emp.startDate}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Số sổ BHXH:</span><span class="font-bold font-mono">${emp.bhxh}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Dự kiến nghỉ hưu:</span><span class="font-bold font-mono">${emp.retireDate}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Cảnh báo thai sản:</span><span class="font-bold text-rose-600">${emp.maternityWarning}</span></div>
                         </div>
                     </div>
 
-                    <div>
-                        <h3 class="font-black text-emerald-800 uppercase mb-2 pb-1 border-b border-slate-100 flex items-center gap-2 text-xs">
-                            <i class="fa-solid fa-wallet text-emerald-600"></i> 2. CHI TIẾT LƯƠNG THEO MẪU VĂN PHÒNG TCT (2026)
-                        </h3>
+                    <div id="tab-content-luong-${emp.stt}" class="hidden space-y-4">
                         ${pay ? `
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-2.5 bg-purple-50/40 p-3.5 rounded-xl border border-purple-100">
-                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Lương CB thực tế:</span><span class="font-extrabold text-slate-800 font-mono">${pay.tongTienCB.toLocaleString('vi-VN')} đ</span></div>
-                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Lương CV thực tế:</span><span class="font-extrabold text-indigo-900 font-mono">${pay.luongCV_ThucTe.toLocaleString('vi-VN')} đ</span></div>
-                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Trừ BHTN+BHXH (10.5%):</span><span class="font-bold text-rose-700 font-mono">-${(pay.bhtn + pay.bhxh_bhyt).toLocaleString('vi-VN')} đ</span></div>
-                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Trừ Tạm ứng:</span><span class="font-bold text-rose-800 font-mono">-${pay.tamUng.toLocaleString('vi-VN')} đ</span></div>
-                            <div class="md:col-span-2 flex justify-between"><span class="text-slate-700 font-extrabold">Tổng lương LCB + LCV thực tế:</span><span class="font-bold text-blue-900 font-mono">${(pay.tongTienCB + pay.luongCV_ThucTe).toLocaleString('vi-VN')} đ</span></div>
-                            <div class="md:col-span-2 flex justify-between bg-emerald-100 p-2 rounded-lg border border-emerald-300"><span class="text-emerald-900 font-black">THỰC LĨNH CUỐI CÙNG:</span><span class="font-black text-emerald-900 text-sm font-mono">${pay.tongThucLinhCuoiCung.toLocaleString('vi-VN')} đ</span></div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3 bg-purple-50/40 p-4 rounded-xl border border-purple-200">
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Hệ số Lương CB:</span><span class="font-bold font-mono">${emp.salaryCoeff}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Phụ cấp Lương CB:</span><span class="font-bold font-mono">${emp.allowance || '0'}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Lương ký HĐLĐ:</span><span class="font-bold font-mono">${pay.luongHDLD.toLocaleString('vi-VN')} đ</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Lương CB Chuẩn:</span><span class="font-bold font-mono">${pay.luongCB_Chuan.toLocaleString('vi-VN')} đ</span></div>
+                            
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Số công thời gian:</span><span class="font-black text-amber-900 font-mono">${emp.workDays} ngày</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Số công Lễ/Phép:</span><span class="font-bold font-mono">${emp.leaveDays || '0'} ngày</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Hệ số hoàn thành:</span><span class="font-bold font-mono">${emp.completionCoeff || '1.0'}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Tổng Lương CB Thực tế:</span><span class="font-extrabold text-slate-800 font-mono">${pay.tongTienCB.toLocaleString('vi-VN')} đ</span></div>
+                            
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Trừ BHTN (1%):</span><span class="font-bold text-rose-700 font-mono">-${pay.bhtn.toLocaleString('vi-VN')} đ</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Trừ BHXH+BHYT (9.5%):</span><span class="font-bold text-rose-700 font-mono">-${pay.bhxh_bhyt.toLocaleString('vi-VN')} đ</span></div>
+                            <div class="md:col-span-2 flex justify-between border-b pb-1"><span class="text-slate-700 font-bold">Thực Lĩnh Lương CB:</span><span class="font-extrabold text-emerald-800 font-mono">${pay.thucLinhCB.toLocaleString('vi-VN')} đ</span></div>
+
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Hệ số Lương CV:</span><span class="font-bold font-mono text-indigo-900">${emp.jobSalaryCoeff}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Phụ cấp Lương CV:</span><span class="font-bold font-mono text-indigo-900">${emp.jobAllowance || '0'}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Lương CV Thực Tế:</span><span class="font-extrabold text-indigo-900 font-mono">${pay.luongCV_ThucTe.toLocaleString('vi-VN')} đ</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Trừ Tạm Ứng:</span><span class="font-bold text-rose-800 font-mono">-${pay.tamUng.toLocaleString('vi-VN')} đ</span></div>
+
+                            <div class="md:col-span-4 flex justify-between bg-emerald-100 p-3 rounded-lg border border-emerald-300 mt-2">
+                                <span class="text-emerald-900 font-black text-sm">THỰC LĨNH LƯƠNG CUỐI CÙNG (LCB + LCV):</span>
+                                <span class="font-black text-emerald-900 text-base font-mono">${pay.tongThucLinhCuoiCung.toLocaleString('vi-VN')} VNĐ</span>
+                            </div>
                         </div>` : `
-                        <div class="bg-amber-50 border border-amber-200 text-amber-800 p-3 rounded-xl text-xs font-semibold">
-                            <i class="fa-solid fa-circle-info mr-1"></i> Đơn vị này chưa có file mẫu bảng lương chi tiết. Hệ thống giữ trống thông tin lương cho đến khi bổ sung file mẫu mới.
+                        <div class="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl text-xs font-semibold">
+                            <i class="fa-solid fa-circle-info mr-1.5"></i> Bỏ trống. Đơn vị này chưa bổ sung file mẫu bảng lương chi tiết.
                         </div>`}
                     </div>
                 </div>
@@ -1172,7 +1292,10 @@
                                     <div class="font-bold text-slate-800">${e.fullName}</div>
                                     <div class="text-xs text-slate-500">${e.title} - SĐT: ${e.phone}</div>
                                 </div>
-                                <button onclick="openModalByStt('${e.stt}')" class="bg-white border border-slate-200 px-2.5 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-50 text-emerald-800 transition shadow-sm">Xem Hồ Sơ Đầy Đủ</button>
+                                <div class="flex gap-1.5">
+                                    <button onclick="openPaySlipModal('${e.stt}')" class="bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"><i class="fa-solid fa-receipt"></i> Phiếu Lương</button>
+                                    <button onclick="openModalByStt('${e.stt}')" class="bg-white border border-slate-200 px-2.5 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-50 text-emerald-800 transition shadow-sm">Xem Hồ Sơ</button>
+                                </div>
                             </div>`).join('')}
                     </div>
                 </div>`).join('') || '<div class="bg-white p-12 text-center rounded-2xl text-slate-400">Không có dữ liệu</div>';
@@ -1188,7 +1311,8 @@
                     <td class="p-3 font-bold text-emerald-800">${e.unit}</td>
                     <td class="p-3">${e.title}</td>
                     <td class="p-3 text-center font-bold text-amber-900">${e.workDays}</td>
-                    <td class="p-3 text-center">
+                    <td class="p-3 text-center flex justify-center gap-1.5">
+                        <button onclick="openPaySlipModal('${e.stt}')" class="bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1 rounded text-xs font-bold transition"><i class="fa-solid fa-receipt"></i> Phiếu Lương / Zalo</button>
                         <button onclick="openModalByStt('${e.stt}')" class="bg-slate-100 hover:bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded text-xs font-bold transition">Xem Hồ Sơ</button>
                     </td>
                 </tr>`).join('') || '<tr><td colspan="8" class="p-8 text-center text-slate-400">Không có dữ liệu</td></tr>';
