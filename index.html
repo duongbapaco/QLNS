@@ -3,705 +3,1154 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tử Vi AI Online & Google Drive Sync</title>
+    <title>Hệ Thống Hồ Sơ Nhân Sự & Chấm Công Đám Mây - VINAPACO</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- SheetJS (XLSX) Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        body { background-color: #f8fafc; font-family: 'Segoe UI', system-ui, sans-serif; }
-        .grid-tuvi {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            grid-template-rows: repeat(4, minmax(0, 1fr));
-            gap: 4px;
-            background-color: #7c2d12;
-            padding: 4px;
-            border-radius: 8px;
-            max-width: 980px;
-            margin: auto;
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; padding: 0; }
+            .print-card { page-break-after: always; border: 1px solid #ccc !important; box-shadow: none !important; }
         }
-        .cung-box {
-            background-color: #fffefb;
-            min-height: 160px;
-            padding: 6px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            border: 1px solid #fed7aa;
-            border-radius: 4px;
-        }
-        .trung-cung {
-            grid-column: 2 / span 2;
-            grid-row: 2 / span 2;
-            background-color: #fff7ed;
-            padding: 16px;
-            border: 2px solid #ea580c;
-            border-radius: 6px;
-        }
-        .chinh-tinh { color: #b91c1c; font-weight: 700; font-size: 0.85rem; }
     </style>
 </head>
-<body class="p-3 md:p-6">
+<body class="p-3 md:p-6 text-slate-800">
 
-    <!-- THANH CÔNG CỤ & THÔNG TIN ĐỒNG BỘ -->
-    <div class="max-w-5xl mx-auto bg-white p-5 rounded-xl shadow-md mb-6 border border-orange-200">
-        <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b border-gray-100 pb-4">
+    <!-- HEADER & TOOLBAR -->
+    <header class="max-w-6xl mx-auto mb-6 bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 no-print">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-4">
             <div>
-                <h1 class="text-2xl font-black text-orange-950 flex items-center gap-2">
-                    <span>☯️</span> HỆ THỐNG TỬ VI AI ONLINE
+                <h1 class="text-xl md:text-2xl font-black text-emerald-800 flex items-center gap-2">
+                    <i class="fa-solid fa-cloud-arrow-up text-emerald-600"></i>
+                    QUẢN LÝ HỒ SƠ NHÂN SỰ & CHẤM CÔNG - VINAPACO
                 </h1>
-                <p class="text-xs text-gray-500 mt-1">Lập lá số chuẩn xác • AI Luận giải • Tự động đồng bộ Cloud Google Drive</p>
+                <p class="text-xs md:text-sm text-slate-500 mt-1" id="syncStatus">
+                    <i class="fa-solid fa-circle-notch fa-spin text-blue-600"></i> Đang khởi tạo hệ thống...
+                </p>
             </div>
             
-            <div class="flex items-center gap-2">
-                <button onclick="saveToDrive()" id="btnSave" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-4 py-2.5 rounded-lg font-semibold flex items-center gap-1.5 shadow transition">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
-                    Lưu lên Drive
+            <div class="flex flex-wrap items-center gap-2">
+                <button onclick="fetchCloudData(true)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs md:text-sm font-bold px-3 py-2.5 rounded-xl flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-rotate"></i> Tải lại đám mây
                 </button>
-                <button onclick="loadFromDrive()" id="btnLoad" class="bg-amber-600 hover:bg-amber-700 text-white text-xs px-4 py-2.5 rounded-lg font-semibold flex items-center gap-1.5 shadow transition">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-                    Tải từ Drive
+
+                <label for="fileInput" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs md:text-sm font-bold px-3.5 py-2.5 rounded-xl cursor-pointer flex items-center gap-2 transition shadow-sm">
+                    <i class="fa-solid fa-file-excel"></i>
+                    <span>Tải File Hồ Sơ Mới</span>
+                    <input type="file" id="fileInput" accept=".xlsx, .xls, .csv, .json" class="hidden" onchange="handleFileUpload(event)">
+                </label>
+
+                <button onclick="clearAllData()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs md:text-sm font-bold px-3 py-2.5 rounded-xl flex items-center gap-1.5 transition shadow-sm" title="Xóa toàn bộ dữ liệu cũ để nạp mới">
+                    <i class="fa-solid fa-trash-can"></i> Xóa & Làm Mới
+                </button>
+
+                <label for="attendanceFileInput" class="bg-amber-600 hover:bg-amber-700 text-white text-xs md:text-sm font-bold px-3.5 py-2.5 rounded-xl cursor-pointer flex items-center gap-2 transition shadow-sm">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>Tải File Chấm Công</span>
+                    <input type="file" id="attendanceFileInput" accept=".xlsx, .xls, .csv, .txt, .log, .dat" class="hidden" onchange="handleAttendanceFileUpload(event)">
+                </label>
+                
+                <button onclick="openEditModal(null)" class="bg-blue-600 hover:bg-blue-700 text-white text-xs md:text-sm font-bold px-3.5 py-2.5 rounded-xl flex items-center gap-2 transition shadow-sm">
+                    <i class="fa-solid fa-user-plus"></i>
+                    <span>Thêm Nhân Sự</span>
+                </button>
+
+                <button onclick="exportExcelByUnits()" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs md:text-sm font-bold px-3.5 py-2.5 rounded-xl flex items-center gap-2 transition shadow-sm">
+                    <i class="fa-solid fa-file-export"></i>
+                    <span>Xuất Excel Đơn Vị</span>
+                </button>
+
+                <button onclick="window.print()" class="bg-slate-700 hover:bg-slate-800 text-white text-xs md:text-sm font-bold px-3.5 py-2.5 rounded-xl flex items-center gap-1.5 transition shadow-sm">
+                    <i class="fa-solid fa-print"></i>
+                    <span>In Hồ Sơ</span>
                 </button>
             </div>
         </div>
 
-        <!-- FORM NHẬP THÔNG TIN -->
-        <form id="tuviForm" onsubmit="lapLaSo(event)" class="grid grid-cols-2 md:grid-cols-6 gap-3 mt-4">
-            <div>
-                <label class="block text-xs font-bold text-gray-700">Họ và Tên</label>
-                <input type="text" id="fullname" required value="Trần Bình Dương" class="w-full border p-2 text-sm rounded-lg mt-1 focus:ring-2 focus:ring-orange-500 outline-none">
+        <!-- THỐNG KÊ TỔNG QUAN -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <div class="bg-emerald-50/60 border border-emerald-200 p-3 rounded-xl">
+                <div class="text-xs text-emerald-700 font-semibold">Tổng nhân sự</div>
+                <div class="text-xl font-black text-emerald-900" id="statTotal">0</div>
             </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-700">Giới tính</label>
-                <select id="gender" class="w-full border p-2 text-sm rounded-lg mt-1 focus:ring-2 focus:ring-orange-500 outline-none">
-                    <option value="Nam">Nam Mạng</option>
-                    <option value="Nữ">Nữ Mạng</option>
-                </select>
+            <div class="bg-blue-50/60 border border-blue-200 p-3 rounded-xl">
+                <div class="text-xs text-blue-700 font-semibold">Đơn vị / Phòng ban</div>
+                <div class="text-xl font-black text-blue-900" id="statUnits">0</div>
             </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-700">Ngày sinh (Dương)</label>
-                <input type="number" id="day" min="1" max="31" value="15" class="w-full border p-2 text-sm rounded-lg mt-1 focus:ring-2 focus:ring-orange-500 outline-none">
+            <div class="bg-amber-50/60 border border-amber-200 p-3 rounded-xl">
+                <div class="text-xs text-amber-700 font-semibold">Đã chấm công</div>
+                <div class="text-xl font-black text-amber-900" id="statAttendance">0</div>
             </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-700">Tháng sinh</label>
-                <input type="number" id="month" min="1" max="12" value="5" class="w-full border p-2 text-sm rounded-lg mt-1 focus:ring-2 focus:ring-orange-500 outline-none">
+            <div class="bg-purple-50/60 border border-purple-200 p-3 rounded-xl">
+                <div class="text-xs text-purple-700 font-semibold">Cán bộ Nam / Nữ</div>
+                <div class="text-xl font-black text-purple-900"><span id="statMale">0</span> / <span id="statFemale">0</span></div>
             </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-700">Năm sinh</label>
-                <input type="number" id="year" value="1990" class="w-full border p-2 text-sm rounded-lg mt-1 focus:ring-2 focus:ring-orange-500 outline-none">
+        </div>
+
+        <!-- BỘ LỌC & TÌM KIẾM -->
+        <div class="flex flex-col md:flex-row items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+            <div class="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <span class="text-xs font-bold text-slate-700 shrink-0"><i class="fa-solid fa-sitemap text-emerald-600"></i> Lọc Đơn Vị:</span>
+                    <select id="unitFilter" onchange="applyFilters()" class="border border-slate-300 text-xs rounded-lg px-3 py-2 bg-white w-full sm:w-72 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="ALL">-- Tất cả đơn vị --</option>
+                    </select>
+                </div>
+                <input type="text" id="searchInput" onkeyup="applyFilters()" placeholder="Tìm tên, SĐT, CCCD, BHXH, chức danh..." class="border border-slate-300 text-xs rounded-lg px-3 py-2 bg-white w-full sm:w-60 focus:outline-none focus:ring-2 focus:ring-emerald-500">
             </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-700">Giờ sinh</label>
-                <select id="hourChi" class="w-full border p-2 text-sm rounded-lg mt-1 focus:ring-2 focus:ring-orange-500 outline-none">
-                    <option value="0">Tý (23g-01g)</option>
-                    <option value="1">Sửu (01g-03g)</option>
-                    <option value="2">Dần (03g-05g)</option>
-                    <option value="3">Mão (05g-07g)</option>
-                    <option value="4" selected>Thìn (07g-09g)</option>
-                    <option value="5">Tỵ (09g-11g)</option>
-                    <option value="6">Ngọ (11g-13g)</option>
-                    <option value="7">Mùi (13g-15g)</option>
-                    <option value="8">Thân (15g-17g)</option>
-                    <option value="9">Dậu (17g-19g)</option>
-                    <option value="10">Tuất (19g-21g)</option>
-                    <option value="11">Hợi (21g-23g)</option>
-                </select>
+
+            <div class="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 w-full md:w-auto justify-center">
+                <button id="btnViewCard" onclick="switchView('card')" class="px-3 py-1.5 rounded-md text-xs font-bold transition bg-emerald-600 text-white">
+                    <i class="fa-solid fa-address-card mr-1"></i> Thẻ Hồ Sơ
+                </button>
+                <button id="btnViewUnit" onclick="switchView('unit')" class="px-3 py-1.5 rounded-md text-xs font-bold transition text-slate-600 hover:bg-slate-100">
+                    <i class="fa-solid fa-layer-group mr-1"></i> Tách Đơn Vị
+                </button>
+                <button id="btnViewTable" onclick="switchView('table')" class="px-3 py-1.5 rounded-md text-xs font-bold transition text-slate-600 hover:bg-slate-100">
+                    <i class="fa-solid fa-table-list mr-1"></i> Danh Sách
+                </button>
+                <button id="btnViewAttendance" onclick="openAttendanceModal()" class="px-3 py-1.5 rounded-md text-xs font-bold transition text-amber-700 hover:bg-amber-50 border border-amber-200">
+                    <i class="fa-solid fa-calendar-check mr-1"></i> Chấm Công
+                </button>
             </div>
-            <div class="col-span-2 md:col-span-6 text-center mt-2">
-                <button type="submit" class="bg-orange-600 hover:bg-orange-700 text-white font-bold px-8 py-2.5 rounded-lg shadow-lg hover:shadow-orange-200 transition">AN SAO & LUẬN GIẢI</button>
+        </div>
+    </header>
+
+    <!-- TỔNG HỢP ĐƠN VỊ -->
+    <section id="unitSummaryContainer" class="max-w-6xl mx-auto mb-6"></section>
+
+    <!-- MAIN CONTAINER -->
+    <main class="max-w-6xl mx-auto space-y-6">
+        <div id="cardViewContainer" class="space-y-6"></div>
+        <div id="unitViewContainer" class="hidden space-y-6"></div>
+        <div id="tableViewContainer" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-700 uppercase font-extrabold border-b border-slate-200">
+                            <th class="p-3 text-center">STT</th>
+                            <th class="p-3">Họ và tên</th>
+                            <th class="p-3">Số Điện Thoại</th>
+                            <th class="p-3">Số CCCD</th>
+                            <th class="p-3">Đơn vị công tác</th>
+                            <th class="p-3">Chức danh công việc</th>
+                            <th class="p-3 text-center">Số công</th>
+                            <th class="p-3 text-center">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-slate-100"></tbody>
+                </table>
             </div>
-        </form>
+        </div>
+    </main>
+
+    <!-- MODAL ATTENDANCE REPORT -->
+    <div id="attendanceModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto no-print">
+        <div class="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 relative">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 class="font-extrabold text-amber-800 text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left text-amber-600"></i> BẢNG TỔNG HỢP DỮ LIỆU MÁY CHẤM CÔNG
+                </h3>
+                <button onclick="closeAttendanceModal()" class="text-slate-400 hover:text-slate-600 font-bold text-xl"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-3 mb-4 bg-amber-50 p-3 rounded-xl border border-amber-200">
+                <div class="text-xs text-amber-900 font-semibold" id="attendanceSummaryText">Chưa có dữ liệu chấm công.</div>
+                <button onclick="exportAttendanceExcel()" class="bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs px-3 py-2 rounded-lg flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-file-excel"></i> Xuất Báo Cáo Công
+                </button>
+            </div>
+            <div class="overflow-x-auto border border-slate-200 rounded-xl">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-700 uppercase font-extrabold border-b border-slate-200">
+                            <th class="p-3 text-center">STT</th>
+                            <th class="p-3">Mã NV / STT</th>
+                            <th class="p-3">Họ và Tên</th>
+                            <th class="p-3">Số Điện Thoại</th>
+                            <th class="p-3">Đơn Vị</th>
+                            <th class="p-3 text-center">Số Lượt</th>
+                            <th class="p-3 text-center font-bold text-amber-900">Tổng Ngày Công</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendanceTableBody" class="divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
-    <!-- KHU VỰC HIỂN THỊ LÁ SỐ TỬ VI 12 CUNG -->
-    <div id="chartContainer" class="grid-tuvi"></div>
+    <!-- MODAL EDIT / ADD -->
+    <div id="editModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto no-print">
+        <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 relative">
+            <div class="flex justify-between items-center border-b pb-3 mb-4">
+                <h3 class="font-extrabold text-emerald-800 text-lg flex items-center gap-2" id="editModalTitle">
+                    <i class="fa-solid fa-user-pen"></i> THÔNG TIN NHÂN SỰ CHI TIẾT
+                </h3>
+                <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600 font-bold text-xl"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="employeeForm" onsubmit="saveEmployeeData(event)" class="space-y-5 text-xs">
+                <input type="hidden" id="editStt">
+                
+                <!-- KHỐI 1: CÁ NHÂN & CÔNG TÁC -->
+                <div>
+                    <h4 class="font-bold text-emerald-700 uppercase mb-2 text-xs flex items-center gap-1.5"><i class="fa-solid fa-thumbtack text-rose-500"></i> 1. Thông tin cá nhân & Công tác</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <div><label class="font-semibold block mb-1">Họ và tên *</label><input type="text" id="inputFullName" required class="w-full border rounded-lg p-2 font-bold"></div>
+                        <div><label class="font-semibold block mb-1">Tên gọi</label><input type="text" id="inputShortName" class="w-full border rounded-lg p-2 font-bold"></div>
+                        <div><label class="font-semibold block mb-1">Giới tính</label><select id="inputGender" class="w-full border rounded-lg p-2 bg-white font-semibold"><option value="Nam">Nam</option><option value="Nữ">Nữ</option></select></div>
+                        <div><label class="font-semibold block mb-1">Ngày sinh</label><input type="text" id="inputDob" class="w-full border rounded-lg p-2"></div>
+                        <div><label class="font-bold block mb-1 text-emerald-800">Số điện thoại</label><input type="text" id="inputPhone" class="w-full border border-emerald-400 rounded-lg p-2 font-mono font-bold text-emerald-900 bg-emerald-50/30"></div>
+                        <div><label class="font-semibold block mb-1">Số CCCD</label><input type="text" id="inputCccd" class="w-full border rounded-lg p-2 font-mono font-bold"></div>
+                        <div><label class="font-semibold block mb-1">Mã đơn vị</label><input type="text" id="inputUnitCode" class="w-full border rounded-lg p-2 font-bold text-blue-900 border-blue-300"></div>
+                        
+                        <!-- CHỌN ĐƠN VỊ CÔNG TÁC (CHỈ CHỌN 19 ĐƠN VỊ CHUẨN) -->
+                        <div>
+                            <label class="font-semibold block mb-1">Tên đơn vị công tác *</label>
+                            <select id="inputUnit" required class="w-full border rounded-lg p-2 font-bold text-emerald-900 border-emerald-300 bg-white">
+                                <option value="">-- Chọn đơn vị --</option>
+                                <option value="Phòng Kỹ thuật">Phòng Kỹ thuật</option>
+                                <option value="Xí nghiệp Bảo dưỡng">Xí nghiệp Bảo dưỡng</option>
+                                <option value="Phòng Nhân sự">Phòng Nhân sự</option>
+                                <option value="Trợ lý, Thư ký Hội đồng thành viên">Trợ lý, Thư ký Hội đồng thành viên</option>
+                                <option value="Nhà máy Điện">Nhà máy Điện</option>
+                                <option value="Phòng Lâm nghiệp">Phòng Lâm nghiệp</option>
+                                <option value="Văn phòng TCT">Văn phòng TCT</option>
+                                <option value="Phòng Tài chính kế toán">Phòng Tài chính kế toán</option>
+                                <option value="Xí nghiệp Dịch vụ">Xí nghiệp Dịch vụ</option>
+                                <option value="Phòng Kế hoạch Đầu tư">Phòng Kế hoạch Đầu tư</option>
+                                <option value="Phòng Vật tư">Phòng Vật tư</option>
+                                <option value="Văn phòng Công đoàn">Văn phòng Công đoàn</option>
+                                <option value="Tổng kho">Tổng kho</option>
+                                <option value="Phòng Kinh doanh">Phòng Kinh doanh</option>
+                                <option value="Ban Kiểm tra Kiểm toán nội bộ">Ban Kiểm tra Kiểm toán nội bộ</option>
+                                <option value="Nhà máy Hóa chất">Nhà máy Hóa chất</option>
+                                <option value="Các cơ quan tham mưu giúp việc Đảng ủy">Các cơ quan tham mưu giúp việc Đảng ủy</option>
+                                <option value="Nhà máy Giấy">Nhà máy Giấy</option>
+                            </select>
+                        </div>
 
-    <!-- AI LUẬN GIẢI KẾT QUẢ -->
-    <div id="aiAnalysisBox" class="max-w-5xl mx-auto bg-white p-6 rounded-xl shadow-md mt-6 border border-orange-200 hidden">
-        <h2 class="text-xl font-bold text-orange-950 border-b pb-3 mb-4 flex items-center gap-2">
-            <span>🧠</span> KẾT QUẢ LUẬN GIẢI TỰ ĐỘNG (AI ENGINE)
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
-                <h3 class="font-bold text-amber-900 mb-2">1. Định Hướng Bản Mệnh</h3>
-                <p id="aiTongQuan" class="text-sm text-gray-700 leading-relaxed"></p>
-            </div>
-            <div class="bg-sky-50 p-4 rounded-xl border border-sky-200">
-                <h3 class="font-bold text-sky-900 mb-2">2. Công Danh & Sự Nghiệp</h3>
-                <p id="aiCongDanh" class="text-sm text-gray-700 leading-relaxed"></p>
-            </div>
-            <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
-                <h3 class="font-bold text-emerald-900 mb-2">3. Lời Khuyên Chiến Lược</h3>
-                <p id="aiLoiKhuyen" class="text-sm text-gray-700 leading-relaxed"></p>
-            </div>
+                        <div><label class="font-semibold block mb-1">Số công làm việc thực tế</label><input type="text" id="inputWorkDays" class="w-full border border-amber-300 rounded-lg p-2 font-mono font-bold text-amber-900 bg-amber-50/30" value="0"></div>
+                        <div class="md:col-span-2"><label class="font-semibold block mb-1">Chức danh công việc</label><input type="text" id="inputTitle" class="w-full border rounded-lg p-2"></div>
+                        
+                        <div class="md:col-span-2">
+                            <label class="font-semibold block mb-1">Tình trạng công tác</label>
+                            <select id="inputStatus" class="w-full border rounded-lg p-2 bg-white font-semibold">
+                                <option value="Đang làm việc">Đang làm việc</option>
+                                <option value="Nghỉ thai sản">Nghỉ thai sản</option>
+                                <option value="Nghỉ không lương">Nghỉ không lương</option>
+                                <option value="Đã nghỉ hưu">Đã nghỉ hưu</option>
+                                <option value="Chấm dứt HĐLĐ">Chấm dứt HĐLĐ</option>
+                                <option value="Tạm hoãn HĐLĐ">Tạm hoãn HĐLĐ</option>
+                            </select>
+                        </div>
+
+                        <div class="md:col-span-2"><label class="font-semibold block mb-1">Trình độ chuyên môn</label><input type="text" id="inputEducation" class="w-full border rounded-lg p-2"></div>
+                    </div>
+                </div>
+
+                <!-- KHỐI 2: LƯƠNG & CHẾ ĐỘ (CHO PHÉP CHỌN DANH SÁCH THỰC TẾ + NHẬP TỰ DO) -->
+                <div>
+                    <h4 class="font-bold text-emerald-700 uppercase mb-2 text-xs flex items-center gap-1.5"><i class="fa-solid fa-briefcase"></i> 2. Lương & Chế độ</h4>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <div><label class="font-semibold block mb-1">Vào TCT</label><input type="text" id="inputStartDate" class="w-full border rounded-lg p-2"></div>
+                        <div><label class="font-semibold block mb-1">Số sổ BHXH</label><input type="text" id="inputBhxh" class="w-full border rounded-lg p-2 font-mono"></div>
+                        
+                        <!-- 1. NHÓM LƯƠNG CB -->
+                        <div>
+                            <label class="font-semibold block mb-1">Nhóm lương CB</label>
+                            <input type="text" id="inputSalaryGroup" list="listSalaryGroup" class="w-full border rounded-lg p-2 font-bold" placeholder="Chọn/Nhập...">
+                            <datalist id="listSalaryGroup"></datalist>
+                        </div>
+
+                        <!-- 2. BẬC LƯƠNG CB -->
+                        <div>
+                            <label class="font-semibold block mb-1">Bậc lương CB</label>
+                            <input type="text" id="inputSalaryGrade" list="listSalaryGrade" class="w-full border rounded-lg p-2" placeholder="Chọn/Nhập...">
+                            <datalist id="listSalaryGrade"></datalist>
+                        </div>
+
+                        <!-- 3. HỆ SỐ LƯƠNG CB -->
+                        <div>
+                            <label class="font-semibold block mb-1">Hệ số lương CB</label>
+                            <input type="text" id="inputSalaryCoeff" list="listSalaryCoeff" class="w-full border rounded-lg p-2 font-mono" placeholder="Chọn/Nhập...">
+                            <datalist id="listSalaryCoeff"></datalist>
+                        </div>
+
+                        <!-- 4. PHỤ CẤP CB -->
+                        <div>
+                            <label class="font-semibold block mb-1">Phụ cấp CB</label>
+                            <input type="text" id="inputAllowance" list="listAllowance" class="w-full border rounded-lg p-2 font-mono" placeholder="Chọn/Nhập...">
+                            <datalist id="listAllowance"></datalist>
+                        </div>
+
+                        <!-- 5. NHÓM LƯƠNG CV -->
+                        <div>
+                            <label class="font-semibold block mb-1">Nhóm lương CV</label>
+                            <input type="text" id="inputJobSalaryGroup" list="listJobSalaryGroup" class="w-full border rounded-lg p-2 font-bold text-indigo-800" placeholder="Chọn/Nhập...">
+                            <datalist id="listJobSalaryGroup"></datalist>
+                        </div>
+                        
+                        <!-- 6. BẬC LƯƠNG CV -->
+                        <div>
+                            <label class="font-semibold block mb-1">Bậc lương CV</label>
+                            <input type="text" id="inputJobSalaryGrade" list="listJobSalaryGrade" class="w-full border rounded-lg p-2" placeholder="Chọn/Nhập...">
+                            <datalist id="listJobSalaryGrade"></datalist>
+                        </div>
+
+                        <!-- 7. HỆ SỐ LƯƠNG CV -->
+                        <div>
+                            <label class="font-semibold block mb-1">Hệ số lương CV</label>
+                            <input type="text" id="inputJobSalaryCoeff" list="listJobSalaryCoeff" class="w-full border rounded-lg p-2 font-mono" placeholder="Chọn/Nhập...">
+                            <datalist id="listJobSalaryCoeff"></datalist>
+                        </div>
+
+                        <!-- 8. PHỤ CẤP CV -->
+                        <div>
+                            <label class="font-semibold block mb-1">Phụ cấp CV</label>
+                            <input type="text" id="inputJobAllowance" list="listJobAllowance" class="w-full border rounded-lg p-2 font-mono" placeholder="Chọn/Nhập...">
+                            <datalist id="listJobAllowance"></datalist>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KHỐI 3: CHI TIẾT KHÁC -->
+                <div>
+                    <h4 class="font-bold text-emerald-700 uppercase mb-2 text-xs flex items-center gap-1.5"><i class="fa-regular fa-file-lines"></i> 3. Chi tiết khác</h4>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <div><label class="font-semibold block mb-1">Dự kiến nghỉ hưu</label><input type="text" id="inputRetireDate" class="w-full border rounded-lg p-2"></div>
+                        <div><label class="font-semibold block mb-1">Thai sản / Nghỉ KL</label><input type="text" id="inputMaternityLeave" class="w-full border rounded-lg p-2"></div>
+                        <div><label class="font-semibold block mb-1">Cảnh báo thai sản</label><input type="text" id="inputMaternityWarning" class="w-full border rounded-lg p-2"></div>
+                        <div><label class="font-semibold block mb-1">Công phép năm</label><input type="text" id="inputAnnualLeaveDays" class="w-full border rounded-lg p-2"></div>
+                        <div><label class="font-semibold block mb-1">Tự động điền chấm dứt</label><input type="text" id="inputAutoTermination" class="w-full border rounded-lg p-2"></div>
+                        <div><label class="font-semibold block mb-1">Chấm dứt HĐLD</label><input type="text" id="inputContractTermination" class="w-full border rounded-lg p-2"></div>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-3 border-t">
+                    <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-xl font-bold text-slate-700">Hủy</button>
+                    <button type="submit" class="px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold shadow-md"><i class="fa-solid fa-cloud-arrow-up mr-1"></i> Lưu & Đồng bộ (Enter)</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL XEM CHI TIẾT -->
+    <div id="profileModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto no-print">
+        <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 p-2 relative">
+            <button onclick="closeModal()" class="absolute top-4 right-4 bg-slate-100 hover:bg-slate-200 text-slate-700 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm z-10"><i class="fa-solid fa-xmark"></i></button>
+            <div id="modalContent"></div>
         </div>
     </div>
 
     <script>
-        // URL GOOGLE APPS SCRIPT API ĐÃ TÍCH HỢP TRỰC TIẾP
-        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyb5WzsAWBUECe48rl0HgdS9LhX8iQJRUXRX8vQ92_CeEAnGKQhEHHyrqxQEjUBVtPapg/exec";
+        const CLOUD_API_URL = "https://script.google.com/macros/s/AKfycby8iehhv8RNRh3pWSwWMNv_qX893POHNQc45YUm_D-bSfK5XouJR7mZ1zHyxzDnU0KO/exec";
 
-        const DIA_CHI = ["Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi", "Thân", "Dậu", "Tuất", "Hợi"];
-        const THIEN_CAN = ["Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ", "Canh", "Tân", "Nhâm", "Quý"];
-        const NGU_HANH_CUC = { 2: "Thủy Nhị Cục", 3: "Mộc Tam Cục", 4: "Kim Tứ Cục", 5: "Thổ Ngũ Cục", 6: "Hỏa Lục Cục" };
-
-        const CUNG_GRID_POS = [
-            { chi: "Tỵ", row: 1, col: 1 }, { chi: "Ngọ", row: 1, col: 2 }, { chi: "Mùi", row: 1, col: 3 }, { chi: "Thân", row: 1, col: 4 },
-            { chi: "Thìn", row: 2, col: 1 },                                                               { chi: "Dậu", row: 2, col: 4 },
-            { chi: "Mão", row: 3, col: 1 },                                                               { chi: "Tuất", row: 3, col: 4 },
-            { chi: "Dần", row: 4, col: 1 }, { chi: "Sửu", row: 4, col: 2 }, { chi: "Tý", row: 4, col: 3 }, { chi: "Hợi", row: 4, col: 4 }
+        // DANH SÁCH CHUẨN 19 ĐƠN VỊ CÔNG TÁC
+        const MASTER_UNITS = [
+            "Phòng Kỹ thuật", "Xí nghiệp Bảo dưỡng", "Phòng Nhân sự", 
+            "Trợ lý, Thư ký Hội đồng thành viên", "Nhà máy Điện", "Phòng Lâm nghiệp", 
+            "Văn phòng TCT", "Phòng Tài chính kế toán", "Xí nghiệp Dịch vụ", 
+            "Phòng Kế hoạch Đầu tư", "Phòng Vật tư", "Văn phòng Công đoàn", 
+            "Tổng kho", "Phòng Kinh doanh", "Ban Kiểm tra Kiểm toán nội bộ", 
+            "Nhà máy Hóa chất", "Các cơ quan tham mưu giúp việc Đảng ủy", "Nhà máy Giấy"
         ];
 
-        let currentChartData = null;
+        let rawEmployees = [];
+        let currentFilteredData = [];
+        let attendanceLogs = [];
+        let unitPayrollRules = {};
+        let currentView = 'card';
+        let cloudSyncInProgress = false;
+        let localDirty = false;
+        const CLIENT_ID = 'WEB-' + Math.random().toString(36).slice(2, 10);
 
-        // --- THUẬT TOÁN AN SAO TỬ VI ---
-        function calculateTuVi(fullname, gender, day, month, year, hourChi) {
-            const canNam = (year - 4) % 10;
-            const chiNam = (year - 4) % 12;
-
-            let menhPos = (2 + (month - 1) - hourChi + 120) % 12;
-            let thanPos = (2 + (month - 1) + hourChi) % 12;
-
-            const cucTable = [
-                [2,6,3,5,4,6], [6,3,5,4,6,2], [3,5,4,6,2,6], [5,4,6,2,6,3], [4,6,2,6,3,5]
-            ];
-            let cucVal = cucTable[canNam % 5][Math.floor(menhPos / 2)];
-            let tuViPos = (cucVal + day) % 12;
-
-            let chinhTinhMap = {};
-            for(let i=0; i<12; i++) chinhTinhMap[i] = [];
-
-            const tuViGroup = [
-                { name: "Tử Vi", offset: 0 }, { name: "Liêm Trinh", offset: 8 },
-                { name: "Thiên Đồng", offset: 5 }, { name: "Vũ Khúc", offset: 4 },
-                { name: "Thái Dương", offset: 3 }, { name: "Thiên Cơ", offset: 1 }
-            ];
-            tuViGroup.forEach(star => chinhTinhMap[(tuViPos + star.offset) % 12].push(star.name));
-
-            let thienPhuPos = (4 - tuViPos + 12) % 12;
-            const phuGroup = [
-                { name: "Thiên Phủ", offset: 0 }, { name: "Thái Âm", offset: 1 },
-                { name: "Tham Lang", offset: 2 }, { name: "Cự Môn", offset: 3 },
-                { name: "Thiên Tướng", offset: 4 }, { name: "Thiên Lương", offset: 5 },
-                { name: "Thất Sát", offset: 6 }, { name: "Phá Quân", offset: 10 }
-            ];
-            phuGroup.forEach(star => chinhTinhMap[(thienPhuPos + star.offset) % 12].push(star.name));
-
-            const tenCungChuan = ["Mệnh", "Phụ Mẫu", "Phúc Đức", "Điền Trạch", "Quan Lộc", "Nô Bộc", "Thiên Di", "Tật Ách", "Tài Bạch", "Tử Tức", "Phu Thê", "Huynh Đệ"];
-            let cungTenMap = {};
-            for (let i = 0; i < 12; i++) cungTenMap[(menhPos + i) % 12] = tenCungChuan[i];
-
-            return {
-                info: { fullname, gender, day, month, year, canNam: THIEN_CAN[canNam], chiNam: DIA_CHI[chiNam], cuc: NGU_HANH_CUC[cucVal], menhPos, thanPos },
-                chinhTinhMap,
-                cungTenMap
-            };
+        function setSyncStatus(html) {
+            const el = document.getElementById('syncStatus');
+            if (el) el.innerHTML = html;
         }
 
-        function lapLaSo(e) {
-            if(e) e.preventDefault();
-            const fullname = document.getElementById('fullname').value;
-            const gender = document.getElementById('gender').value;
-            const day = parseInt(document.getElementById('day').value);
-            const month = parseInt(document.getElementById('month').value);
-            const year = parseInt(document.getElementById('year').value);
-            const hourChi = parseInt(document.getElementById('hourChi').value);
-
-            const data = calculateTuVi(fullname, gender, day, month, year, hourChi);
-            currentChartData = data;
-            renderChart(data);
-            generateAIAnalysis(data);
+        function saveToLocal() {
+            try {
+                localStorage.setItem('vnp_employees_data', JSON.stringify(rawEmployees));
+                localStorage.setItem('vnp_attendance_logs', JSON.stringify(attendanceLogs));
+                localStorage.setItem('vnp_unit_payroll_rules', JSON.stringify(unitPayrollRules || {}));
+            } catch(e) {}
         }
 
-        function renderChart(data) {
-            const container = document.getElementById('chartContainer');
-            container.innerHTML = '';
+        function loadFromLocal() {
+            try {
+                const savedEmp = localStorage.getItem('vnp_employees_data');
+                const savedAtt = localStorage.getItem('vnp_attendance_logs');
+                const savedRules = localStorage.getItem('vnp_unit_payroll_rules');
+                if (savedAtt) attendanceLogs = JSON.parse(savedAtt);
+                if (savedRules) unitPayrollRules = JSON.parse(savedRules) || {};
+                if (savedEmp) return JSON.parse(savedEmp);
+            } catch(e) {}
+            return null;
+        }
 
-            CUNG_GRID_POS.forEach(pos => {
-                const chiIdx = DIA_CHI.indexOf(pos.chi);
-                const isMenh = (chiIdx === data.info.menhPos);
-                const isThan = (chiIdx === data.info.thanPos);
-                const tenCung = data.cungTenMap[chiIdx];
-                const chinhTinhs = data.chinhTinhMap[chiIdx] || [];
+        function jsonpGet(timeoutMs = 10000) {
+            return new Promise((resolve, reject) => {
+                const callbackName = '__vnpCloud_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+                const script = document.createElement('script');
+                let settled = false;
+                const timer = setTimeout(() => {
+                    if (settled) return;
+                    settled = true;
+                    script.remove();
+                    delete window[callbackName];
+                    reject(new Error('Hết thời gian chờ Cloud'));
+                }, timeoutMs);
 
-                const cell = document.createElement('div');
-                cell.className = `cung-box ${isMenh ? 'bg-orange-100 border-2 border-orange-500' : ''}`;
-                cell.style.gridRow = pos.row;
-                cell.style.gridColumn = pos.col;
+                window[callbackName] = data => {
+                    if (settled) return;
+                    settled = true;
+                    clearTimeout(timer);
+                    script.remove();
+                    delete window[callbackName];
+                    resolve(data);
+                };
 
-                cell.innerHTML = `
-                    <div class="flex justify-between items-center border-b pb-1">
-                        <span class="font-bold text-xs ${isMenh ? 'text-red-700' : 'text-gray-800'}">${tenCung} ${isThan ? '<span class="text-blue-600 font-bold">(Thân)</span>' : ''}</span>
-                        <span class="text-xs font-semibold text-gray-500">${pos.chi}</span>
-                    </div>
-                    <div class="my-2 flex-grow">
-                        ${chinhTinhs.map(s => `<div class="chinh-tinh">${s}</div>`).join('')}
-                    </div>
-                    <div class="text-right text-[10px] text-gray-400">Đại hạn: ${10 + chiIdx*10}</div>
-                `;
-                container.appendChild(cell);
+                script.onerror = () => {
+                    if (settled) return;
+                    settled = true;
+                    clearTimeout(timer);
+                    script.remove();
+                    delete window[callbackName];
+                    reject(new Error('Lỗi kết nối Cloud'));
+                };
+
+                script.src = CLOUD_API_URL + '?callback=' + encodeURIComponent(callbackName) + '&t=' + Date.now();
+                document.head.appendChild(script);
             });
-
-            const trungCung = document.createElement('div');
-            trungCung.className = 'trung-cung flex flex-col justify-between text-center rounded-lg shadow-inner';
-            trungCung.innerHTML = `
-                <div>
-                    <h2 class="text-lg font-bold text-orange-900 border-b-2 border-orange-400 pb-1 mb-2">THIÊN BÀN</h2>
-                    <p class="text-xl font-black text-red-800">${data.info.fullname}</p>
-                    <p class="text-xs text-gray-700 mt-1">Năm sinh: <b>${data.info.canNam} ${data.info.chiNam}</b> (${data.info.gender})</p>
-                    <p class="text-xs text-gray-700">Âm lịch: Ngày ${data.info.day} tháng ${data.info.month}</p>
-                    <p class="text-xs font-bold text-amber-800 mt-2">${data.info.cuc}</p>
-                </div>
-                <div class="text-xs text-gray-600 italic border-t border-orange-200 pt-1">
-                    Cung Mệnh tại <b>${DIA_CHI[data.info.menhPos]}</b> | Cung Thân tại <b>${DIA_CHI[data.info.thanPos]}</b>
-                </div>
-            `;
-            container.appendChild(trungCung);
         }
 
-        function generateAIAnalysis(data) {
-            document.getElementById('aiAnalysisBox').classList.remove('hidden');
-            const menhChi = DIA_CHI[data.info.menhPos];
-            const chinhTinhMenh = data.chinhTinhMap[data.info.menhPos].join(", ") || "Vô Chính Diệu";
-
-            document.getElementById('aiTongQuan').innerText = 
-                `Bản mệnh tuổi ${data.info.canNam} ${data.info.chiNam}, Mệnh tọa tại cung ${menhChi} có sao [${chinhTinhMenh}] đắc vị. ` +
-                `Đạt cục thế ${data.info.cuc}, bản tính quyết đoán, khả năng làm chủ bản thân và quản trị công việc xuất sắc.`;
-
-            document.getElementById('aiCongDanh').innerText = 
-                `Tài Bạch và Quan Lộc có sự phối hợp nhịp nhàng giữa các sao điều hành và tham mưu. ` +
-                `Rất thuận lợi trong việc xây dựng hệ thống quản lý, triển khai giải pháp kỹ thuật và hoạch định chiến lược.`;
-
-            document.getElementById('aiLoiKhuyen').innerText = 
-                `Giữ vững phương châm phát triển bền vững. Tối ưu hóa các nguồn lực cá nhân và chú trọng việc lưu trữ dữ liệu lâu dài.`;
-        }
-
-        // --- ĐỒNG BỘ GOOGLE DRIVE API ---
-        async function saveToDrive() {
-            if (!currentChartData) {
-                alert("Vui lòng bấm 'LẬP LÁ SỐ' trước khi lưu lên Google Drive!");
-                return;
+        async function fetchCloudData(isManual = false) {
+            const localData = loadFromLocal();
+            if (localData && localData.length > 0 && !isManual) {
+                rawEmployees = localData;
+                initSystem();
+                setSyncStatus(`<span class="text-slate-600 font-semibold"><i class="fa-solid fa-hard-drive"></i> Đã tải ${rawEmployees.length} nhân sự từ bộ nhớ máy; đang kiểm tra Cloud...</span>`);
+            } else {
+                setSyncStatus(`<i class="fa-solid fa-circle-notch fa-spin text-blue-600"></i> Đang đọc dữ liệu Cloud...`);
             }
 
-            const btnSave = document.getElementById('btnSave');
-            btnSave.innerText = "⏳ Đang lưu...";
-            btnSave.disabled = true;
-
             try {
-                const response = await fetch(GAS_WEB_APP_URL, {
-                    method: "POST",
-                    headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify(currentChartData)
-                });
-
-                const result = await response.json();
-                if (result.status === "success") {
-                    alert(`✅ ${result.message}\nTên tệp: ${result.fileName}`);
-                } else {
-                    alert(`❌ Lỗi lưu tệp: ${result.message}`);
-                }
-            } catch (error) {
-                alert(`❌ Kết nối thất bại: ${error.message}`);
-            } finally {
-                btnSave.innerText = "Lưu lên Drive";
-                btnSave.disabled = false;
-            }
-        }
-
-        async function loadFromDrive() {
-            const btnLoad = document.getElementById('btnLoad');
-            btnLoad.innerText = "⏳ Đang tải...";
-            btnLoad.disabled = true;
-
-            try {
-                const response = await fetch(GAS_WEB_APP_URL, { method: "GET" });
-                const result = await response.json();
-
-                if (result.status === "success" && result.files && result.files.length > 0) {
-                    const fileNames = result.files.map((f, i) => `${i + 1}. ${f.name} (${new Date(f.updatedAt).toLocaleDateString()})`).join('\n');
-                    const choice = prompt(`Tìm thấy ${result.files.length} lá số trên Drive.\nNhập số thứ tự để tải:\n\n${fileNames}`, "1");
-
-                    if (choice) {
-                        const idx = parseInt(choice) - 1;
-                        if (idx >= 0 && idx < result.files.length) {
-                            const selectedData = result.files[idx].content;
-                            currentChartData = selectedData;
-
-                            // Điền lại form
-                            document.getElementById('fullname').value = selectedData.info.fullname || '';
-                            document.getElementById('day').value = selectedData.info.day || 15;
-                            document.getElementById('month').value = selectedData.info.month || 5;
-                            document.getElementById('year').value = selectedData.info.year || 1990;
-
-                            renderChart(selectedData);
-                            generateAIAnalysis(selectedData);
-                            alert(`✅ Đã tải lá số: ${result.files[idx].name}`);
+                const data = await jsonpGet();
+                if (data && (data.employees || Array.isArray(data))) {
+                    const empList = data.employees || data;
+                    if (empList.length > 0) {
+                        if (!localDirty || isManual) {
+                            rawEmployees = empList;
+                            attendanceLogs = data.attendanceLogs || [];
+                            unitPayrollRules = data.unitPayrollRules || {};
+                            localDirty = false;
+                            saveToLocal();
+                            initSystem();
                         }
+                        setSyncStatus(`<span class="text-emerald-700 font-bold"><i class="fa-solid fa-cloud-check"></i> Đã đồng bộ Cloud • ${rawEmployees.length} nhân sự</span>`);
+                        return;
                     }
-                } else {
-                    alert("Chưa có lá số nào được lưu trong thư mục 'TuVi_App_Data' trên Google Drive của bạn!");
                 }
-            } catch (error) {
-                alert(`❌ Không thể tải dữ liệu: ${error.message}`);
-            } finally {
-                btnLoad.innerText = "Tải từ Drive";
-                btnLoad.disabled = false;
+                setSyncStatus(`<span class="text-amber-600 font-bold"><i class="fa-solid fa-database"></i> Cloud chưa có dữ liệu. Hãy tải file hồ sơ lên.</span>`);
+            } catch (err) {
+                if (rawEmployees.length > 0) {
+                    setSyncStatus(`<span class="text-amber-700 font-semibold"><i class="fa-solid fa-triangle-exclamation"></i> Không kết nối Cloud • Dữ liệu trên máy an toàn</span>`);
+                } else {
+                    setSyncStatus(`<span class="text-rose-600 font-semibold"><i class="fa-solid fa-cloud-exclamation"></i> Chưa kết nối được Cloud</span>`);
+                }
             }
         }
 
-        // Khởi tạo lá số mặc định khi mở trang
-        window.onload = () => lapLaSo();
-    </script>
-</body>
-</html><!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tử Vi AI Online & Google Drive Sync</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { background-color: #f8fafc; font-family: 'Segoe UI', system-ui, sans-serif; }
-        .grid-tuvi {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            grid-template-rows: repeat(4, minmax(0, 1fr));
-            gap: 4px;
-            background-color: #7c2d12;
-            padding: 4px;
-            border-radius: 8px;
-            max-width: 980px;
-            margin: auto;
-        }
-        .cung-box {
-            background-color: #fffefb;
-            min-height: 160px;
-            padding: 6px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            border: 1px solid #fed7aa;
-            border-radius: 4px;
-        }
-        .trung-cung {
-            grid-column: 2 / span 2;
-            grid-row: 2 / span 2;
-            background-color: #fff7ed;
-            padding: 16px;
-            border: 2px solid #ea580c;
-            border-radius: 6px;
-        }
-        .chinh-tinh { color: #b91c1c; font-weight: 700; font-size: 0.85rem; }
-    </style>
-</head>
-<body class="p-3 md:p-6">
+        function postCloudPayload(payload) {
+            return new Promise((resolve, reject) => {
+                const iframeName = 'vnp_post_' + Date.now();
+                const iframe = document.createElement('iframe');
+                iframe.name = iframeName;
+                iframe.style.display = 'none';
+                document.body.appendChild(iframe);
 
-    <!-- THANH CÔNG CỤ & THÔNG TIN ĐỒNG BỘ -->
-    <div class="max-w-5xl mx-auto bg-white p-5 rounded-xl shadow-md mb-6 border border-orange-200">
-        <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b border-gray-100 pb-4">
-            <div>
-                <h1 class="text-2xl font-black text-orange-950 flex items-center gap-2">
-                    <span>☯️</span> HỆ THỐNG TỬ VI AI ONLINE
-                </h1>
-                <p class="text-xs text-gray-500 mt-1">Lập lá số chuẩn xác • AI Luận giải • Tự động đồng bộ Cloud Google Drive</p>
-            </div>
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = CLOUD_API_URL;
+                form.target = iframeName;
+                form.style.display = 'none';
+
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'payload';
+                input.value = JSON.stringify(payload);
+                form.appendChild(input);
+                document.body.appendChild(form);
+
+                let done = false;
+                const finish = (ok) => {
+                    if (done) return;
+                    done = true;
+                    setTimeout(() => { iframe.remove(); form.remove(); }, 1000);
+                    ok ? resolve(true) : reject(new Error('Lỗi gửi dữ liệu'));
+                };
+
+                iframe.onload = () => finish(true);
+                iframe.onerror = () => finish(false);
+                form.submit();
+                setTimeout(() => finish(true), 3500);
+            });
+        }
+
+        async function saveToCloud() {
+            if (cloudSyncInProgress) return false;
+            cloudSyncInProgress = true;
+            localDirty = true;
+            saveToLocal();
+
+            const payload = {
+                clientId: CLIENT_ID,
+                updatedAt: new Date().toISOString(),
+                employees: rawEmployees,
+                attendanceLogs: attendanceLogs,
+                unitPayrollRules: unitPayrollRules
+            };
+
+            setSyncStatus(`<i class="fa-solid fa-circle-notch fa-spin text-emerald-600"></i> Đang ghi dữ liệu lên Google Sheets...`);
+            try {
+                await postCloudPayload(payload);
+                localDirty = false;
+                saveToLocal();
+                setSyncStatus(`<span class="text-emerald-700 font-bold"><i class="fa-solid fa-cloud-check"></i> Đã lưu & đồng bộ Google Sheets thành công • ${rawEmployees.length} nhân sự</span>`);
+                cloudSyncInProgress = false;
+                return true;
+            } catch (err) {
+                setSyncStatus(`<span class="text-rose-700 font-bold"><i class="fa-solid fa-cloud-exclamation"></i> Đã lưu trên máy • Chưa xác minh được Google Sheets</span>`);
+                cloudSyncInProgress = false;
+                return false;
+            }
+        }
+
+        function cleanUnitName(str) { 
+            const s = String(str || '').trim().replace(/\s+/g, ' '); 
+            const matched = MASTER_UNITS.find(m => m.toLowerCase() === s.toLowerCase());
+            if (matched) return matched;
+            return s || 'Chưa phân loại';
+        }
+        
+        function cleanUnitCode(str) { return String(str || '').trim().toUpperCase(); }
+
+        function parseExcelDate(val) {
+            if (!val) return '---';
             
-            <div class="flex items-center gap-2">
-                <button onclick="saveToDrive()" id="btnSave" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-4 py-2.5 rounded-lg font-semibold flex items-center gap-1.5 shadow transition">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
-                    Lưu lên Drive
-                </button>
-                <button onclick="loadFromDrive()" id="btnLoad" class="bg-amber-600 hover:bg-amber-700 text-white text-xs px-4 py-2.5 rounded-lg font-semibold flex items-center gap-1.5 shadow transition">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-                    Tải từ Drive
-                </button>
-            </div>
-        </div>
+            if (val instanceof Date) {
+                const day = String(val.getDate()).padStart(2, '0');
+                const month = String(val.getMonth() + 1).padStart(2, '0');
+                const year = val.getFullYear();
+                return `${day}/${month}/${year}`;
+            }
+            
+            if (typeof val === 'number' && val > 10000) {
+                const excelEpoch = new Date(1899, 11, 30);
+                const jsDate = new Date(excelEpoch.getTime() + val * 86400000);
+                const day = String(jsDate.getDate()).padStart(2, '0');
+                const month = String(jsDate.getMonth() + 1).padStart(2, '0');
+                const year = jsDate.getFullYear();
+                return `${day}/${month}/${year}`;
+            }
 
-        <!-- FORM NHẬP THÔNG TIN -->
-        <form id="tuviForm" onsubmit="lapLaSo(event)" class="grid grid-cols-2 md:grid-cols-6 gap-3 mt-4">
-            <div>
-                <label class="block text-xs font-bold text-gray-700">Họ và Tên</label>
-                <input type="text" id="fullname" required value="Trần Bình Dương" class="w-full border p-2 text-sm rounded-lg mt-1 focus:ring-2 focus:ring-orange-500 outline-none">
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-700">Giới tính</label>
-                <select id="gender" class="w-full border p-2 text-sm rounded-lg mt-1 focus:ring-2 focus:ring-orange-500 outline-none">
-                    <option value="Nam">Nam Mạng</option>
-                    <option value="Nữ">Nữ Mạng</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-700">Ngày sinh (Dương)</label>
-                <input type="number" id="day" min="1" max="31" value="15" class="w-full border p-2 text-sm rounded-lg mt-1 focus:ring-2 focus:ring-orange-500 outline-none">
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-700">Tháng sinh</label>
-                <input type="number" id="month" min="1" max="12" value="5" class="w-full border p-2 text-sm rounded-lg mt-1 focus:ring-2 focus:ring-orange-500 outline-none">
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-700">Năm sinh</label>
-                <input type="number" id="year" value="1990" class="w-full border p-2 text-sm rounded-lg mt-1 focus:ring-2 focus:ring-orange-500 outline-none">
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-700">Giờ sinh</label>
-                <select id="hourChi" class="w-full border p-2 text-sm rounded-lg mt-1 focus:ring-2 focus:ring-orange-500 outline-none">
-                    <option value="0">Tý (23g-01g)</option>
-                    <option value="1">Sửu (01g-03g)</option>
-                    <option value="2">Dần (03g-05g)</option>
-                    <option value="3">Mão (05g-07g)</option>
-                    <option value="4" selected>Thìn (07g-09g)</option>
-                    <option value="5">Tỵ (09g-11g)</option>
-                    <option value="6">Ngọ (11g-13g)</option>
-                    <option value="7">Mùi (13g-15g)</option>
-                    <option value="8">Thân (15g-17g)</option>
-                    <option value="9">Dậu (17g-19g)</option>
-                    <option value="10">Tuất (19g-21g)</option>
-                    <option value="11">Hợi (21g-23g)</option>
-                </select>
-            </div>
-            <div class="col-span-2 md:col-span-6 text-center mt-2">
-                <button type="submit" class="bg-orange-600 hover:bg-orange-700 text-white font-bold px-8 py-2.5 rounded-lg shadow-lg hover:shadow-orange-200 transition">AN SAO & LUẬN GIẢI</button>
-            </div>
-        </form>
-    </div>
+            let s = String(val).trim();
 
-    <!-- KHU VỰC HIỂN THỊ LÁ SỐ TỬ VI 12 CUNG -->
-    <div id="chartContainer" class="grid-tuvi"></div>
+            if (s.includes('-') || s.includes('/')) {
+                const sep = s.includes('-') ? '-' : '/';
+                const parts = s.split(sep);
+                if (parts.length === 3) {
+                    if (parts[2].length === 4) {
+                        const day = String(parts[0]).padStart(2, '0');
+                        const month = String(parts[1]).padStart(2, '0');
+                        const year = parts[2];
+                        return `${day}/${month}/${year}`;
+                    }
+                    if (parts[0].length === 4) {
+                        const year = parts[0];
+                        const month = String(parts[1]).padStart(2, '0');
+                        const day = String(parts[2]).padStart(2, '0');
+                        return `${day}/${month}/${year}`;
+                    }
+                }
+            }
 
-    <!-- AI LUẬN GIẢI KẾT QUẢ -->
-    <div id="aiAnalysisBox" class="max-w-5xl mx-auto bg-white p-6 rounded-xl shadow-md mt-6 border border-orange-200 hidden">
-        <h2 class="text-xl font-bold text-orange-950 border-b pb-3 mb-4 flex items-center gap-2">
-            <span>🧠</span> KẾT QUẢ LUẬN GIẢI TỰ ĐỘNG (AI ENGINE)
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
-                <h3 class="font-bold text-amber-900 mb-2">1. Định Hướng Bản Mệnh</h3>
-                <p id="aiTongQuan" class="text-sm text-gray-700 leading-relaxed"></p>
-            </div>
-            <div class="bg-sky-50 p-4 rounded-xl border border-sky-200">
-                <h3 class="font-bold text-sky-900 mb-2">2. Công Danh & Sự Nghiệp</h3>
-                <p id="aiCongDanh" class="text-sm text-gray-700 leading-relaxed"></p>
-            </div>
-            <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
-                <h3 class="font-bold text-emerald-900 mb-2">3. Lời Khuyên Chiến Lược</h3>
-                <p id="aiLoiKhuyen" class="text-sm text-gray-700 leading-relaxed"></p>
-            </div>
-        </div>
-    </div>
+            if (/^\d{4}$/.test(s)) {
+                return `01/01/${s}`;
+            }
 
-    <script>
-        // URL GOOGLE APPS SCRIPT API ĐÃ TÍCH HỢP TRỰC TIẾP
-        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyb5WzsAWBUECe48rl0HgdS9LhX8iQJRUXRX8vQ92_CeEAnGKQhEHHyrqxQEjUBVtPapg/exec";
+            return s || '---';
+        }
 
-        const DIA_CHI = ["Tý", "Sửu", "Dần", "Mão", "Thìn", "Tỵ", "Ngọ", "Mùi", "Thân", "Dậu", "Tuất", "Hợi"];
-        const THIEN_CAN = ["Giáp", "Ất", "Bính", "Đinh", "Mậu", "Kỷ", "Canh", "Tân", "Nhâm", "Quý"];
-        const NGU_HANH_CUC = { 2: "Thủy Nhị Cục", 3: "Mộc Tam Cục", 4: "Kim Tứ Cục", 5: "Thổ Ngũ Cục", 6: "Hỏa Lục Cục" };
+        function mapRawRowToEmployee(row, defaultStt) {
+            const findValExact = (exactKeys) => {
+                for (let rawKey of Object.keys(row)) {
+                    const normKey = rawKey.toString().toLowerCase().replace(/[\n\r\s_\-./()]/g, '');
+                    for (let k of exactKeys) {
+                        if (normKey === k.toLowerCase().replace(/[\n\r\s_\-./()]/g, '')) {
+                            let val = row[rawKey];
+                            if (val !== undefined && val !== null && val !== '') return val;
+                        }
+                    }
+                }
+                return '';
+            };
 
-        const CUNG_GRID_POS = [
-            { chi: "Tỵ", row: 1, col: 1 }, { chi: "Ngọ", row: 1, col: 2 }, { chi: "Mùi", row: 1, col: 3 }, { chi: "Thân", row: 1, col: 4 },
-            { chi: "Thìn", row: 2, col: 1 },                                                               { chi: "Dậu", row: 2, col: 4 },
-            { chi: "Mão", row: 3, col: 1 },                                                               { chi: "Tuất", row: 3, col: 4 },
-            { chi: "Dần", row: 4, col: 1 }, { chi: "Sửu", row: 4, col: 2 }, { chi: "Tý", row: 4, col: 3 }, { chi: "Hợi", row: 4, col: 4 }
-        ];
+            const findVal = (keys) => {
+                for (let rawKey of Object.keys(row)) {
+                    const normKey = rawKey.toString().toLowerCase().replace(/[\n\r\s_\-./()]/g, '');
+                    for (let k of keys) {
+                        if (normKey.includes(k.toLowerCase().replace(/[\n\r\s_\-./()]/g, ''))) {
+                            let val = row[rawKey];
+                            if (val !== undefined && val !== null && val !== '') return val;
+                        }
+                    }
+                }
+                return '';
+            };
 
-        let currentChartData = null;
+            const fullName = String(findVal(['họ và tên', 'họ tên', 'fullname', 'tên nhân viên']) || `Nhân sự #${defaultStt}`).trim();
+            const shortName = String(findValExact(['tên']) || findVal(['shortname']) || fullName.split(' ').pop()).trim();
+            
+            const genderStr = String(findVal(['giới tính', 'gender', 'nữ']) || '').toLowerCase();
+            let gender = 'Nam';
+            if (genderStr.includes('nữ') || genderStr === '1' || genderStr === 'x' || genderStr === 'f' || fullName.toLowerCase().includes(' thị ')) {
+                gender = 'Nữ';
+            }
 
-        // --- THUẬT TOÁN AN SAO TỬ VI ---
-        function calculateTuVi(fullname, gender, day, month, year, hourChi) {
-            const canNam = (year - 4) % 10;
-            const chiNam = (year - 4) % 12;
-
-            let menhPos = (2 + (month - 1) - hourChi + 120) % 12;
-            let thanPos = (2 + (month - 1) + hourChi) % 12;
-
-            const cucTable = [
-                [2,6,3,5,4,6], [6,3,5,4,6,2], [3,5,4,6,2,6], [5,4,6,2,6,3], [4,6,2,6,3,5]
-            ];
-            let cucVal = cucTable[canNam % 5][Math.floor(menhPos / 2)];
-            let tuViPos = (cucVal + day) % 12;
-
-            let chinhTinhMap = {};
-            for(let i=0; i<12; i++) chinhTinhMap[i] = [];
-
-            const tuViGroup = [
-                { name: "Tử Vi", offset: 0 }, { name: "Liêm Trinh", offset: 8 },
-                { name: "Thiên Đồng", offset: 5 }, { name: "Vũ Khúc", offset: 4 },
-                { name: "Thái Dương", offset: 3 }, { name: "Thiên Cơ", offset: 1 }
-            ];
-            tuViGroup.forEach(star => chinhTinhMap[(tuViPos + star.offset) % 12].push(star.name));
-
-            let thienPhuPos = (4 - tuViPos + 12) % 12;
-            const phuGroup = [
-                { name: "Thiên Phủ", offset: 0 }, { name: "Thái Âm", offset: 1 },
-                { name: "Tham Lang", offset: 2 }, { name: "Cự Môn", offset: 3 },
-                { name: "Thiên Tướng", offset: 4 }, { name: "Thiên Lương", offset: 5 },
-                { name: "Thất Sát", offset: 6 }, { name: "Phá Quân", offset: 10 }
-            ];
-            phuGroup.forEach(star => chinhTinhMap[(thienPhuPos + star.offset) % 12].push(star.name));
-
-            const tenCungChuan = ["Mệnh", "Phụ Mẫu", "Phúc Đức", "Điền Trạch", "Quan Lộc", "Nô Bộc", "Thiên Di", "Tật Ách", "Tài Bạch", "Tử Tức", "Phu Thê", "Huynh Đệ"];
-            let cungTenMap = {};
-            for (let i = 0; i < 12; i++) cungTenMap[(menhPos + i) % 12] = tenCungChuan[i];
+            const rawDobVal = findValExact(['năm sinh', 'ngầy sinh', 'ngày sinh', 'dob', 'ngaysinh']) || findVal(['ngày sinh', 'dob', 'ngaysinh']);
 
             return {
-                info: { fullname, gender, day, month, year, canNam: THIEN_CAN[canNam], chiNam: DIA_CHI[chiNam], cuc: NGU_HANH_CUC[cucVal], menhPos, thanPos },
-                chinhTinhMap,
-                cungTenMap
+                stt: String(findValExact(['stt']) || findVal(['mã nv', 'mã nhân sự', 'id']) || defaultStt).trim(),
+                fullName: fullName,
+                shortName: shortName,
+                gender: gender,
+                dob: parseExcelDate(rawDobVal),
+                phone: String(findVal(['số điện thoại', 'sđt', 'điện thoại', 'phone', 'mobile', 'tel']) || '---').trim(),
+                cccd: String(findVal(['cccd', 'số cccd', 'cmnd', 'socccd']) || '---').trim(),
+                unitCode: cleanUnitCode(findVal(['mã đơn vị', 'mã đv', 'unitcode', 'madonvi'])),
+                unitName: cleanUnitName(findVal(['tên đơn vị công tác', 'tên đơn vị', 'đơn vị', 'phòng ban', 'department', 'tendonvi'])),
+                unit: cleanUnitName(findVal(['tên đơn vị công tác', 'tên đơn vị', 'đơn vị', 'phòng ban', 'department', 'tendonvi'])),
+                title: String(findVal(['chức danh công việc', 'chức danh', 'công việc', 'title', 'chucdanh']) || 'Cán bộ nhân viên').trim(),
+                status: String(findVal(['tình trạng công tác', 'trạng thái', 'status']) || 'Đang làm việc').trim(),
+                education: String(findVal(['trình độ chuyên môn', 'trình độ', 'education', 'trinhdo']) || 'Đại học').trim(),
+                workDays: String(findVal(['số công', 'tổng công', 'ngày công', 'workdays']) || '0').trim(),
+                startDate: parseExcelDate(findVal(['thời gian vào tct', 'ngày vào', 'startdate', 'ngayvao'])),
+                bhxh: String(findVal(['số sổ bhxh', 'bhxh', 'sosobhxh']) || '---').trim(),
+                salaryGroup: String(findVal(['nhóm lương cơ bản', 'nhóm lương cb', 'salarygroup']) || '---').trim(),
+                salaryGrade: String(findVal(['bậc lương cơ bản', 'bậc lương cb', 'salarygrade']) || '---').trim(),
+                salaryCoeff: String(findVal(['hệ số lương cơ bản', 'hệ số lương cb', 'salarycoeff']) || '---').trim(),
+                allowance: String(findVal(['phụ cấp cơ bản', 'phụ cấp cb', 'allowance']) || '---').trim(),
+                jobSalaryGroup: String(findVal(['nhóm lương công việc', 'nhóm lương cv', 'jobsalarygroup']) || '---').trim(),
+                jobSalaryGrade: String(findVal(['bậc lương công việc', 'bậc lương cv', 'jobsalarygrade']) || '---').trim(),
+                jobSalaryCoeff: String(findVal(['hệ số lương công việc', 'hệ số lương cv', 'jobsalarycoeff']) || '---').trim(),
+                jobAllowance: String(findVal(['phụ cấp lương công việc', 'phụ cấp cv', 'joballowance']) || '---').trim(),
+                retireDate: parseExcelDate(findVal(['dự kiến nghỉ hưu', 'năm về hưu', 'retiredate'])),
+                maternityLeave: String(findVal(['nghỉ thai sản', 'thai sản', 'maternityleave']) || '---').trim(),
+                maternityWarning: String(findVal(['cảnh báo thai sản', 'maternitywarning']) || '---').trim(),
+                annualLeaveDays: String(findVal(['số công phép năm', 'phép năm', 'annualleavedays']) || '12').trim(),
+                autoTermination: String(findVal(['tự động điền chấm dứt', 'autotermination']) || '---').trim(),
+                contractTermination: String(findVal(['chấm dứt hợp đồng lao động', 'chấm dứt hđld', 'contracttermination']) || '---').trim()
             };
         }
 
-        function lapLaSo(e) {
-            if(e) e.preventDefault();
-            const fullname = document.getElementById('fullname').value;
-            const gender = document.getElementById('gender').value;
-            const day = parseInt(document.getElementById('day').value);
-            const month = parseInt(document.getElementById('month').value);
-            const year = parseInt(document.getElementById('year').value);
-            const hourChi = parseInt(document.getElementById('hourChi').value);
+        function updateSalaryDatalists() {
+            const extractUnique = (key, defaultList) => {
+                const fromData = rawEmployees.map(e => e[key]).filter(v => v && v !== '---');
+                const combined = [...new Set([...defaultList, ...fromData])].sort();
+                return combined;
+            };
 
-            const data = calculateTuVi(fullname, gender, day, month, year, hourChi);
-            currentChartData = data;
-            renderChart(data);
-            generateAIAnalysis(data);
+            const populateDatalist = (elementId, items) => {
+                const datalist = document.getElementById(elementId);
+                if (datalist) {
+                    datalist.innerHTML = items.map(item => `<option value="${item}">`).join('');
+                }
+            };
+
+            populateDatalist('listSalaryGroup', extractUnique('salaryGroup', ['A1', 'A2', 'A3', 'B', 'C']));
+            populateDatalist('listSalaryGrade', extractUnique('salaryGrade', ['Bậc 1', 'Bậc 2', 'Bậc 3', 'Bậc 4', 'Bậc 5', 'Bậc 6', 'Bậc 7', 'Bậc 8', 'Bậc 9', 'Bậc 10', 'Bậc 11', 'Bậc 12']));
+            populateDatalist('listSalaryCoeff', extractUnique('salaryCoeff', ['2.34', '2.67', '3.00', '3.33', '3.66', '3.99', '4.32', '4.65', '4.98', '5.31', '5.64', '5.97', '6.30', '6.63', '6.96', '7.29', '7.62', '7.95', '8.00']));
+            populateDatalist('listAllowance', extractUnique('allowance', ['0.10', '0.20', '0.25', '0.30', '0.35', '0.40', '0.50', '0.60', '0.70', '0.80', '1.00']));
+            populateDatalist('listJobSalaryGroup', extractUnique('jobSalaryGroup', ['A', 'B', 'B.1', 'B.2', 'C', 'D']));
+            populateDatalist('listJobSalaryGrade', extractUnique('jobSalaryGrade', ['Bậc 1', 'Bậc 2', 'Bậc 3', 'Bậc 4', 'Bậc 5', 'Bậc 6']));
+            populateDatalist('listJobSalaryCoeff', extractUnique('jobSalaryCoeff', ['1.00', '1.20', '1.50', '1.80', '2.00', '2.20', '2.50', '2.80', '3.00', '3.50', '4.00', '4.50', '5.00']));
+            populateDatalist('listJobAllowance', extractUnique('jobAllowance', ['0.10', '0.20', '0.30', '0.40', '0.50', '0.60', '0.70', '0.80', '1.00']));
         }
 
-        function renderChart(data) {
-            const container = document.getElementById('chartContainer');
-            container.innerHTML = '';
+        async function clearAllData() {
+            if (confirm("Bạn có chắc chắn muốn XÓA SẠCH toàn bộ dữ liệu nhân sự cũ để nạp lại file mới chuẩn xác nhất không?")) {
+                rawEmployees = [];
+                attendanceLogs = [];
+                unitPayrollRules = {};
+                localStorage.removeItem('vnp_employees_data');
+                localStorage.removeItem('vnp_attendance_logs');
+                localStorage.removeItem('vnp_unit_payroll_rules');
+                initSystem();
+                await saveToCloud();
+                alert("Đã làm sạch dữ liệu thành công! Hãy bấm 'Tải File Hồ Sơ Mới' để nạp lại file Excel của bạn.");
+            }
+        }
 
-            CUNG_GRID_POS.forEach(pos => {
-                const chiIdx = DIA_CHI.indexOf(pos.chi);
-                const isMenh = (chiIdx === data.info.menhPos);
-                const isThan = (chiIdx === data.info.thanPos);
-                const tenCung = data.cungTenMap[chiIdx];
-                const chinhTinhs = data.chinhTinhMap[chiIdx] || [];
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', raw: true });
+                    const sheetName = workbook.SheetNames[0];
+                    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "", raw: true });
+                    if (rows.length === 0) { alert("File trống!"); return; }
 
-                const cell = document.createElement('div');
-                cell.className = `cung-box ${isMenh ? 'bg-orange-100 border-2 border-orange-500' : ''}`;
-                cell.style.gridRow = pos.row;
-                cell.style.gridColumn = pos.col;
+                    rawEmployees = rows.map((r, idx) => mapRawRowToEmployee(r, idx + 1));
+                    attendanceLogs = [];
+                    initSystem();
+                    await saveToCloud();
+                    alert(`Đã nạp thành công ${rawEmployees.length} nhân sự!`);
+                } catch (err) {
+                    alert("Lỗi đọc file: " + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+            event.target.value = '';
+        }
 
-                cell.innerHTML = `
-                    <div class="flex justify-between items-center border-b pb-1">
-                        <span class="font-bold text-xs ${isMenh ? 'text-red-700' : 'text-gray-800'}">${tenCung} ${isThan ? '<span class="text-blue-600 font-bold">(Thân)</span>' : ''}</span>
-                        <span class="text-xs font-semibold text-gray-500">${pos.chi}</span>
-                    </div>
-                    <div class="my-2 flex-grow">
-                        ${chinhTinhs.map(s => `<div class="chinh-tinh">${s}</div>`).join('')}
-                    </div>
-                    <div class="text-right text-[10px] text-gray-400">Đại hạn: ${10 + chiIdx*10}</div>
-                `;
-                container.appendChild(cell);
+        function handleAttendanceFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array', cellDates: true });
+                    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
+                    attendanceLogs = rows.map(r => ({
+                        empId: String(r['Mã NV'] || r['ID'] || '').trim(),
+                        fullName: String(r['Họ và tên'] || r['Tên NV'] || '').trim(),
+                        phone: String(r['Số điện thoại'] || r['SĐT'] || '').trim(),
+                        totalDays: Number(r['Số công'] || r['Tổng công'] || 1)
+                    }));
+
+                    attendanceLogs.forEach(att => {
+                        let emp = rawEmployees.find(e => e.stt === att.empId || e.fullName.toLowerCase() === att.fullName.toLowerCase());
+                        if (emp) emp.workDays = String(att.totalDays);
+                    });
+
+                    initSystem();
+                    await saveToCloud();
+                    alert(`Đã cập nhật chấm công cho ${attendanceLogs.length} bản ghi!`);
+                } catch(err) { alert("Lỗi đọc file chấm công: " + err.message); }
+            };
+            reader.readAsArrayBuffer(file);
+            event.target.value = '';
+        }
+
+        function initSystem() {
+            updateSalaryDatalists();
+            populateUnitFilter();
+            applyFilters();
+            renderUnitSummary();
+        }
+
+        function populateUnitFilter() {
+            const unitSelect = document.getElementById('unitFilter');
+            const currentSelected = unitSelect.value || 'ALL';
+            
+            const activeUnits = MASTER_UNITS.filter(u => 
+                rawEmployees.some(e => cleanUnitName(e.unit) === u)
+            );
+
+            unitSelect.innerHTML = `<option value="ALL">-- Tất cả đơn vị (${activeUnits.length}) --</option>`;
+            activeUnits.forEach(u => {
+                const count = rawEmployees.filter(e => cleanUnitName(e.unit) === u).length;
+                unitSelect.innerHTML += `<option value="${u}">${u} (${count} NS)</option>`;
             });
 
-            const trungCung = document.createElement('div');
-            trungCung.className = 'trung-cung flex flex-col justify-between text-center rounded-lg shadow-inner';
-            trungCung.innerHTML = `
-                <div>
-                    <h2 class="text-lg font-bold text-orange-900 border-b-2 border-orange-400 pb-1 mb-2">THIÊN BÀN</h2>
-                    <p class="text-xl font-black text-red-800">${data.info.fullname}</p>
-                    <p class="text-xs text-gray-700 mt-1">Năm sinh: <b>${data.info.canNam} ${data.info.chiNam}</b> (${data.info.gender})</p>
-                    <p class="text-xs text-gray-700">Âm lịch: Ngày ${data.info.day} tháng ${data.info.month}</p>
-                    <p class="text-xs font-bold text-amber-800 mt-2">${data.info.cuc}</p>
-                </div>
-                <div class="text-xs text-gray-600 italic border-t border-orange-200 pt-1">
-                    Cung Mệnh tại <b>${DIA_CHI[data.info.menhPos]}</b> | Cung Thân tại <b>${DIA_CHI[data.info.thanPos]}</b>
-                </div>
-            `;
-            container.appendChild(trungCung);
-        }
-
-        function generateAIAnalysis(data) {
-            document.getElementById('aiAnalysisBox').classList.remove('hidden');
-            const menhChi = DIA_CHI[data.info.menhPos];
-            const chinhTinhMenh = data.chinhTinhMap[data.info.menhPos].join(", ") || "Vô Chính Diệu";
-
-            document.getElementById('aiTongQuan').innerText = 
-                `Bản mệnh tuổi ${data.info.canNam} ${data.info.chiNam}, Mệnh tọa tại cung ${menhChi} có sao [${chinhTinhMenh}] đắc vị. ` +
-                `Đạt cục thế ${data.info.cuc}, bản tính quyết đoán, khả năng làm chủ bản thân và quản trị công việc xuất sắc.`;
-
-            document.getElementById('aiCongDanh').innerText = 
-                `Tài Bạch và Quan Lộc có sự phối hợp nhịp nhàng giữa các sao điều hành và tham mưu. ` +
-                `Rất thuận lợi trong việc xây dựng hệ thống quản lý, triển khai giải pháp kỹ thuật và hoạch định chiến lược.`;
-
-            document.getElementById('aiLoiKhuyen').innerText = 
-                `Giữ vững phương châm phát triển bền vững. Tối ưu hóa các nguồn lực cá nhân và chú trọng việc lưu trữ dữ liệu lâu dài.`;
-        }
-
-        // --- ĐỒNG BỘ GOOGLE DRIVE API ---
-        async function saveToDrive() {
-            if (!currentChartData) {
-                alert("Vui lòng bấm 'LẬP LÁ SỐ' trước khi lưu lên Google Drive!");
-                return;
+            if (activeUnits.includes(currentSelected)) {
+                unitSelect.value = currentSelected;
+            } else {
+                unitSelect.value = 'ALL';
             }
+        }
 
-            const btnSave = document.getElementById('btnSave');
-            btnSave.innerText = "⏳ Đang lưu...";
-            btnSave.disabled = true;
+        function applyFilters() {
+            const unitVal = document.getElementById('unitFilter').value;
+            const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
 
-            try {
-                const response = await fetch(GAS_WEB_APP_URL, {
-                    method: "POST",
-                    headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify(currentChartData)
-                });
+            currentFilteredData = rawEmployees.filter(emp => {
+                const empUnit = cleanUnitName(emp.unit);
+                const matchUnit = (unitVal === 'ALL') || (empUnit === unitVal);
+                const matchSearch = !searchVal || 
+                    emp.fullName.toLowerCase().includes(searchVal) ||
+                    emp.phone.includes(searchVal) ||
+                    emp.cccd.includes(searchVal) ||
+                    emp.bhxh.includes(searchVal) ||
+                    empUnit.toLowerCase().includes(searchVal) ||
+                    emp.title.toLowerCase().includes(searchVal);
+                return matchUnit && matchSearch;
+            });
 
-                const result = await response.json();
-                if (result.status === "success") {
-                    alert(`✅ ${result.message}\nTên tệp: ${result.fileName}`);
-                } else {
-                    alert(`❌ Lỗi lưu tệp: ${result.message}`);
+            updateStats();
+            renderCurrentView();
+        }
+
+        function updateStats() {
+            document.getElementById('statTotal').innerText = currentFilteredData.length;
+            const activeUnits = new Set(
+                currentFilteredData
+                    .map(e => cleanUnitName(e.unit))
+                    .filter(u => MASTER_UNITS.includes(u))
+            );
+            document.getElementById('statUnits').innerText = activeUnits.size;
+            document.getElementById('statAttendance').innerText = rawEmployees.filter(e => Number(e.workDays) > 0).length;
+            document.getElementById('statMale').innerText = currentFilteredData.filter(e => e.gender === 'Nam').length;
+            document.getElementById('statFemale').innerText = currentFilteredData.filter(e => e.gender === 'Nữ').length;
+        }
+
+        function switchView(mode) {
+            currentView = mode;
+            ['Card', 'Unit', 'Table'].forEach(m => {
+                const btn = document.getElementById(`btnView${m}`);
+                btn.className = (m.toLowerCase() === mode)
+                    ? "px-3 py-1.5 rounded-md text-xs font-bold transition bg-emerald-600 text-white shadow-sm"
+                    : "px-3 py-1.5 rounded-md text-xs font-bold transition text-slate-600 hover:bg-slate-100";
+            });
+            document.getElementById('cardViewContainer').classList.toggle('hidden', mode !== 'card');
+            document.getElementById('unitViewContainer').classList.toggle('hidden', mode !== 'unit');
+            document.getElementById('tableViewContainer').classList.toggle('hidden', mode !== 'table');
+            renderCurrentView();
+        }
+
+        function renderCurrentView() {
+            if (currentView === 'card') renderCardView();
+            if (currentView === 'unit') renderUnitGroupView();
+            if (currentView === 'table') renderTableView();
+        }
+
+        function renderCardView() {
+            document.getElementById('cardViewContainer').innerHTML = currentFilteredData.map(emp => buildProfileCardHTML(emp)).join('') || '<div class="bg-white p-12 text-center rounded-2xl text-slate-400">Không có dữ liệu nhân sự</div>';
+        }
+
+        function buildProfileCardHTML(emp) {
+            return `
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden text-xs md:text-sm print-card">
+                <div class="bg-emerald-800 text-white px-6 py-3.5 flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <span class="bg-emerald-600 text-white font-mono font-bold text-xs px-2.5 py-1 rounded-lg border border-emerald-500">STT: #${emp.stt}</span>
+                        <h2 class="font-extrabold text-base md:text-lg tracking-wide uppercase">${emp.fullName}</h2>
+                        ${emp.shortName ? `<span class="text-xs bg-emerald-700/80 px-2 py-0.5 rounded text-emerald-100">(${emp.shortName})</span>` : ''}
+                    </div>
+                    <div class="no-print flex gap-2">
+                        <button onclick="openEditModal('${emp.stt}')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition shadow-sm"><i class="fa-solid fa-pen"></i> Chỉnh sửa</button>
+                        <button onclick="deleteEmployee('${emp.stt}')" class="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition shadow-sm"><i class="fa-solid fa-trash"></i> Xóa</button>
+                    </div>
+                </div>
+
+                <div class="p-6 space-y-5">
+                    <div>
+                        <h3 class="font-black text-emerald-800 uppercase mb-2 pb-1 border-b border-slate-100 flex items-center gap-2 text-xs">
+                            <i class="fa-solid fa-user text-emerald-600"></i> 1. THÔNG TIN CÁ NHÂN & VỊ TRÍ CÔNG TÁC
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-2.5 bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Họ và tên:</span><span class="font-extrabold text-slate-800">${emp.fullName}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Tên gọi / Tên ngắn:</span><span class="font-bold text-slate-700">${emp.shortName || '---'}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Giới tính:</span><span class="font-bold text-purple-700">${emp.gender}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Ngày sinh:</span><span class="font-extrabold text-rose-700 font-mono">${emp.dob}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Số điện thoại:</span><span class="font-bold text-emerald-700 font-mono">${emp.phone}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Số CCCD:</span><span class="font-bold font-mono">${emp.cccd}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Đơn vị công tác:</span><span class="font-extrabold text-emerald-900">${emp.unit}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Mã đơn vị:</span><span class="font-bold text-blue-800 font-mono">${emp.unitCode || '---'}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Tình trạng công tác:</span><span class="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">${emp.status}</span></div>
+                            <div class="md:col-span-2 flex justify-between"><span class="text-slate-500 font-medium">Chức danh công việc:</span><span class="font-bold text-slate-800">${emp.title}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Trình độ chuyên môn:</span><span class="font-bold text-slate-700">${emp.education}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Ngày công thực tế:</span><span class="font-black text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded font-mono">${emp.workDays} ngày</span></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="font-black text-emerald-800 uppercase mb-2 pb-1 border-b border-slate-100 flex items-center gap-2 text-xs">
+                            <i class="fa-solid fa-wallet text-emerald-600"></i> 2. CHẾ ĐỘ LƯƠNG & BẢO HIỂM XÃ HỘI
+                        </h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-2.5 bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Vào TCT:</span><span class="font-bold font-mono">${emp.startDate}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Số sổ BHXH:</span><span class="font-bold font-mono text-slate-800">${emp.bhxh}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Nhóm lương CB:</span><span class="font-bold text-emerald-800">${emp.salaryGroup || '---'}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Bậc lương CB:</span><span class="font-bold">${emp.salaryGrade || '---'}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Hệ số lương CB:</span><span class="font-extrabold text-emerald-700 font-mono">${emp.salaryCoeff || '---'}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Phụ cấp CB:</span><span class="font-bold font-mono">${emp.allowance || '---'}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Nhóm lương CV:</span><span class="font-bold text-indigo-800">${emp.jobSalaryGroup || '---'}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Bậc lương CV:</span><span class="font-bold">${emp.jobSalaryGrade || '---'}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Hệ số lương CV:</span><span class="font-extrabold text-indigo-700 font-mono">${emp.jobSalaryCoeff || '---'}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Phụ cấp CV:</span><span class="font-bold font-mono">${emp.jobAllowance || '---'}</span></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="font-black text-emerald-800 uppercase mb-2 pb-1 border-b border-slate-100 flex items-center gap-2 text-xs">
+                            <i class="fa-solid fa-file-contract text-emerald-600"></i> 3. CHI TIẾT HỢP ĐỒNG & CHẾ ĐỘ KHÁC
+                        </h3>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2.5 bg-slate-50/70 p-3.5 rounded-xl border border-slate-100">
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Dự kiến nghỉ hưu:</span><span class="font-bold text-rose-800 font-mono">${emp.retireDate}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Thai sản / Nghỉ KL:</span><span class="font-bold text-slate-700">${emp.maternityLeave}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Cảnh báo thai sản:</span><span class="font-bold text-amber-700">${emp.maternityWarning}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Công phép năm:</span><span class="font-bold font-mono text-emerald-700">${emp.annualLeaveDays} ngày</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Tự động điền chấm dứt:</span><span class="font-bold text-slate-700">${emp.autoTermination}</span></div>
+                            <div class="flex justify-between"><span class="text-slate-500 font-medium">Chấm dứt HĐLĐ:</span><span class="font-bold text-rose-700">${emp.contractTermination}</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function renderUnitSummary() {
+            const box = document.getElementById('unitSummaryContainer');
+            const groups = {};
+
+            rawEmployees.forEach(e => {
+                const u = cleanUnitName(e.unit);
+                if (MASTER_UNITS.includes(u)) {
+                    if (!groups[u]) groups[u] = [];
+                    groups[u].push(e);
                 }
-            } catch (error) {
-                alert(`❌ Kết nối thất bại: ${error.message}`);
-            } finally {
-                btnSave.innerText = "Lưu lên Drive";
-                btnSave.disabled = false;
+            });
+
+            const activeUnitKeys = MASTER_UNITS.filter(u => groups[u] && groups[u].length > 0);
+
+            if (!activeUnitKeys.length) { 
+                box.innerHTML = ''; 
+                return; 
+            }
+            
+            box.innerHTML = `
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-4 py-3 bg-slate-50 border-b flex justify-between items-center">
+                    <h2 class="font-black text-slate-800 text-xs md:text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie text-emerald-600"></i>
+                        TỔNG HỢP NHÂN SỰ THEO ĐƠN VỊ CÔNG TÁC
+                    </h2>
+                    <span class="text-xs font-bold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full">${activeUnitKeys.length} đơn vị có nhân sự</span>
+                </div>
+                <div class="overflow-x-auto"><table class="w-full text-xs">
+                    <thead class="bg-slate-100 font-black text-slate-700 uppercase">
+                        <tr>
+                            <th class="p-2.5 text-center">STT</th>
+                            <th class="p-2.5 text-left">Tên Đơn Vị Công Tác</th>
+                            <th class="p-2.5 text-center">Tổng Nhân Sự</th>
+                            <th class="p-2.5 text-center">Nam</th>
+                            <th class="p-2.5 text-center">Nữ</th>
+                            <th class="p-2.5 text-center">Tổng Số Ngày Công</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">${activeUnitKeys.map((k, i) => {
+                        const list = groups[k];
+                        const days = list.reduce((s, e) => s + Number(e.workDays || 0), 0);
+                        return `<tr class="hover:bg-emerald-50/50 cursor-pointer transition" onclick="document.getElementById('unitFilter').value='${k}';applyFilters();">
+                            <td class="p-2.5 text-center font-bold text-slate-500">${i+1}</td>
+                            <td class="p-2.5 font-bold text-emerald-900">${k}</td>
+                            <td class="p-2.5 text-center font-black text-slate-800">${list.length}</td>
+                            <td class="p-2.5 text-center font-semibold text-slate-600">${list.filter(e=>e.gender==='Nam').length}</td>
+                            <td class="p-2.5 text-center font-semibold text-purple-700">${list.filter(e=>e.gender==='Nữ').length}</td>
+                            <td class="p-2.5 text-center font-black text-amber-800 font-mono">${days.toFixed(1)}</td>
+                        </tr>`;
+                    }).join('')}</tbody>
+                </table></div>
+            </div>`;
+        }
+
+        function renderUnitGroupView() {
+            const container = document.getElementById('unitViewContainer');
+            const groups = {};
+
+            currentFilteredData.forEach(e => {
+                const u = cleanUnitName(e.unit);
+                if (!groups[u]) groups[u] = [];
+                groups[u].push(e);
+            });
+
+            const activeKeys = MASTER_UNITS.filter(u => groups[u] && groups[u].length > 0);
+
+            container.innerHTML = activeKeys.map(u => `
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="bg-slate-50 p-4 border-b flex justify-between items-center font-black text-slate-800">
+                        <span class="text-sm font-extrabold text-emerald-900">${u}</span>
+                        <span class="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-bold">${groups[u].length} nhân sự</span>
+                    </div>
+                    <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                        ${groups[u].map(e => `
+                            <div class="border p-3 rounded-xl bg-slate-50/50 flex justify-between items-center">
+                                <div>
+                                    <div class="font-bold text-slate-800">${e.fullName}</div>
+                                    <div class="text-xs text-slate-500">${e.title} - SĐT: ${e.phone}</div>
+                                </div>
+                                <button onclick="openModalByStt('${e.stt}')" class="bg-white border border-slate-200 px-2.5 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-50 text-emerald-800 transition shadow-sm">Xem Hồ Sơ Đầy Đủ</button>
+                            </div>`).join('')}
+                    </div>
+                </div>`).join('') || '<div class="bg-white p-12 text-center rounded-2xl text-slate-400">Không có dữ liệu</div>';
+        }
+
+        function renderTableView() {
+            document.getElementById('tableBody').innerHTML = currentFilteredData.map((e, idx) => `
+                <tr class="hover:bg-slate-50">
+                    <td class="p-3 text-center font-bold">${idx + 1}</td>
+                    <td class="p-3 font-bold text-slate-800">${e.fullName}</td>
+                    <td class="p-3 font-mono text-emerald-700">${e.phone}</td>
+                    <td class="p-3 font-mono">${e.cccd}</td>
+                    <td class="p-3 font-bold text-emerald-800">${e.unit}</td>
+                    <td class="p-3">${e.title}</td>
+                    <td class="p-3 text-center font-bold text-amber-900">${e.workDays}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="openModalByStt('${e.stt}')" class="bg-slate-100 hover:bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded text-xs font-bold transition">Xem Hồ Sơ</button>
+                    </td>
+                </tr>`).join('') || '<tr><td colspan="8" class="p-8 text-center text-slate-400">Không có dữ liệu</td></tr>';
+        }
+
+        function openEditModal(stt) {
+            closeModal();
+            updateSalaryDatalists();
+            const form = document.getElementById('employeeForm');
+            form.reset();
+            if (stt) {
+                const emp = rawEmployees.find(e => e.stt === String(stt));
+                if (!emp) return;
+                document.getElementById('editStt').value = emp.stt;
+                document.getElementById('inputFullName').value = emp.fullName;
+                document.getElementById('inputShortName').value = emp.shortName;
+                document.getElementById('inputGender').value = emp.gender;
+                document.getElementById('inputDob').value = emp.dob;
+                document.getElementById('inputPhone').value = emp.phone;
+                document.getElementById('inputCccd').value = emp.cccd;
+                document.getElementById('inputUnitCode').value = emp.unitCode;
+                document.getElementById('inputUnit').value = emp.unit;
+                document.getElementById('inputWorkDays').value = emp.workDays;
+                document.getElementById('inputTitle').value = emp.title;
+                document.getElementById('inputStatus').value = emp.status || 'Đang làm việc';
+                document.getElementById('inputEducation').value = emp.education;
+                document.getElementById('inputStartDate').value = emp.startDate;
+                document.getElementById('inputBhxh').value = emp.bhxh;
+                document.getElementById('inputSalaryGroup').value = emp.salaryGroup;
+                document.getElementById('inputSalaryGrade').value = emp.salaryGrade;
+                document.getElementById('inputSalaryCoeff').value = emp.salaryCoeff;
+                document.getElementById('inputAllowance').value = emp.allowance;
+                document.getElementById('inputJobSalaryGroup').value = emp.jobSalaryGroup;
+                document.getElementById('inputJobSalaryGrade').value = emp.jobSalaryGrade;
+                document.getElementById('inputJobSalaryCoeff').value = emp.jobSalaryCoeff;
+                document.getElementById('inputJobAllowance').value = emp.jobAllowance;
+                document.getElementById('inputRetireDate').value = emp.retireDate;
+                document.getElementById('inputMaternityLeave').value = emp.maternityLeave;
+                document.getElementById('inputMaternityWarning').value = emp.maternityWarning;
+                document.getElementById('inputAnnualLeaveDays').value = emp.annualLeaveDays;
+                document.getElementById('inputAutoTermination').value = emp.autoTermination;
+                document.getElementById('inputContractTermination').value = emp.contractTermination;
+            } else {
+                document.getElementById('editStt').value = '';
+            }
+            document.getElementById('editModal').classList.remove('hidden');
+            document.getElementById('editModal').classList.add('flex');
+        }
+        function closeEditModal() { document.getElementById('editModal').classList.add('hidden'); document.getElementById('editModal').classList.remove('flex'); }
+
+        async function saveEmployeeData(event) {
+            if (event) event.preventDefault();
+            const stt = document.getElementById('editStt').value;
+            const emp = {
+                stt: stt || String(Date.now()),
+                fullName: document.getElementById('inputFullName').value.trim(),
+                shortName: document.getElementById('inputShortName').value.trim(),
+                gender: document.getElementById('inputGender').value,
+                dob: document.getElementById('inputDob').value.trim(),
+                phone: document.getElementById('inputPhone').value.trim(),
+                cccd: document.getElementById('inputCccd').value.trim(),
+                unitCode: cleanUnitCode(document.getElementById('inputUnitCode').value),
+                unitName: cleanUnitName(document.getElementById('inputUnit').value),
+                unit: cleanUnitName(document.getElementById('inputUnit').value),
+                workDays: document.getElementById('inputWorkDays').value.trim() || '0',
+                title: document.getElementById('inputTitle').value.trim(),
+                status: document.getElementById('inputStatus').value,
+                education: document.getElementById('inputEducation').value.trim(),
+                startDate: document.getElementById('inputStartDate').value.trim(),
+                bhxh: document.getElementById('inputBhxh').value.trim(),
+                salaryGroup: document.getElementById('inputSalaryGroup').value.trim(),
+                salaryGrade: document.getElementById('inputSalaryGrade').value.trim(),
+                salaryCoeff: document.getElementById('inputSalaryCoeff').value.trim(),
+                allowance: document.getElementById('inputAllowance').value.trim(),
+                jobSalaryGroup: document.getElementById('inputJobSalaryGroup').value.trim(),
+                jobSalaryGrade: document.getElementById('inputJobSalaryGrade').value.trim(),
+                jobSalaryCoeff: document.getElementById('inputJobSalaryCoeff').value.trim(),
+                jobAllowance: document.getElementById('inputJobAllowance').value.trim(),
+                retireDate: document.getElementById('inputRetireDate').value.trim(),
+                maternityLeave: document.getElementById('inputMaternityLeave').value.trim(),
+                maternityWarning: document.getElementById('inputMaternityWarning').value.trim(),
+                annualLeaveDays: document.getElementById('inputAnnualLeaveDays').value.trim(),
+                autoTermination: document.getElementById('inputAutoTermination').value.trim(),
+                contractTermination: document.getElementById('inputContractTermination').value.trim()
+            };
+
+            if (stt) {
+                const idx = rawEmployees.findIndex(e => e.stt === stt);
+                if (idx !== -1) rawEmployees[idx] = emp;
+            } else {
+                rawEmployees.unshift(emp);
+            }
+            closeEditModal();
+            initSystem();
+            await saveToCloud();
+        }
+
+        async function deleteEmployee(stt) {
+            if (confirm("Bạn có chắc chắn muốn xóa nhân sự này?")) {
+                rawEmployees = rawEmployees.filter(e => e.stt !== String(stt));
+                initSystem();
+                await saveToCloud();
             }
         }
 
-        async function loadFromDrive() {
-            const btnLoad = document.getElementById('btnLoad');
-            btnLoad.innerText = "⏳ Đang tải...";
-            btnLoad.disabled = true;
+        function openModalByStt(stt) {
+            const emp = rawEmployees.find(e => e.stt === String(stt));
+            if (!emp) return;
+            document.getElementById('modalContent').innerHTML = buildProfileCardHTML(emp);
+            document.getElementById('profileModal').classList.remove('hidden');
+            document.getElementById('profileModal').classList.add('flex');
+        }
+        function closeModal() { document.getElementById('profileModal').classList.add('hidden'); document.getElementById('profileModal').classList.remove('flex'); }
 
-            try {
-                const response = await fetch(GAS_WEB_APP_URL, { method: "GET" });
-                const result = await response.json();
+        function openAttendanceModal() {
+            document.getElementById('attendanceTableBody').innerHTML = attendanceLogs.map((a, i) => `
+                <tr><td class="p-3 text-center">${i+1}</td><td class="p-3">${a.empId}</td><td class="p-3 font-bold">${a.fullName}</td><td class="p-3">${a.phone}</td><td class="p-3">—</td><td class="p-3 text-center">1</td><td class="p-3 text-center font-bold">${a.totalDays}</td></tr>`).join('') || '<tr><td colspan="7" class="p-8 text-center text-slate-400">Chưa có dữ liệu chấm công</td></tr>';
+            document.getElementById('attendanceModal').classList.remove('hidden');
+            document.getElementById('attendanceModal').classList.add('flex');
+        }
+        function closeAttendanceModal() { document.getElementById('attendanceModal').classList.add('hidden'); document.getElementById('attendanceModal').classList.remove('flex'); }
 
-                if (result.status === "success" && result.files && result.files.length > 0) {
-                    const fileNames = result.files.map((f, i) => `${i + 1}. ${f.name} (${new Date(f.updatedAt).toLocaleDateString()})`).join('\n');
-                    const choice = prompt(`Tìm thấy ${result.files.length} lá số trên Drive.\nNhập số thứ tự để tải:\n\n${fileNames}`, "1");
+        function exportExcelByUnits() {
+            if (!rawEmployees.length) return alert("Không có dữ liệu để xuất!");
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(rawEmployees);
+            XLSX.utils.book_append_sheet(wb, ws, "NhanSu_VINAPACO");
+            XLSX.writeFile(wb, `VINAPACO_NhanSu_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
 
-                    if (choice) {
-                        const idx = parseInt(choice) - 1;
-                        if (idx >= 0 && idx < result.files.length) {
-                            const selectedData = result.files[idx].content;
-                            currentChartData = selectedData;
+        function exportAttendanceExcel() { exportExcelByUnits(); }
 
-                            // Điền lại form
-                            document.getElementById('fullname').value = selectedData.info.fullname || '';
-                            document.getElementById('day').value = selectedData.info.day || 15;
-                            document.getElementById('month').value = selectedData.info.month || 5;
-                            document.getElementById('year').value = selectedData.info.year || 1990;
+        // BẮT SỰ KIỆN PHÍM ENTER CHO FORM CHỈNH SỬA / THÊM MỚI
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchCloudData(false);
 
-                            renderChart(selectedData);
-                            generateAIAnalysis(selectedData);
-                            alert(`✅ Đã tải lá số: ${result.files[idx].name}`);
-                        }
+            const employeeForm = document.getElementById('employeeForm');
+            if (employeeForm) {
+                employeeForm.addEventListener('keydown', function(event) {
+                    if (event.key === 'Enter') {
+                        event.preventDefault(); // Tránh reload trang mặc định
+                        saveEmployeeData(event); // Kích hoạt lưu & đồng bộ
                     }
-                } else {
-                    alert("Chưa có lá số nào được lưu trong thư mục 'TuVi_App_Data' trên Google Drive của bạn!");
-                }
-            } catch (error) {
-                alert(`❌ Không thể tải dữ liệu: ${error.message}`);
-            } finally {
-                btnLoad.innerText = "Tải từ Drive";
-                btnLoad.disabled = false;
+                });
             }
-        }
-
-        // Khởi tạo lá số mặc định khi mở trang
-        window.onload = () => lapLaSo();
+        });
     </script>
 </body>
 </html>
