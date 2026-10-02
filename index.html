@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Quản Lý Hồ Sơ Lý Lịch & Phiếu Lương Điện Tử - VINAPACO</title>
+    <title>Hệ Thống Hồ Sơ Nhân Sự, Quản Lý Chấm Công & Phiếu Lương Điện Tử - VINAPACO</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome Icons -->
@@ -12,12 +12,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
         
+        /* CẤU HÌNH IN ẤN CHUẨN VĂN BẢN HÀNH CHÍNH & PHIẾU LƯƠNG */
         @media print {
             .no-print { display: none !important; }
             body { background: white; padding: 0; margin: 0; font-size: 10pt; color: #000; }
-            .print-container { width: 100% !important; margin: 0 !important; padding: 5mm !important; box-shadow: none !important; border: none !important; }
+            .print-container { width: 100% !important; margin: 0 !important; padding: 10mm 5mm !important; box-shadow: none !important; border: none !important; }
             table { border-collapse: collapse !important; width: 100% !important; }
             th, td { border: 1px solid #000 !important; padding: 4px 3px !important; font-size: 8.5pt !important; }
         }
@@ -25,33 +26,33 @@
 </head>
 <body class="p-3 md:p-6 text-slate-800">
 
-    <!-- HEADER & THANH CÔNG CỤ -->
+    <!-- HEADER & TOOLBAR -->
     <header class="max-w-7xl mx-auto mb-6 bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 no-print">
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-4">
             <div>
                 <h1 class="text-xl md:text-2xl font-black text-emerald-800 flex items-center gap-2">
-                    <i class="fa-solid fa-address-card text-emerald-600"></i>
-                    QUẢN LÝ LÝ LỊCH NHÂN SỰ & QUYỂN LƯƠNG ĐIỆN TỬ - VINAPACO
+                    <i class="fa-solid fa-cloud-arrow-up text-emerald-600"></i>
+                    QUẢN LÝ HỒ SƠ NHÂN SỰ & PHIẾU LƯƠNG ĐIỆN TỬ - VINAPACO
                 </h1>
                 <p class="text-xs md:text-sm text-slate-500 mt-1" id="syncStatus">
-                    <i class="fa-solid fa-circle-notch fa-spin text-blue-600"></i> Đang tải dữ liệu hồ sơ nhân sự...
+                    <i class="fa-solid fa-circle-notch fa-spin text-blue-600"></i> Đang khởi tạo hệ thống...
                 </p>
             </div>
             
             <div class="flex flex-wrap items-center gap-2">
                 <button onclick="fetchCloudData(true)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs md:text-sm font-bold px-3 py-2.5 rounded-xl flex items-center gap-1.5 transition">
-                    <i class="fa-solid fa-rotate"></i> Đồng bộ đám mây
+                    <i class="fa-solid fa-rotate"></i> Tải lại đám mây
                 </button>
 
                 <label for="fileInput" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs md:text-sm font-bold px-3.5 py-2.5 rounded-xl cursor-pointer flex items-center gap-2 transition shadow-sm">
                     <i class="fa-solid fa-file-excel"></i>
-                    <span>Nạp File Lý Lịch Mới</span>
+                    <span>Tải File Hồ Sơ Mới</span>
                     <input type="file" id="fileInput" accept=".xlsx, .xls, .csv, .json" class="hidden" onchange="handleFileUpload(event)">
                 </label>
 
-                <label for="attendanceFileInput" class="bg-amber-600 hover:bg-amber-700 text-white text-xs md:text-sm font-bold px-3.5 py-2.5 rounded-xl cursor-pointer flex items-center gap-2 transition shadow-sm" title="Nhập dữ liệu công từ máy chấm công của đơn vị">
+                <label for="attendanceFileInput" class="bg-amber-600 hover:bg-amber-700 text-white text-xs md:text-sm font-bold px-3.5 py-2.5 rounded-xl cursor-pointer flex items-center gap-2 transition shadow-sm" title="Tải file máy chấm công để tự động tính lương cả đơn vị">
                     <i class="fa-solid fa-clock-rotate-left"></i>
-                    <span>Nhập Chấm Công Đơn Vị</span>
+                    <span>Nhập File Chấm Công Đơn Vị</span>
                     <input type="file" id="attendanceFileInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleAttendanceFileUpload(event)">
                 </label>
 
@@ -62,58 +63,65 @@
 
                 <button onclick="openEditModal(null)" class="bg-blue-600 hover:bg-blue-700 text-white text-xs md:text-sm font-bold px-3.5 py-2.5 rounded-xl flex items-center gap-2 transition shadow-sm">
                     <i class="fa-solid fa-user-plus"></i>
-                    <span>Thêm Hồ Sơ Nhân Sự</span>
+                    <span>Thêm Nhân Sự</span>
+                </button>
+
+                <button onclick="clearAllData()" class="bg-rose-600 hover:bg-rose-700 text-white text-xs md:text-sm font-bold px-3 py-2.5 rounded-xl flex items-center gap-1.5 transition shadow-sm" title="Xóa toàn bộ dữ liệu cũ để nạp mới">
+                    <i class="fa-solid fa-trash-can"></i> Làm Mới
                 </button>
             </div>
         </div>
 
-        <!-- THỐNG KÊ TỔNG QUAN HỒ SƠ -->
+        <!-- THỐNG KÊ TỔNG QUAN -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            <div class="bg-emerald-50/70 border border-emerald-200 p-3 rounded-xl">
-                <div class="text-xs text-emerald-700 font-bold uppercase">Tổng hồ sơ nhân sự</div>
+            <div class="bg-emerald-50/60 border border-emerald-200 p-3 rounded-xl">
+                <div class="text-xs text-emerald-700 font-semibold">Tổng nhân sự hệ thống</div>
                 <div class="text-xl font-black text-emerald-900" id="statTotal">0</div>
             </div>
-            <div class="bg-blue-50/70 border border-blue-200 p-3 rounded-xl">
-                <div class="text-xs text-blue-700 font-bold uppercase">Đơn vị / Phòng ban</div>
+            <div class="bg-blue-50/60 border border-blue-200 p-3 rounded-xl">
+                <div class="text-xs text-blue-700 font-semibold">Đơn vị / Phòng ban</div>
                 <div class="text-xl font-black text-blue-900" id="statUnits">0</div>
             </div>
-            <div class="bg-amber-50/70 border border-amber-200 p-3 rounded-xl">
-                <div class="text-xs text-amber-700 font-bold uppercase">Đã khớp công tháng này</div>
+            <div class="bg-amber-50/60 border border-amber-200 p-3 rounded-xl">
+                <div class="text-xs text-amber-700 font-semibold">Đã cập nhật chấm công</div>
                 <div class="text-xl font-black text-amber-900" id="statAttendance">0</div>
             </div>
-            <div class="bg-purple-50/70 border border-purple-200 p-3 rounded-xl">
-                <div class="text-xs text-purple-700 font-bold uppercase">Cơ cấu Nam / Nữ</div>
-                <div class="text-xl font-black text-purple-900"><span id="statMale">0</span> Nam / <span id="statFemale">0</span> Nữ</div>
+            <div class="bg-purple-50/60 border border-purple-200 p-3 rounded-xl">
+                <div class="text-xs text-purple-700 font-semibold">Cán bộ Nam / Nữ</div>
+                <div class="text-xl font-black text-purple-900"><span id="statMale">0</span> / <span id="statFemale">0</span></div>
             </div>
         </div>
 
-        <!-- BỘ LỌC TÌM KIẾM HỒ SƠ LÝ LỊCH -->
+        <!-- BỘ LỌC & TÌM KIẾM -->
         <div class="flex flex-col md:flex-row items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
             <div class="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
                 <div class="flex items-center gap-2 w-full sm:w-auto">
-                    <span class="text-xs font-bold text-slate-700 shrink-0"><i class="fa-solid fa-sitemap text-emerald-600"></i> Đơn vị:</span>
+                    <span class="text-xs font-bold text-slate-700 shrink-0"><i class="fa-solid fa-sitemap text-emerald-600"></i> Lọc Đơn Vị:</span>
                     <select id="unitFilter" onchange="applyFilters()" class="border border-slate-300 text-xs rounded-lg px-3 py-2 bg-white w-full sm:w-72 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                        <option value="ALL">-- Tất cả 18 đơn vị --</option>
+                        <option value="ALL">-- Tất cả đơn vị --</option>
                     </select>
                 </div>
-                <input type="text" id="searchInput" onkeyup="applyFilters()" placeholder="Tìm theo tên, SĐT, CCCD, Mã BHXH, Chức danh..." class="border border-slate-300 text-xs rounded-lg px-3 py-2 bg-white w-full sm:w-72 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium">
+                <input type="text" id="searchInput" onkeyup="applyFilters()" placeholder="Tìm tên, SĐT, CCCD, BHXH, chức danh..." class="border border-slate-300 text-xs rounded-lg px-3 py-2 bg-white w-full sm:w-60 focus:outline-none focus:ring-2 focus:ring-emerald-500">
             </div>
 
             <div class="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 w-full md:w-auto justify-center">
                 <button id="btnViewCard" onclick="switchView('card')" class="px-3 py-1.5 rounded-md text-xs font-bold transition bg-emerald-600 text-white">
-                    <i class="fa-solid fa-address-card mr-1"></i> Lý Lịch Chi Tiết
+                    <i class="fa-solid fa-address-card mr-1"></i> Thẻ Hồ Sơ
                 </button>
                 <button id="btnViewUnit" onclick="switchView('unit')" class="px-3 py-1.5 rounded-md text-xs font-bold transition text-slate-600 hover:bg-slate-100">
-                    <i class="fa-solid fa-layer-group mr-1"></i> Nhóm Đơn Vị
+                    <i class="fa-solid fa-layer-group mr-1"></i> Tách Đơn Vị
                 </button>
                 <button id="btnViewTable" onclick="switchView('table')" class="px-3 py-1.5 rounded-md text-xs font-bold transition text-slate-600 hover:bg-slate-100">
-                    <i class="fa-solid fa-table-list mr-1"></i> Bảng Danh Sách
+                    <i class="fa-solid fa-table-list mr-1"></i> Danh Sách
                 </button>
             </div>
         </div>
     </header>
 
-    <!-- CONTAINER HIỂN THỊ CHÍNH -->
+    <!-- TỔNG HỢP ĐƠN VỊ -->
+    <section id="unitSummaryContainer" class="max-w-7xl mx-auto mb-6 no-print"></section>
+
+    <!-- MAIN CONTAINER -->
     <main class="max-w-7xl mx-auto space-y-6">
         <div id="cardViewContainer" class="space-y-6"></div>
         <div id="unitViewContainer" class="hidden space-y-6"></div>
@@ -123,14 +131,13 @@
                     <thead>
                         <tr class="bg-slate-100 text-slate-700 uppercase font-extrabold border-b border-slate-200">
                             <th class="p-3 text-center">STT</th>
-                            <th class="p-3">Họ và Tên Nhân Sự</th>
+                            <th class="p-3">Họ và tên</th>
                             <th class="p-3">Số Điện Thoại</th>
                             <th class="p-3">Số CCCD</th>
-                            <th class="p-3">Số Sổ BHXH</th>
-                            <th class="p-3">Đơn Vị Công Tác</th>
-                            <th class="p-3">Chức Danh Công Việc</th>
-                            <th class="p-3 text-center">Ngày Công</th>
-                            <th class="p-3 text-center">Thao Tác</th>
+                            <th class="p-3">Đơn vị công tác</th>
+                            <th class="p-3">Chức danh công việc</th>
+                            <th class="p-3 text-center">Công TG</th>
+                            <th class="p-3 text-center">Phiếu Lương / Zalo</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody" class="divide-y divide-slate-100"></tbody>
@@ -139,54 +146,56 @@
         </div>
     </main>
 
-    <!-- MODAL Xem/Gửi Phiếu Lương Điện Tử qua Zalo -->
-    <div id="paySlipModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto">
-        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[95vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 relative">
-            <button onclick="closePaySlipModal()" class="absolute top-4 right-4 bg-slate-100 hover:bg-slate-200 text-slate-700 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm z-10 no-print"><i class="fa-solid fa-xmark"></i></button>
-            <div id="paySlipModalContent"></div>
-        </div>
-    </div>
-
-    <!-- MODAL In Bảng Lương Tổng Hợp Văn Bản Hành Chính VINAPACO -->
+    <!-- MODAL 1: IN BẢNG LƯƠNG CHUẨN VĂN BẢN HÀNH CHÍNH VINAPACO -->
     <div id="payrollReportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto">
         <div class="bg-white rounded-2xl max-w-7xl w-full max-h-[95vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 relative">
+            
             <div class="flex flex-col sm:flex-row justify-between items-center gap-3 border-b pb-3 mb-4 no-print">
                 <div class="flex flex-wrap items-center gap-3">
                     <span class="font-bold text-xs text-slate-700">Đơn vị:</span>
                     <select id="reportSelectUnit" onchange="renderPayrollReportTable()" class="border border-slate-300 rounded-lg px-3 py-1.5 font-bold text-emerald-900 text-xs bg-white">
+                        <!-- Populated by JS -->
                     </select>
 
-                    <span class="font-bold text-xs text-slate-700">Loại Bảng Lương:</span>
+                    <span class="font-bold text-xs text-slate-700">Mẫu Bảng Lương:</span>
                     <select id="reportSelectType" onchange="renderPayrollReportTable()" class="border border-slate-300 rounded-lg px-3 py-1.5 font-bold text-purple-900 text-xs bg-white">
-                        <option value="TONG_HOP">Bảng Tổng Hợp Thanh Toán Lương (LCB + LCV - Tạm ứng)</option>
-                        <option value="LUONG_CB">Bảng Lương Cơ Bản Chi Tiết</option>
-                        <option value="LUONG_CV">Bảng Lương Công Việc Chi Tiết</option>
+                        <option value="TONG_HOP">Bảng 1: Tổng Hợp Lương Thanh Toán (LCB + LCV - Tạm ứng)</option>
+                        <option value="LUONG_CB">Bảng 2: Chi Tiết Lương Cơ Bản (LCB)</option>
+                        <option value="LUONG_CV">Bảng 3: Chi Tiết Lương Công Việc (LCV)</option>
                     </select>
+
+                    <div class="flex items-center gap-1.5 border border-purple-200 bg-purple-50 px-2 py-1 rounded-lg">
+                        <span class="text-xs font-bold text-purple-900">Người lập biểu:</span>
+                        <input type="text" id="inputPreparerName" onkeyup="updatePreparerName()" value="Trần Bình Dương" class="border border-purple-300 rounded px-2 py-0.5 text-xs font-bold text-purple-900 w-36">
+                    </div>
                 </div>
 
                 <div class="flex items-center gap-2">
                     <button onclick="window.print()" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-sm">
-                        <i class="fa-solid fa-print"></i> In Bảng Lương Văn Bản
+                        <i class="fa-solid fa-print"></i> In Bảng Lương
                     </button>
                     <button onclick="closePayrollReportModal()" class="text-slate-400 hover:text-slate-600 font-bold text-xl px-2"><i class="fa-solid fa-xmark"></i></button>
                 </div>
             </div>
 
+            <!-- NỘI DUNG VĂN BẢN HÀNH CHÍNH CHUẨN ĐỂ IN -->
             <div id="payrollReportPrintArea" class="print-container bg-white p-2">
                 <div class="grid grid-cols-2 text-center text-xs font-bold mb-4 uppercase">
                     <div>
                         <p class="tracking-wider">TỔNG CÔNG TY GIẤY VIỆT NAM</p>
                         <p id="printUnitHeaderName" class="text-emerald-900 font-extrabold text-xs md:text-sm">VĂN PHÒNG</p>
+                        <p class="font-normal text-[9pt] lowercase italic mt-0.5">Số: ....../QĐ-NS-VINAPACO</p>
                     </div>
                     <div>
                         <p class="font-black">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
                         <p class="font-bold underline decoration-1 underline-offset-4">Độc lập - Tự do - Hạnh phúc</p>
+                        <p class="font-normal text-[9pt] lowercase italic mt-0.5">Phú Thọ, ngày .... tháng .... năm 2026</p>
                     </div>
                 </div>
 
                 <div class="text-center mb-4">
                     <h2 class="text-base md:text-lg font-black uppercase tracking-wide" id="printTitleText">BẢNG LƯƠNG THANH TOÁN HÀNG THÁNG</h2>
-                    <p class="text-xs italic text-slate-600 mt-0.5">Kỳ thanh toán: Tháng 5 năm 2026</p>
+                    <p class="text-xs italic text-slate-600 mt-0.5" id="printSubTitle">Kỳ thanh toán: Tháng 5 năm 2026 - Áp dụng Quy chế Lương Tổng Công Ty Giấy Việt Nam</p>
                 </div>
 
                 <div class="overflow-x-auto mb-6">
@@ -195,69 +204,180 @@
                         <tbody id="payrollReportTbody" class="divide-y divide-slate-800"></tbody>
                     </table>
                 </div>
+
+                <div class="grid grid-cols-3 text-center text-xs font-bold gap-4 pt-4 mt-6 border-t border-slate-300">
+                    <div>
+                        <p class="uppercase font-extrabold mb-1">NGƯỜI LẬP BIỂU</p>
+                        <p class="italic font-normal text-[9pt] text-slate-500 mb-16">(Ký, ghi rõ họ tên)</p>
+                        <p class="font-extrabold text-slate-800" id="printSignerPreparer">Trần Bình Dương</p>
+                    </div>
+
+                    <div>
+                        <p class="uppercase font-extrabold mb-1">PHÒNG NHÂN SỰ</p>
+                        <p class="italic font-normal text-[9pt] text-slate-500 mb-16">(Ký, đóng dấu duyệt)</p>
+                        <p class="font-extrabold text-slate-800"></p>
+                    </div>
+
+                    <div>
+                        <p class="uppercase font-extrabold mb-1">THỦ TRƯỞNG ĐƠN VỊ</p>
+                        <p class="italic font-normal text-[9pt] text-slate-500 mb-16">(Ký tên và phê duyệt)</p>
+                        <p class="font-extrabold text-slate-800"></p>
+                    </div>
+                </div>
             </div>
+
         </div>
     </div>
 
-    <!-- MODAL THÊM / CHỈNH SỬA HỒ SƠ LÝ LỊCH CÁ NHÂN -->
+    <!-- MODAL 2: PHIẾU LƯƠNG ĐIỆN TỬ CÁ NHÂN & GỬI ZALO -->
+    <div id="paySlipModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[95vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 relative">
+            <button onclick="closePaySlipModal()" class="absolute top-4 right-4 bg-slate-100 hover:bg-slate-200 text-slate-700 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm z-10 no-print"><i class="fa-solid fa-xmark"></i></button>
+            <div id="paySlipModalContent"></div>
+        </div>
+    </div>
+
+    <!-- MODAL EDIT / ADD -->
     <div id="editModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto no-print">
         <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 relative">
             <div class="flex justify-between items-center border-b pb-3 mb-4">
-                <h3 class="font-extrabold text-emerald-800 text-lg flex items-center gap-2">
-                    <i class="fa-solid fa-id-card"></i> THÔNG TIN LÝ LỊCH TRÍCH NGANG NHÂN SỰ
+                <h3 class="font-extrabold text-emerald-800 text-lg flex items-center gap-2" id="editModalTitle">
+                    <i class="fa-solid fa-user-pen"></i> THÔNG TIN NHÂN SỰ CHI TIẾT
                 </h3>
                 <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600 font-bold text-xl"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <form id="employeeForm" onsubmit="saveEmployeeData(event)" class="space-y-4 text-xs">
+            <form id="employeeForm" onsubmit="saveEmployeeData(event)" class="space-y-5 text-xs">
                 <input type="hidden" id="editStt">
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                    <div><label class="font-bold block mb-1">Họ và tên nhân sự *</label><input type="text" id="inputFullName" required class="w-full border rounded-lg p-2 font-bold"></div>
-                    <div><label class="font-semibold block mb-1">Tên thường gọi</label><input type="text" id="inputShortName" class="w-full border rounded-lg p-2"></div>
-                    <div><label class="font-semibold block mb-1">Giới tính</label><select id="inputGender" class="w-full border rounded-lg p-2 bg-white"><option value="Nam">Nam</option><option value="Nữ">Nữ</option></select></div>
-                    <div><label class="font-semibold block mb-1">Ngày tháng năm sinh</label><input type="text" id="inputDob" class="w-full border rounded-lg p-2 font-mono"></div>
-                    <div><label class="font-bold block mb-1 text-emerald-800">Số điện thoại *</label><input type="text" id="inputPhone" class="w-full border border-emerald-400 rounded-lg p-2 font-mono font-bold text-emerald-900 bg-emerald-50/40"></div>
-                    <div><label class="font-semibold block mb-1">Số Căn cước công dân (CCCD)</label><input type="text" id="inputCccd" class="w-full border rounded-lg p-2 font-mono font-bold"></div>
-                    <div><label class="font-semibold block mb-1">Số sổ Bảo hiểm xã hội (BHXH)</label><input type="text" id="inputBhxh" class="w-full border rounded-lg p-2 font-mono font-bold"></div>
-                    <div><label class="font-semibold block mb-1">Đơn vị công tác *</label>
-                        <select id="inputUnit" required class="w-full border rounded-lg p-2 font-bold text-emerald-900 bg-white">
-                            <option value="Văn phòng TCT">Văn phòng TCT</option>
-                            <option value="Phòng Kỹ thuật">Phòng Kỹ thuật</option>
-                            <option value="Xí nghiệp Bảo dưỡng">Xí nghiệp Bảo dưỡng</option>
-                            <option value="Phòng Nhân sự">Phòng Nhân sự</option>
-                            <option value="Trợ lý, Thư ký Hội đồng thành viên">Trợ lý, Thư ký Hội đồng thành viên</option>
-                            <option value="Nhà máy Điện">Nhà máy Điện</option>
-                            <option value="Phòng Lâm nghiệp">Phòng Lâm nghiệp</option>
-                            <option value="Phòng Tài chính kế toán">Phòng Tài chính kế toán</option>
-                            <option value="Xí nghiệp Dịch vụ">Xí nghiệp Dịch vụ</option>
-                            <option value="Phòng Kế hoạch Đầu tư">Phòng Kế hoạch Đầu tư</option>
-                            <option value="Phòng Vật tư">Phòng Vật tư</option>
-                            <option value="Văn phòng Công đoàn">Văn phòng Công đoàn</option>
-                            <option value="Tổng kho">Tổng kho</option>
-                            <option value="Phòng Kinh doanh">Phòng Kinh doanh</option>
-                            <option value="Ban Kiểm tra Kiểm toán nội bộ">Ban Kiểm tra Kiểm toán nội bộ</option>
-                            <option value="Nhà máy Hóa chất">Nhà máy Hóa chất</option>
-                            <option value="Các cơ quan tham mưu giúp việc Đảng ủy">Các cơ quan tham mưu giúp việc Đảng ủy</option>
-                            <option value="Nhà máy Giấy">Nhà máy Giấy</option>
-                        </select>
+                <!-- KHỐI 1: CÁ NHÂN & CÔNG TÁC -->
+                <div>
+                    <h4 class="font-bold text-emerald-700 uppercase mb-2 text-xs flex items-center gap-1.5"><i class="fa-solid fa-thumbtack text-rose-500"></i> 1. Thông tin cá nhân & Công tác</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <div><label class="font-semibold block mb-1">Họ và tên *</label><input type="text" id="inputFullName" required class="w-full border rounded-lg p-2 font-bold"></div>
+                        <div><label class="font-semibold block mb-1">Tên gọi</label><input type="text" id="inputShortName" class="w-full border rounded-lg p-2 font-bold"></div>
+                        <div><label class="font-semibold block mb-1">Giới tính</label><select id="inputGender" class="w-full border rounded-lg p-2 bg-white font-semibold"><option value="Nam">Nam</option><option value="Nữ">Nữ</option></select></div>
+                        <div><label class="font-semibold block mb-1">Ngày sinh</label><input type="text" id="inputDob" class="w-full border rounded-lg p-2"></div>
+                        <div><label class="font-bold block mb-1 text-emerald-800">Số điện thoại *</label><input type="text" id="inputPhone" class="w-full border border-emerald-400 rounded-lg p-2 font-mono font-bold text-emerald-900 bg-emerald-50/30"></div>
+                        <div><label class="font-semibold block mb-1">Số CCCD</label><input type="text" id="inputCccd" class="w-full border rounded-lg p-2 font-mono font-bold"></div>
+                        <div><label class="font-semibold block mb-1">Mã đơn vị</label><input type="text" id="inputUnitCode" class="w-full border rounded-lg p-2 font-bold text-blue-900 border-blue-300"></div>
+                        
+                        <div>
+                            <label class="font-semibold block mb-1">Tên đơn vị công tác *</label>
+                            <select id="inputUnit" required class="w-full border rounded-lg p-2 font-bold text-emerald-900 border-emerald-300 bg-white">
+                                <option value="">-- Chọn đơn vị --</option>
+                                <option value="Văn phòng TCT">Văn phòng TCT</option>
+                                <option value="Phòng Kỹ thuật">Phòng Kỹ thuật</option>
+                                <option value="Xí nghiệp Bảo dưỡng">Xí nghiệp Bảo dưỡng</option>
+                                <option value="Phòng Nhân sự">Phòng Nhân sự</option>
+                                <option value="Trợ lý, Thư ký Hội đồng thành viên">Trợ lý, Thư ký Hội đồng thành viên</option>
+                                <option value="Nhà máy Điện">Nhà máy Điện</option>
+                                <option value="Phòng Lâm nghiệp">Phòng Lâm nghiệp</option>
+                                <option value="Phòng Tài chính kế toán">Phòng Tài chính kế toán</option>
+                                <option value="Xí nghiệp Dịch vụ">Xí nghiệp Dịch vụ</option>
+                                <option value="Phòng Kế hoạch Đầu tư">Phòng Kế hoạch Đầu tư</option>
+                                <option value="Phòng Vật tư">Phòng Vật tư</option>
+                                <option value="Văn phòng Công đoàn">Văn phòng Công đoàn</option>
+                                <option value="Tổng kho">Tổng kho</option>
+                                <option value="Phòng Kinh doanh">Phòng Kinh doanh</option>
+                                <option value="Ban Kiểm tra Kiểm toán nội bộ">Ban Kiểm tra Kiểm toán nội bộ</option>
+                                <option value="Nhà máy Hóa chất">Nhà máy Hóa chất</option>
+                                <option value="Các cơ quan tham mưu giúp việc Đảng ủy">Các cơ quan tham mưu giúp việc Đảng ủy</option>
+                                <option value="Nhà máy Giấy">Nhà máy Giấy</option>
+                            </select>
+                        </div>
+
+                        <div><label class="font-semibold block mb-1">Số công thời gian (Nhập/Máy CC)</label><input type="text" id="inputWorkDays" class="w-full border border-amber-300 rounded-lg p-2 font-mono font-bold text-amber-900 bg-amber-50/30" value="20"></div>
+                        <div><label class="font-semibold block mb-1">Số công Lễ / Phép</label><input type="text" id="inputLeaveDays" class="w-full border rounded-lg p-2 font-mono font-bold" value="1"></div>
+                        <div class="md:col-span-2"><label class="font-semibold block mb-1">Chức danh công việc</label><input type="text" id="inputTitle" class="w-full border rounded-lg p-2"></div>
+                        
+                        <div>
+                            <label class="font-semibold block mb-1">Tình trạng công tác</label>
+                            <select id="inputStatus" class="w-full border rounded-lg p-2 bg-white font-semibold">
+                                <option value="Đang làm việc">Đang làm việc</option>
+                                <option value="Nghỉ thai sản">Nghỉ thai sản</option>
+                                <option value="Nghỉ không lương">Nghỉ không lương</option>
+                                <option value="Đã nghỉ hưu">Đã nghỉ hưu</option>
+                                <option value="Chấm dứt HĐLĐ">Chấm dứt HĐLĐ</option>
+                            </select>
+                        </div>
+
+                        <div><label class="font-semibold block mb-1">Trình độ chuyên môn</label><input type="text" id="inputEducation" class="w-full border rounded-lg p-2"></div>
                     </div>
-                    <div><label class="font-semibold block mb-1">Chức danh công việc</label><input type="text" id="inputTitle" class="w-full border rounded-lg p-2"></div>
-                    <div><label class="font-semibold block mb-1">Trình độ chuyên môn</label><input type="text" id="inputEducation" class="w-full border rounded-lg p-2"></div>
-                    <div><label class="font-semibold block mb-1">Ngày tuyển dụng vào TCT</label><input type="text" id="inputStartDate" class="w-full border rounded-lg p-2 font-mono"></div>
-                    <div><label class="font-semibold block mb-1">Dự kiến thời điểm nghỉ hưu</label><input type="text" id="inputRetireDate" class="w-full border rounded-lg p-2 font-mono"></div>
+                </div>
+
+                <!-- KHỐI 2: HỆ SỐ LƯƠNG CƠ BẢN & CÔNG VIỆC THỰC TẾ VINAPACO -->
+                <div>
+                    <h4 class="font-bold text-emerald-700 uppercase mb-2 text-xs flex items-center gap-1.5"><i class="fa-solid fa-briefcase"></i> 2. Hệ số Lương & Phụ cấp (Theo mẫu Văn phòng TCT)</h4>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <div><label class="font-semibold block mb-1">Vào TCT</label><input type="text" id="inputStartDate" class="w-full border rounded-lg p-2"></div>
+                        <div><label class="font-semibold block mb-1">Số sổ BHXH</label><input type="text" id="inputBhxh" class="w-full border rounded-lg p-2 font-mono"></div>
+                        
+                        <div>
+                            <label class="font-semibold block mb-1">Hệ số lương CB *</label>
+                            <input type="text" id="inputSalaryCoeff" list="listSalaryCoeff" class="w-full border rounded-lg p-2 font-mono font-bold" placeholder="VD: 1.94">
+                            <datalist id="listSalaryCoeff"></datalist>
+                        </div>
+
+                        <div>
+                            <label class="font-semibold block mb-1">Phụ cấp CB</label>
+                            <input type="text" id="inputAllowance" list="listAllowance" class="w-full border rounded-lg p-2 font-mono" placeholder="VD: 0.25">
+                            <datalist id="listAllowance"></datalist>
+                        </div>
+
+                        <div>
+                            <label class="font-semibold block mb-1">Hệ số lương CV *</label>
+                            <input type="text" id="inputJobSalaryCoeff" list="listJobSalaryCoeff" class="w-full border rounded-lg p-2 font-mono font-bold text-indigo-800" placeholder="VD: 5.2">
+                            <datalist id="listJobSalaryCoeff"></datalist>
+                        </div>
+
+                        <div>
+                            <label class="font-semibold block mb-1">Phụ cấp CV</label>
+                            <input type="text" id="inputJobAllowance" list="listJobAllowance" class="w-full border rounded-lg p-2 font-mono text-indigo-800" placeholder="VD: 0.6">
+                            <datalist id="listJobAllowance"></datalist>
+                        </div>
+
+                        <div>
+                            <label class="font-semibold block mb-1">HS Hoàn thành CV</label>
+                            <input type="text" id="inputCompletionCoeff" class="w-full border rounded-lg p-2 font-mono font-bold" value="1.0">
+                        </div>
+
+                        <div>
+                            <label class="font-semibold block mb-1">Số tiền Tạm ứng (VNĐ)</label>
+                            <input type="text" id="inputAdvanceAmount" class="w-full border rounded-lg p-2 font-mono font-bold text-rose-700" value="0">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KHỐI 3: CHI TIẾT KHÁC -->
+                <div>
+                    <h4 class="font-bold text-emerald-700 uppercase mb-2 text-xs flex items-center gap-1.5"><i class="fa-regular fa-file-lines"></i> 3. Chi tiết khác</h4>
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <div><label class="font-semibold block mb-1">Dự kiến nghỉ hưu</label><input type="text" id="inputRetireDate" class="w-full border rounded-lg p-2"></div>
+                        <div><label class="font-semibold block mb-1">Thai sản / Nghỉ KL</label><input type="text" id="inputMaternityLeave" class="w-full border rounded-lg p-2"></div>
+                        <div><label class="font-semibold block mb-1">Cảnh báo thai sản</label><input type="text" id="inputMaternityWarning" class="w-full border rounded-lg p-2"></div>
+                    </div>
                 </div>
 
                 <div class="flex justify-end gap-2 pt-3 border-t">
-                    <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-slate-200 rounded-xl font-bold text-slate-700">Hủy</button>
-                    <button type="submit" class="px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold"><i class="fa-solid fa-save mr-1"></i> Lưu Lý Lịch Nhân Sự</button>
+                    <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-xl font-bold text-slate-700">Hủy</button>
+                    <button type="submit" class="px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold shadow-md"><i class="fa-solid fa-cloud-arrow-up mr-1"></i> Lưu & Đồng bộ (Enter)</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- MODAL XEM CHI TIẾT CÁ NHÂN -->
+    <div id="profileModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto no-print">
+        <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 p-2 relative">
+            <button onclick="closeModal()" class="absolute top-4 right-4 bg-slate-100 hover:bg-slate-200 text-slate-700 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm z-10"><i class="fa-solid fa-xmark"></i></button>
+            <div id="modalContent"></div>
         </div>
     </div>
 
     <script>
         const CLOUD_API_URL = "https://script.google.com/macros/s/AKfycby8iehhv8RNRh3pWSwWMNv_qX893POHNQc45YUm_D-bSfK5XouJR7mZ1zHyxzDnU0KO/exec";
 
+        // DANH SÁCH 18 ĐƠN VỊ CÔNG TÁC CỦA VINAPACO
         const MASTER_UNITS = [
             "Văn phòng TCT", "Phòng Kỹ thuật", "Xí nghiệp Bảo dưỡng", "Phòng Nhân sự", 
             "Trợ lý, Thư ký Hội đồng thành viên", "Nhà máy Điện", "Phòng Lâm nghiệp", 
@@ -270,6 +390,9 @@
         let rawEmployees = [];
         let currentFilteredData = [];
         let currentView = 'card';
+        let cloudSyncInProgress = false;
+        let localDirty = false;
+        const CLIENT_ID = 'WEB-' + Math.random().toString(36).slice(2, 10);
 
         function setSyncStatus(html) {
             const el = document.getElementById('syncStatus');
@@ -277,7 +400,9 @@
         }
 
         function saveToLocal() {
-            try { localStorage.setItem('vnp_employees_data', JSON.stringify(rawEmployees)); } catch(e) {}
+            try {
+                localStorage.setItem('vnp_employees_data', JSON.stringify(rawEmployees));
+            } catch(e) {}
         }
 
         function loadFromLocal() {
@@ -288,41 +413,246 @@
             return null;
         }
 
+        function jsonpGet(timeoutMs = 10000) {
+            return new Promise((resolve, reject) => {
+                const callbackName = '__vnpCloud_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+                const script = document.createElement('script');
+                let settled = false;
+                const timer = setTimeout(() => {
+                    if (settled) return;
+                    settled = true;
+                    script.remove();
+                    delete window[callbackName];
+                    reject(new Error('Hết thời gian chờ Cloud'));
+                }, timeoutMs);
+
+                window[callbackName] = data => {
+                    if (settled) return;
+                    settled = true;
+                    clearTimeout(timer);
+                    script.remove();
+                    delete window[callbackName];
+                    resolve(data);
+                };
+
+                script.onerror = () => {
+                    if (settled) return;
+                    settled = true;
+                    clearTimeout(timer);
+                    script.remove();
+                    delete window[callbackName];
+                    reject(new Error('Lỗi kết nối Cloud'));
+                };
+
+                script.src = CLOUD_API_URL + '?callback=' + encodeURIComponent(callbackName) + '&t=' + Date.now();
+                document.head.appendChild(script);
+            });
+        }
+
         async function fetchCloudData(isManual = false) {
             const localData = loadFromLocal();
             if (localData && localData.length > 0 && !isManual) {
                 rawEmployees = localData;
                 initSystem();
-                setSyncStatus(`<span class="text-slate-700 font-semibold"><i class="fa-solid fa-hard-drive"></i> Đã nạp ${rawEmployees.length} lý lịch nhân sự từ bộ nhớ máy</span>`);
+                setSyncStatus(`<span class="text-slate-600 font-semibold"><i class="fa-solid fa-hard-drive"></i> Đã tải ${rawEmployees.length} nhân sự từ bộ nhớ máy; đang kiểm tra Cloud...</span>`);
             } else {
-                setSyncStatus(`<i class="fa-solid fa-circle-notch fa-spin text-blue-600"></i> Đang tải dữ liệu hồ sơ nhân sự...`);
+                setSyncStatus(`<i class="fa-solid fa-circle-notch fa-spin text-blue-600"></i> Đang đọc dữ liệu Cloud...`);
+            }
+
+            try {
+                const data = await jsonpGet();
+                if (data && (data.employees || Array.isArray(data))) {
+                    const empList = data.employees || data;
+                    if (empList.length > 0) {
+                        if (!localDirty || isManual) {
+                            rawEmployees = empList;
+                            localDirty = false;
+                            saveToLocal();
+                            initSystem();
+                        }
+                        setSyncStatus(`<span class="text-emerald-700 font-bold"><i class="fa-solid fa-cloud-check"></i> Đã đồng bộ Cloud • ${rawEmployees.length} nhân sự</span>`);
+                        return;
+                    }
+                }
+                setSyncStatus(`<span class="text-amber-600 font-bold"><i class="fa-solid fa-database"></i> Cloud chưa có dữ liệu. Hãy tải file hồ sơ lên.</span>`);
+            } catch (err) {
+                if (rawEmployees.length > 0) {
+                    setSyncStatus(`<span class="text-amber-700 font-semibold"><i class="fa-solid fa-triangle-exclamation"></i> Không kết nối Cloud • Dữ liệu trên máy an toàn</span>`);
+                } else {
+                    setSyncStatus(`<span class="text-rose-600 font-semibold"><i class="fa-solid fa-cloud-exclamation"></i> Chưa kết nối được Cloud</span>`);
+                }
+            }
+        }
+
+        function postCloudPayload(payload) {
+            return new Promise((resolve, reject) => {
+                const iframeName = 'vnp_post_' + Date.now();
+                const iframe = document.createElement('iframe');
+                iframe.name = iframeName;
+                iframe.style.display = 'none';
+                document.body.appendChild(iframe);
+
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = CLOUD_API_URL;
+                form.target = iframeName;
+                form.style.display = 'none';
+
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'payload';
+                input.value = JSON.stringify(payload);
+                form.appendChild(input);
+                document.body.appendChild(form);
+
+                let done = false;
+                const finish = (ok) => {
+                    if (done) return;
+                    done = true;
+                    setTimeout(() => { iframe.remove(); form.remove(); }, 1000);
+                    ok ? resolve(true) : reject(new Error('Lỗi gửi dữ liệu'));
+                };
+
+                iframe.onload = () => finish(true);
+                iframe.onerror = () => finish(false);
+                form.submit();
+                setTimeout(() => finish(true), 3500);
+            });
+        }
+
+        async function saveToCloud() {
+            if (cloudSyncInProgress) return false;
+            cloudSyncInProgress = true;
+            localDirty = true;
+            saveToLocal();
+
+            const payload = {
+                clientId: CLIENT_ID,
+                updatedAt: new Date().toISOString(),
+                employees: rawEmployees
+            };
+
+            setSyncStatus(`<i class="fa-solid fa-circle-notch fa-spin text-emerald-600"></i> Đang ghi dữ liệu lên Google Sheets...`);
+            try {
+                await postCloudPayload(payload);
+                localDirty = false;
+                saveToLocal();
+                setSyncStatus(`<span class="text-emerald-700 font-bold"><i class="fa-solid fa-cloud-check"></i> Đã lưu & đồng bộ Google Sheets thành công • ${rawEmployees.length} nhân sự</span>`);
+                cloudSyncInProgress = false;
+                return true;
+            } catch (err) {
+                setSyncStatus(`<span class="text-rose-700 font-bold"><i class="fa-solid fa-cloud-exclamation"></i> Đã lưu trên máy • Chưa xác minh được Google Sheets</span>`);
+                cloudSyncInProgress = false;
+                return false;
             }
         }
 
         function cleanUnitName(str) { 
             const s = String(str || '').trim().replace(/\s+/g, ' '); 
             const matched = MASTER_UNITS.find(m => m.toLowerCase() === s.toLowerCase());
-            return matched || s || 'Văn phòng TCT';
+            if (matched) return matched;
+            return s || 'Văn phòng TCT';
+        }
+        
+        function cleanUnitCode(str) { return String(str || '').trim().toUpperCase(); }
+
+        function parseExcelDate(val) {
+            if (!val) return '---';
+            if (val instanceof Date) {
+                return `${String(val.getDate()).padStart(2, '0')}/${String(val.getMonth() + 1).padStart(2, '0')}/${val.getFullYear()}`;
+            }
+            if (typeof val === 'number' && val > 10000) {
+                const jsDate = new Date(new Date(1899, 11, 30).getTime() + val * 86400000);
+                return `${String(jsDate.getDate()).padStart(2, '0')}/${String(jsDate.getMonth() + 1).padStart(2, '0')}/${jsDate.getFullYear()}`;
+            }
+            let s = String(val).trim();
+            if (s.includes('-') || s.includes('/')) {
+                const sep = s.includes('-') ? '-' : '/';
+                const parts = s.split(sep);
+                if (parts.length === 3) {
+                    if (parts[2].length === 4) return `${String(parts[0]).padStart(2, '0')}/${String(parts[1]).padStart(2, '0')}/${parts[2]}`;
+                    if (parts[0].length === 4) return `${String(parts[2]).padStart(2, '0')}/${String(parts[1]).padStart(2, '0')}/${parts[0]}`;
+                }
+            }
+            if (/^\d{4}$/.test(s)) return `01/01/${s}`;
+            return s || '---';
         }
 
+        function mapRawRowToEmployee(row, defaultStt) {
+            const findVal = (keys) => {
+                for (let rawKey of Object.keys(row)) {
+                    const normKey = rawKey.toString().toLowerCase().replace(/[\n\r\s_\-./()]/g, '');
+                    for (let k of keys) {
+                        if (normKey.includes(k.toLowerCase().replace(/[\n\r\s_\-./()]/g, ''))) {
+                            let val = row[rawKey];
+                            if (val !== undefined && val !== null && val !== '') return val;
+                        }
+                    }
+                }
+                return '';
+            };
+
+            const fullName = String(findVal(['họ và tên', 'họ tên', 'fullname']) || `Nhân sự #${defaultStt}`).trim();
+            const genderStr = String(findVal(['giới tính', 'gender']) || '').toLowerCase();
+            let gender = (genderStr.includes('nữ') || fullName.toLowerCase().includes(' thị ')) ? 'Nữ' : 'Nam';
+
+            return {
+                stt: String(findVal(['stt', 'mã nv', 'id']) || defaultStt).trim(),
+                fullName: fullName,
+                shortName: String(findVal(['tên']) || fullName.split(' ').pop()).trim(),
+                gender: gender,
+                dob: parseExcelDate(findVal(['ngày sinh', 'năm sinh', 'dob'])),
+                phone: String(findVal(['số điện thoại', 'sđt', 'phone']) || '---').trim(),
+                cccd: String(findVal(['cccd', 'số cccd', 'cmnd']) || '---').trim(),
+                unitCode: cleanUnitCode(findVal(['mã đơn vị', 'mã đv'])),
+                unitName: cleanUnitName(findVal(['tên đơn vị công tác', 'tên đơn vị', 'đơn vị', 'phòng ban'])),
+                unit: cleanUnitName(findVal(['tên đơn vị công tác', 'tên đơn vị', 'đơn vị', 'phòng ban'])),
+                title: String(findVal(['chức danh công việc', 'chức danh']) || 'Cán bộ nhân viên').trim(),
+                status: String(findVal(['tình trạng công tác', 'trạng thái']) || 'Đang làm việc').trim(),
+                education: String(findVal(['trình độ chuyên môn', 'trình độ']) || 'Đại học').trim(),
+                
+                workDays: String(findVal(['ngày công thời gian', 'thời gian', 'số công', 'ngày công']) || '20').trim(),
+                leaveDays: String(findVal(['lễ, vr', 'phép', 'ngày lễ']) || '1').trim(),
+                salaryCoeff: String(findVal(['hệ số lương cơ bản', 'hệ số lcb', 'salarycoeff']) || '1.94').trim(),
+                allowance: String(findVal(['phụ cấp cơ bản', 'phụ cấp cb', 'allowance']) || '0').trim(),
+                jobSalaryCoeff: String(findVal(['hệ số lương công việc', 'hệ số lcv', 'jobsalarycoeff']) || '2.24').trim(),
+                jobAllowance: String(findVal(['phụ cấp lương công việc', 'phụ cấp cv', 'joballowance']) || '0').trim(),
+                completionCoeff: String(findVal(['hệ số hoàn thành', 'hs hoàn thành']) || '1.0').trim(),
+                advanceAmount: String(findVal(['tạm ứng', 'trừ ứng']) || '0').trim(),
+
+                startDate: parseExcelDate(findVal(['thời gian vào tct', 'ngày vào'])),
+                bhxh: String(findVal(['số sổ bhxh', 'bhxh']) || '---').trim(),
+                retireDate: parseExcelDate(findVal(['dự kiến nghỉ hưu'])),
+                maternityLeave: String(findVal(['nghỉ thai sản']) || '---').trim(),
+                maternityWarning: String(findVal(['cảnh báo thai sản']) || '---').trim()
+            };
+        }
+
+        // =========================================================================
+        // TÍNH LƯƠNG CHUẨN CHO CÁC ĐƠN VỊ CÓ FILE MẪU CHUẨN (VĂN PHÒNG TCT)
+        // =========================================================================
         function calculateEmployeePayroll(emp) {
             const unit = cleanUnitName(emp.unit);
-            if (unit !== 'Văn phòng TCT') return null;
+            
+            if (unit !== 'Văn phòng TCT') {
+                return null;
+            }
 
             const baseSalary = 2530000;
             const regionMin = 4140000;
             const jobSalaryBase = 2087970;
             const standardDays = 22;
 
-            const hsCB = parseFloat(emp.salaryCoeff || 1.94);
+            const hsCB = parseFloat(emp.salaryCoeff || 0);
             const pcCB = parseFloat(emp.allowance || 0);
-            const hsCV = parseFloat(emp.jobSalaryCoeff || 2.24);
+            const hsCV = parseFloat(emp.jobSalaryCoeff || 0);
             const pcCV = parseFloat(emp.jobAllowance || 0);
-            const ncTG = parseFloat(emp.workDays || 20);
-            const ncLe = parseFloat(emp.leaveDays || 1);
+            const ncTG = parseFloat(emp.workDays || 0);
+            const ncLe = parseFloat(emp.leaveDays || 0);
             const hsHT = parseFloat(emp.completionCoeff || 1.0);
             const tamUng = parseFloat(emp.advanceAmount || 0);
 
+            // 1. LƯƠNG CƠ BẢN (LCB)
             const luongHDLD = regionMin * (hsCB + pcCB);
             const luongCB_Chuan = baseSalary * (hsCB + pcCB);
             const luongTG_CB = Math.round((luongCB_Chuan / standardDays) * ncTG);
@@ -333,6 +663,7 @@
             const bhxh_bhyt = Math.round(luongHDLD * 0.095);
             const thucLinhCB = tongTienCB - bhtn - bhxh_bhyt;
 
+            // 2. LƯƠNG CÔNG VIỆC (LCV)
             const luongCV_Chuan = jobSalaryBase * (hsCV + pcCV);
             const luongCV_ThucTe = Math.round((luongCV_Chuan / standardDays) * ncTG);
             const thucLinhCV = luongCV_ThucTe - tamUng;
@@ -344,11 +675,12 @@
             };
         }
 
+        // TỰ ĐỘNG LẤY ĐƠN VỊ TỪ FILE MÁY CHẤM CÔNG & TÍNH LƯƠNG TOÀN BỘ ĐƠN VỊ ĐÓ
         function handleAttendanceFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 try {
                     const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
                     const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
@@ -360,49 +692,389 @@
                         const id = String(r['Mã NV'] || r['ID'] || r['STT'] || '').trim();
                         const name = String(r['Họ và tên'] || r['Tên NV'] || '').trim().toLowerCase();
                         const côngTG = String(r['Số công'] || r['Ngày công'] || r['Thời gian'] || '').trim();
+                        const côngLễ = String(r['Công lễ'] || r['Phép'] || r['Lễ, VR'] || '0').trim();
+                        const rowUnit = cleanUnitName(r['Tên đơn vị'] || r['Đơn vị'] || r['Phòng ban'] || '');
 
                         const emp = rawEmployees.find(e => (id && e.stt === id) || (name && e.fullName.toLowerCase() === name));
                         if (emp) {
                             if (côngTG) emp.workDays = côngTG;
+                            if (côngLễ) emp.leaveDays = côngLễ;
                             if (!detectedUnit) detectedUnit = cleanUnitName(emp.unit);
                             updatedCount++;
                         }
                     });
 
-                    if (detectedUnit) document.getElementById('unitFilter').value = detectedUnit;
+                    if (detectedUnit) {
+                        document.getElementById('unitFilter').value = detectedUnit;
+                    }
+
                     initSystem();
-                    saveToLocal();
-                    alert(`Đã cập nhật công & tính lương thành công cho ${updatedCount} nhân sự thuộc đơn vị: ${detectedUnit || 'Toàn hệ thống'}`);
-                } catch(err) { alert("Lỗi nạp file chấm công: " + err.message); }
+                    await saveToCloud();
+                    alert(`Đã nạp file chấm công thành công cho đơn vị: ${detectedUnit || 'Toàn bộ'}\nCập nhật tính lương cho ${updatedCount} nhân sự!`);
+                } catch(err) { alert("Lỗi đọc file chấm công: " + err.message); }
             };
             reader.readAsArrayBuffer(file);
             event.target.value = '';
         }
 
+        function updatePreparerName() {
+            const val = document.getElementById('inputPreparerName').value.trim();
+            document.getElementById('printSignerPreparer').innerText = val || 'Trần Bình Dương';
+        }
+
         function switchProfileTab(stt, tabName) {
             document.querySelectorAll(`.tab-btn-${stt}`).forEach(b => {
                 b.className = b.dataset.tab === tabName 
-                    ? "px-4 py-2 font-black text-xs border-b-2 border-emerald-600 text-emerald-800 bg-white shadow-sm" 
+                    ? "px-4 py-2 font-black text-xs border-b-2 border-emerald-600 text-emerald-800 bg-white" 
                     : "px-4 py-2 font-bold text-xs text-slate-500 hover:text-slate-800 bg-slate-50";
             });
             document.getElementById(`tab-content-lylich-${stt}`).classList.toggle('hidden', tabName !== 'lylich');
             document.getElementById(`tab-content-luong-${stt}`).classList.toggle('hidden', tabName !== 'luong');
         }
 
+        // PHIẾU LƯƠNG ĐIỆN TỬ CÁ NHÂN & GỬI ZALO TỰ ĐỘNG
+        function openPaySlipModal(stt) {
+            const emp = rawEmployees.find(e => e.stt === String(stt));
+            if (!emp) return;
+            const pay = calculateEmployeePayroll(emp);
+            const modalContent = document.getElementById('paySlipModalContent');
+
+            if (!pay) {
+                modalContent.innerHTML = `
+                <div class="p-6 text-center space-y-4">
+                    <div class="text-amber-600 font-extrabold text-base"><i class="fa-solid fa-triangle-exclamation"></i> Đơn vị chưa có dữ liệu bảng lương chi tiết!</div>
+                    <p class="text-xs text-slate-500">Đơn vị "${emp.unit}" hiện chưa có file mẫu bảng lương chi tiết trong hệ thống.</p>
+                    <button onclick="closePaySlipModal()" class="px-4 py-2 bg-slate-200 text-slate-700 font-bold text-xs rounded-xl">Đóng</button>
+                </div>`;
+            } else {
+                const phoneClean = emp.phone.replace(/[^0-9]/g, '');
+                const formattedPhone = phoneClean.startsWith('0') ? '84' + phoneClean.slice(1) : phoneClean;
+                
+                const zaloMessage = encodeURIComponent(
+`[PHIẾU LƯƠNG ĐIỆN TỬ THÁNG 05/2026 - VINAPACO]
+Kính gửi Anh/Chị: ${emp.fullName}
+Chức danh: ${emp.title} (${emp.unit})
+--------------------------------
+• Ngày công thời gian: ${emp.workDays} ngày
+• Tổng Lương Cơ Bản Thực Tế: ${pay.tongTienCB.toLocaleString('vi-VN')} đ
+• Tổng Lương Công Việc Thực Tế: ${pay.luongCV_ThucTe.toLocaleString('vi-VN')} đ
+• Trừ BHTN (1%): -${pay.bhtn.toLocaleString('vi-VN')} đ
+• Trừ BHXH + BHYT (9.5%): -${pay.bhxh_bhyt.toLocaleString('vi-VN')} đ
+• Trừ Tạm Ứng Lương: -${pay.tamUng.toLocaleString('vi-VN')} đ
+--------------------------------
+=> THỰC LĨNH LƯƠNG CUỐI CÙNG: ${pay.tongThucLinhCuoiCung.toLocaleString('vi-VN')} VNĐ
+
+Mọi thắc mắc vui lòng liên hệ Phòng Nhân sự / Người lập biểu: Trần Bình Dương.`
+                );
+
+                modalContent.innerHTML = `
+                <div class="space-y-4 text-xs">
+                    <div class="text-center border-b pb-3">
+                        <p class="font-extrabold text-emerald-900 text-xs">TỔNG CÔNG TY GIẤY VIỆT NAM - ${emp.unit.toUpperCase()}</p>
+                        <h2 class="font-black text-emerald-800 text-base md:text-lg mt-1">PHIẾU LƯƠNG ĐIỆN TỬ THÁNG 5/2026</h2>
+                        <p class="text-slate-500 italic text-[9pt]">Mã NV: #${emp.stt} • Họ tên: <span class="font-bold text-slate-800">${emp.fullName}</span></p>
+                    </div>
+
+                    <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2">
+                        <div class="flex justify-between border-b pb-1"><span>Chức danh công việc:</span><span class="font-bold">${emp.title}</span></div>
+                        <div class="flex justify-between border-b pb-1"><span>Số điện thoại nhận Zalo:</span><span class="font-bold font-mono text-blue-700">${emp.phone}</span></div>
+                        <div class="flex justify-between border-b pb-1"><span>Số ngày công làm việc:</span><span class="font-bold font-mono text-amber-800">${emp.workDays} ngày</span></div>
+                    </div>
+
+                    <div class="bg-purple-50/50 p-3.5 rounded-xl border border-purple-200 space-y-2">
+                        <div class="flex justify-between"><span>Lương Hợp Đồng Lao Động:</span><span class="font-mono font-semibold">${pay.luongHDLD.toLocaleString('vi-VN')} đ</span></div>
+                        <div class="flex justify-between font-bold text-slate-800"><span>1. Lương Cơ Bản Thực Tế:</span><span class="font-mono">${pay.tongTienCB.toLocaleString('vi-VN')} đ</span></div>
+                        <div class="flex justify-between font-bold text-indigo-900"><span>2. Lương Công Việc Thực Tế:</span><span class="font-mono">${pay.luongCV_ThucTe.toLocaleString('vi-VN')} đ</span></div>
+                        <div class="flex justify-between text-rose-700"><span>- Trừ BHTN (1%):</span><span class="font-mono">-${pay.bhtn.toLocaleString('vi-VN')} đ</span></div>
+                        <div class="flex justify-between text-rose-700"><span>- Trừ BHXH + BHYT (9.5%):</span><span class="font-mono">-${pay.bhxh_bhyt.toLocaleString('vi-VN')} đ</span></div>
+                        <div class="flex justify-between text-rose-800"><span>- Trừ Khoản Tạm Ứng Lương:</span><span class="font-mono">-${pay.tamUng.toLocaleString('vi-VN')} đ</span></div>
+                        <div class="flex justify-between bg-emerald-100 p-2.5 rounded-lg border border-emerald-300 font-black text-emerald-900 text-sm mt-2">
+                            <span>THỰC LĨNH CUỐI CÙNG:</span>
+                            <span class="font-mono text-base">${pay.tongThucLinhCuoiCung.toLocaleString('vi-VN')} VNĐ</span>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap justify-between items-center gap-2 pt-2 border-t no-print">
+                        <button onclick="window.print()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl flex items-center gap-1.5">
+                            <i class="fa-solid fa-print"></i> In Phiếu Lương
+                        </button>
+
+                        <div class="flex gap-2">
+                            <a href="https://zalo.me/${phoneClean}" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-sm">
+                                <i class="fa-solid fa-comment-dots"></i> Mở Zalo (${emp.phone})
+                            </a>
+                            <a href="https://zalo.me/${phoneClean}?text=${zaloMessage}" target="_blank" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-sm">
+                                <i class="fa-solid fa-paper-plane"></i> Gửi Phiếu Lương Qua Zalo
+                            </a>
+                        </div>
+                    </div>
+                </div>`;
+            }
+
+            document.getElementById('paySlipModal').classList.remove('hidden');
+            document.getElementById('paySlipModal').classList.add('flex');
+        }
+        function closePaySlipModal() { document.getElementById('paySlipModal').classList.add('hidden'); document.getElementById('paySlipModal').classList.remove('flex'); }
+
+        // BẢNG BÁO CÁO IN LƯƠNG CHUẨN VĂN BẢN HÀNH CHÍNH
+        function openPayrollReportModal() {
+            const selectUnit = document.getElementById('reportSelectUnit');
+            const activeUnits = MASTER_UNITS.filter(u => rawEmployees.some(e => cleanUnitName(e.unit) === u));
+            
+            selectUnit.innerHTML = (activeUnits.length ? activeUnits : MASTER_UNITS).map(u => `<option value="${u}">${u}</option>`).join('');
+            
+            renderPayrollReportTable();
+            document.getElementById('payrollReportModal').classList.remove('hidden');
+            document.getElementById('payrollReportModal').classList.add('flex');
+        }
+        function closePayrollReportModal() {
+            document.getElementById('payrollReportModal').classList.add('hidden');
+            document.getElementById('payrollReportModal').classList.remove('flex');
+        }
+
+        function renderPayrollReportTable() {
+            const selectedUnit = document.getElementById('reportSelectUnit').value;
+            const reportType = document.getElementById('reportSelectType').value;
+            
+            document.getElementById('printUnitHeaderName').innerText = selectedUnit.toUpperCase();
+            const list = rawEmployees.filter(e => cleanUnitName(e.unit) === selectedUnit);
+            
+            const thead = document.getElementById('payrollReportThead');
+            const tbody = document.getElementById('payrollReportTbody');
+
+            if (!list.length) {
+                tbody.innerHTML = `<tr><td colspan="12" class="p-4 text-center text-slate-400">Không có nhân sự nào thuộc đơn vị này.</td></tr>`;
+                return;
+            }
+
+            const isVP = (selectedUnit === 'Văn phòng TCT');
+
+            if (!isVP) {
+                document.getElementById('printTitleText').innerText = `BẢNG DANH SÁCH CÔNG TÁC ĐƠN VỊ ${selectedUnit.toUpperCase()}`;
+                thead.innerHTML = `
+                <tr class="bg-slate-100 font-bold text-center uppercase">
+                    <th class="border p-2">STT</th>
+                    <th class="border p-2">Họ và Tên</th>
+                    <th class="border p-2">Chức danh công việc</th>
+                    <th class="border p-2">Số công làm việc</th>
+                    <th class="border p-2">Trạng thái dữ liệu bảng lương</th>
+                </tr>`;
+
+                tbody.innerHTML = list.map((emp, idx) => `
+                <tr>
+                    <td class="text-center p-2">${idx + 1}</td>
+                    <td class="p-2 font-bold">${emp.fullName}</td>
+                    <td class="p-2">${emp.title}</td>
+                    <td class="text-center p-2 font-mono">${emp.workDays}</td>
+                    <td class="text-center p-2 text-slate-400 font-italic">[Bỏ trống - Đơn vị chưa có mẫu bảng lương]</td>
+                </tr>`).join('');
+                return;
+            }
+
+            if (reportType === 'TONG_HOP') {
+                document.getElementById('printTitleText').innerText = "BẢNG TỔNG HỢP THANH TOÁN LƯƠNG HÀNG THÁNG";
+                thead.innerHTML = `
+                <tr class="bg-slate-100 font-bold text-center uppercase">
+                    <th class="border p-2">STT</th>
+                    <th class="border p-2">Họ và Tên</th>
+                    <th class="border p-2">Chức danh</th>
+                    <th class="border p-2">Công TG</th>
+                    <th class="border p-2">HS CB</th>
+                    <th class="border p-2">HS CV</th>
+                    <th class="border p-2">Lương Căn Bản Thực Tế</th>
+                    <th class="border p-2">Lương Công Việc Thực Tế</th>
+                    <th class="border p-2">Trừ BHTN+BHXH (10.5%)</th>
+                    <th class="border p-2 text-rose-700">Tạm Ứng</th>
+                    <th class="border p-2 font-black text-emerald-900">THỰC LĨNH CUỐI CÙNG</th>
+                    <th class="border p-2 w-16">Ký nhận</th>
+                </tr>`;
+
+                let sumWorkDays = 0, sumCB = 0, sumCV = 0, sumBh = 0, sumAdv = 0, sumNet = 0;
+                tbody.innerHTML = list.map((emp, idx) => {
+                    const pay = calculateEmployeePayroll(emp);
+                    sumWorkDays += parseFloat(emp.workDays || 0);
+                    sumCB += pay.tongTienCB;
+                    sumCV += pay.luongCV_ThucTe;
+                    sumBh += (pay.bhtn + pay.bhxh_bhyt);
+                    sumAdv += pay.tamUng;
+                    sumNet += pay.tongThucLinhCuoiCung;
+
+                    return `
+                    <tr>
+                        <td class="text-center p-2">${idx + 1}</td>
+                        <td class="p-2 font-bold">${emp.fullName}</td>
+                        <td class="p-2">${emp.title}</td>
+                        <td class="text-center p-2 font-mono">${emp.workDays}</td>
+                        <td class="text-center p-2 font-mono">${emp.salaryCoeff}</td>
+                        <td class="text-center p-2 font-mono">${emp.jobSalaryCoeff}</td>
+                        <td class="text-right p-2 font-mono">${pay.tongTienCB.toLocaleString('vi-VN')}</td>
+                        <td class="text-right p-2 font-mono">${pay.luongCV_ThucTe.toLocaleString('vi-VN')}</td>
+                        <td class="text-right p-2 font-mono text-rose-700">${(pay.bhtn + pay.bhxh_bhyt).toLocaleString('vi-VN')}</td>
+                        <td class="text-right p-2 font-mono text-rose-800">${pay.tamUng.toLocaleString('vi-VN')}</td>
+                        <td class="text-right p-2 font-mono font-black text-emerald-900 bg-emerald-50/30">${pay.tongThucLinhCuoiCung.toLocaleString('vi-VN')}</td>
+                        <td class="text-center p-2"></td>
+                    </tr>`;
+                }).join('') + `
+                <tr class="bg-slate-100 font-extrabold border-t-2">
+                    <td colspan="3" class="p-2 text-center uppercase">TỔNG CỘNG</td>
+                    <td class="text-center p-2 font-mono">${sumWorkDays}</td>
+                    <td colspan="2"></td>
+                    <td class="text-right p-2 font-mono">${sumCB.toLocaleString('vi-VN')}</td>
+                    <td class="text-right p-2 font-mono">${sumCV.toLocaleString('vi-VN')}</td>
+                    <td class="text-right p-2 font-mono text-rose-700">${sumBh.toLocaleString('vi-VN')}</td>
+                    <td class="text-right p-2 font-mono text-rose-800">${sumAdv.toLocaleString('vi-VN')}</td>
+                    <td class="text-right p-2 font-mono text-emerald-900 text-sm font-black">${sumNet.toLocaleString('vi-VN')}</td>
+                    <td></td>
+                </tr>`;
+            } else if (reportType === 'LUONG_CB') {
+                document.getElementById('printTitleText').innerText = "BẢNG LƯƠNG CƠ BẢN THÁNG (MẪU VĂN PHÒNG TCT)";
+                thead.innerHTML = `
+                <tr class="bg-slate-100 font-bold text-center uppercase">
+                    <th class="border p-2">STT</th>
+                    <th class="border p-2">Họ và Tên</th>
+                    <th class="border p-2">HS Lương CB</th>
+                    <th class="border p-2">Phụ cấp CB</th>
+                    <th class="border p-2">Lương ký HĐLĐ</th>
+                    <th class="border p-2">Lương Cơ Bản</th>
+                    <th class="border p-2">Công TG</th>
+                    <th class="border p-2">Công Lễ/VR</th>
+                    <th class="border p-2">Tổng Tiền LCB</th>
+                    <th class="border p-2">BHTN (1%)</th>
+                    <th class="border p-2">BHXH+BHYT (9.5%)</th>
+                    <th class="border p-2 font-black text-emerald-900">THỰC LĨNH LCB</th>
+                </tr>`;
+
+                let sumNetCB = 0;
+                tbody.innerHTML = list.map((emp, idx) => {
+                    const pay = calculateEmployeePayroll(emp);
+                    sumNetCB += pay.thucLinhCB;
+                    return `
+                    <tr>
+                        <td class="text-center p-2">${idx + 1}</td>
+                        <td class="p-2 font-bold">${emp.fullName}</td>
+                        <td class="text-center p-2 font-mono">${emp.salaryCoeff}</td>
+                        <td class="text-center p-2 font-mono">${emp.allowance || '0'}</td>
+                        <td class="text-right p-2 font-mono">${pay.luongHDLD.toLocaleString('vi-VN')}</td>
+                        <td class="text-right p-2 font-mono">${pay.luongCB_Chuan.toLocaleString('vi-VN')}</td>
+                        <td class="text-center p-2 font-mono">${emp.workDays}</td>
+                        <td class="text-center p-2 font-mono">${emp.leaveDays || '0'}</td>
+                        <td class="text-right p-2 font-mono">${pay.tongTienCB.toLocaleString('vi-VN')}</td>
+                        <td class="text-right p-2 font-mono text-rose-700">${pay.bhtn.toLocaleString('vi-VN')}</td>
+                        <td class="text-right p-2 font-mono text-rose-700">${pay.bhxh_bhyt.toLocaleString('vi-VN')}</td>
+                        <td class="text-right p-2 font-mono font-black text-emerald-900">${pay.thucLinhCB.toLocaleString('vi-VN')}</td>
+                    </tr>`;
+                }).join('') + `
+                <tr class="bg-slate-100 font-extrabold border-t-2">
+                    <td colspan="11" class="p-2 text-center uppercase">TỔNG CỘNG THỰC LĨNH LƯƠNG CƠ BẢN</td>
+                    <td class="text-right p-2 font-mono text-emerald-900 text-sm font-black">${sumNetCB.toLocaleString('vi-VN')}</td>
+                </tr>`;
+            } else {
+                document.getElementById('printTitleText').innerText = "BẢNG LƯƠNG CÔNG VIỆC THÁNG (MẪU VĂN PHÒNG TCT)";
+                thead.innerHTML = `
+                <tr class="bg-slate-100 font-bold text-center uppercase">
+                    <th class="border p-2">STT</th>
+                    <th class="border p-2">Họ và Tên</th>
+                    <th class="border p-2">HS Lương CV</th>
+                    <th class="border p-2">PC Lương CV</th>
+                    <th class="border p-2">Lương CV Chuẩn</th>
+                    <th class="border p-2">Công TG</th>
+                    <th class="border p-2">Lương CV Thực Tế</th>
+                    <th class="border p-2 text-rose-700">Tạm Ứng</th>
+                    <th class="border p-2 font-black text-emerald-900">THỰC LĨNH LCV</th>
+                </tr>`;
+
+                let sumNetCV = 0;
+                tbody.innerHTML = list.map((emp, idx) => {
+                    const pay = calculateEmployeePayroll(emp);
+                    sumNetCV += pay.thucLinhCV;
+                    return `
+                    <tr>
+                        <td class="text-center p-2">${idx + 1}</td>
+                        <td class="p-2 font-bold">${emp.fullName}</td>
+                        <td class="text-center p-2 font-mono">${emp.jobSalaryCoeff}</td>
+                        <td class="text-center p-2 font-mono">${emp.jobAllowance || '0'}</td>
+                        <td class="text-right p-2 font-mono">${pay.luongCV_Chuan.toLocaleString('vi-VN')}</td>
+                        <td class="text-center p-2 font-mono">${emp.workDays}</td>
+                        <td class="text-right p-2 font-mono">${pay.luongCV_ThucTe.toLocaleString('vi-VN')}</td>
+                        <td class="text-right p-2 font-mono text-rose-700">${pay.tamUng.toLocaleString('vi-VN')}</td>
+                        <td class="text-right p-2 font-mono font-black text-emerald-900">${pay.thucLinhCV.toLocaleString('vi-VN')}</td>
+                    </tr>`;
+                }).join('') + `
+                <tr class="bg-slate-100 font-extrabold border-t-2">
+                    <td colspan="8" class="p-2 text-center uppercase">TỔNG CỘNG THỰC LĨNH LƯƠNG CÔNG VIỆC</td>
+                    <td class="text-right p-2 font-mono text-emerald-900 text-sm font-black">${sumNetCV.toLocaleString('vi-VN')}</td>
+                </tr>`;
+            }
+        }
+
+        function updateSalaryDatalists() {
+            const extractUnique = (key, defaultList) => {
+                const fromData = rawEmployees.map(e => e[key]).filter(v => v && v !== '---');
+                return [...new Set([...defaultList, ...fromData])].sort();
+            };
+
+            const populateDatalist = (elementId, items) => {
+                const datalist = document.getElementById(elementId);
+                if (datalist) datalist.innerHTML = items.map(item => `<option value="${item}">`).join('');
+            };
+
+            populateDatalist('listSalaryCoeff', extractUnique('salaryCoeff', ['1.35', '1.48', '1.53', '1.67', '1.71', '1.79', '1.80', '1.83', '1.94', '2.26']));
+            populateDatalist('listAllowance', extractUnique('allowance', ['0.10', '0.20', '0.25', '0.30', '0.40', '0.50']));
+            populateDatalist('listJobSalaryCoeff', extractUnique('jobSalaryCoeff', ['1.48', '1.62', '1.63', '1.66', '1.74', '1.86', '2.24', '2.40', '5.20']));
+            populateDatalist('listJobAllowance', extractUnique('jobAllowance', ['0.10', '0.20', '0.30', '0.40', '0.50', '0.60']));
+        }
+
+        async function clearAllData() {
+            if (confirm("Bạn có chắc chắn muốn XÓA SẠCH toàn bộ dữ liệu nhân sự cũ để nạp lại file mới không?")) {
+                rawEmployees = [];
+                localStorage.removeItem('vnp_employees_data');
+                initSystem();
+                await saveToCloud();
+                alert("Đã làm sạch dữ liệu thành công!");
+            }
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array', raw: true });
+                    const sheetName = workbook.SheetNames[0];
+                    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "", raw: true });
+                    if (rows.length === 0) { alert("File trống!"); return; }
+
+                    rawEmployees = rows.map((r, idx) => mapRawRowToEmployee(r, idx + 1));
+                    initSystem();
+                    await saveToCloud();
+                    alert(`Đã nạp thành công ${rawEmployees.length} nhân sự!`);
+                } catch (err) {
+                    alert("Lỗi đọc file: " + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+            event.target.value = '';
+        }
+
         function initSystem() {
+            updateSalaryDatalists();
             populateUnitFilter();
             applyFilters();
+            renderUnitSummary();
         }
 
         function populateUnitFilter() {
             const unitSelect = document.getElementById('unitFilter');
             const currentSelected = unitSelect.value || 'ALL';
+            
             const activeUnits = MASTER_UNITS.filter(u => rawEmployees.some(e => cleanUnitName(e.unit) === u));
 
             unitSelect.innerHTML = `<option value="ALL">-- Tất cả đơn vị (${activeUnits.length}) --</option>`;
             activeUnits.forEach(u => {
                 const count = rawEmployees.filter(e => cleanUnitName(e.unit) === u).length;
-                unitSelect.innerHTML += `<option value="${u}">${u} (${count} nhân sự)</option>`;
+                unitSelect.innerHTML += `<option value="${u}">${u} (${count} NS)</option>`;
             });
 
             if (activeUnits.includes(currentSelected)) unitSelect.value = currentSelected;
@@ -460,80 +1132,81 @@
         }
 
         function renderCardView() {
-            document.getElementById('cardViewContainer').innerHTML = currentFilteredData.map(emp => buildProfileCardHTML(emp)).join('') || '<div class="bg-white p-12 text-center rounded-2xl text-slate-400">Chưa có dữ liệu hồ sơ nhân sự</div>';
+            document.getElementById('cardViewContainer').innerHTML = currentFilteredData.map(emp => buildProfileCardHTML(emp)).join('') || '<div class="bg-white p-12 text-center rounded-2xl text-slate-400">Không có dữ liệu nhân sự</div>';
         }
 
-        // THIẾT KẾ HIỂN THỊ ĐẦY ĐỦ THÔNG TIN LÝ LỊCH VÀ CẢ TÍNH LƯƠNG
         function buildProfileCardHTML(emp) {
             const pay = calculateEmployeePayroll(emp);
 
             return `
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden text-xs md:text-sm">
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden text-xs md:text-sm print-card">
                 <div class="bg-emerald-800 text-white px-6 py-3.5 flex justify-between items-center">
                     <div class="flex items-center gap-3">
-                        <span class="bg-emerald-600 text-white font-mono font-bold text-xs px-2.5 py-1 rounded-lg border border-emerald-500">Mã NV: #${emp.stt}</span>
+                        <span class="bg-emerald-600 text-white font-mono font-bold text-xs px-2.5 py-1 rounded-lg border border-emerald-500">STT: #${emp.stt}</span>
                         <h2 class="font-extrabold text-base md:text-lg tracking-wide uppercase">${emp.fullName}</h2>
                         ${emp.shortName ? `<span class="text-xs bg-emerald-700/80 px-2 py-0.5 rounded text-emerald-100">(${emp.shortName})</span>` : ''}
                     </div>
                     <div class="no-print flex items-center gap-2">
-                        <button onclick="openPaySlipModal('${emp.stt}')" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition shadow-sm"><i class="fa-solid fa-receipt"></i> Phiếu Lương Điện Tử / Zalo</button>
-                        <button onclick="openEditModal('${emp.stt}')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition shadow-sm"><i class="fa-solid fa-pen"></i> Chỉnh Sửa Lý Lịch</button>
+                        <button onclick="openPaySlipModal('${emp.stt}')" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition shadow-sm"><i class="fa-solid fa-receipt"></i> Phiếu Lương / Zalo</button>
+                        <button onclick="openEditModal('${emp.stt}')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition shadow-sm"><i class="fa-solid fa-pen"></i> Chỉnh sửa</button>
+                        <button onclick="deleteEmployee('${emp.stt}')" class="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 transition shadow-sm"><i class="fa-solid fa-trash"></i> Xóa</button>
                     </div>
                 </div>
 
-                <!-- THANH ĐIỀU HƯỚNG TÁCH TAB LÝ LỊCH & LƯƠNG -->
                 <div class="flex border-b border-slate-200 bg-slate-100/80 px-6 pt-2 gap-2 no-print">
                     <button onclick="switchProfileTab('${emp.stt}', 'lylich')" data-tab="lylich" class="tab-btn-${emp.stt} px-4 py-2 font-black text-xs border-b-2 border-emerald-600 text-emerald-800 bg-white rounded-t-lg transition">
-                        <i class="fa-solid fa-id-card mr-1.5"></i> Tab 1: Lý Lịch Nhân Sự Chi Tiết Full
+                        <i class="fa-solid fa-id-card mr-1.5"></i> Tab 1: Lý Lịch Cá Nhân Chi Tiết
                     </button>
                     <button onclick="switchProfileTab('${emp.stt}', 'luong')" data-tab="luong" class="tab-btn-${emp.stt} px-4 py-2 font-bold text-xs text-slate-500 hover:text-slate-800 bg-slate-50 rounded-t-lg transition">
-                        <i class="fa-solid fa-calculator mr-1.5"></i> Tab 2: Bảng Tính Lương Chi Tiết
+                        <i class="fa-solid fa-calculator mr-1.5"></i> Tab 2: Tính Lương Chi Tiết
                     </button>
                 </div>
 
                 <div class="p-6">
-                    <!-- TAB 1: HIỂN THỊ TOÀN BỘ SƠ YẾU LÝ LỊCH CÁ NHÂN -->
                     <div id="tab-content-lylich-${emp.stt}" class="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-3 bg-slate-50/80 p-4 rounded-xl border border-slate-200">
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">1. Họ và tên nhân sự:</span><span class="font-extrabold text-slate-900">${emp.fullName}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">2. Tên thường gọi:</span><span class="font-bold text-slate-700">${emp.shortName || '---'}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">3. Giới tính:</span><span class="font-bold text-purple-700">${emp.gender}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">4. Ngày tháng năm sinh:</span><span class="font-extrabold text-rose-700 font-mono">${emp.dob}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">5. Số điện thoại liên hệ:</span><span class="font-bold text-emerald-700 font-mono">${emp.phone}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">6. Số CCCD / CMND:</span><span class="font-bold font-mono">${emp.cccd}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">7. Số sổ BHXH:</span><span class="font-bold font-mono text-indigo-900">${emp.bhxh}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">8. Đơn vị công tác:</span><span class="font-extrabold text-emerald-900">${emp.unit}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">9. Chức danh công việc:</span><span class="font-bold text-slate-800">${emp.title}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">10. Trình độ chuyên môn:</span><span class="font-bold text-slate-700">${emp.education}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">11. Tình trạng công tác:</span><span class="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">${emp.status || 'Đang làm việc'}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">12. Ngày vào TCT:</span><span class="font-bold font-mono">${emp.startDate}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">13. Dự kiến nghỉ hưu:</span><span class="font-bold font-mono text-amber-900">${emp.retireDate}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">14. Tình trạng thai sản:</span><span class="font-bold text-purple-800">${emp.maternityLeave || 'Không'}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">15. Ghi chú cảnh báo:</span><span class="font-bold text-rose-600">${emp.maternityWarning || 'Bình thường'}</span></div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-3 bg-slate-50/70 p-4 rounded-xl border border-slate-200">
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Họ và tên:</span><span class="font-extrabold text-slate-800">${emp.fullName}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Tên gọi / Tên ngắn:</span><span class="font-bold text-slate-700">${emp.shortName || '---'}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Giới tính:</span><span class="font-bold text-purple-700">${emp.gender}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Ngày sinh:</span><span class="font-extrabold text-rose-700 font-mono">${emp.dob}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Số điện thoại:</span><span class="font-bold text-emerald-700 font-mono">${emp.phone}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Số CCCD:</span><span class="font-bold font-mono">${emp.cccd}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Đơn vị công tác:</span><span class="font-extrabold text-emerald-900">${emp.unit}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Mã đơn vị:</span><span class="font-bold text-blue-800 font-mono">${emp.unitCode || '---'}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Chức danh công việc:</span><span class="font-bold text-slate-800">${emp.title}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Trình độ chuyên môn:</span><span class="font-bold text-slate-700">${emp.education}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Tình trạng công tác:</span><span class="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">${emp.status}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Thời gian vào TCT:</span><span class="font-bold font-mono">${emp.startDate}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Số sổ BHXH:</span><span class="font-bold font-mono">${emp.bhxh}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Dự kiến nghỉ hưu:</span><span class="font-bold font-mono">${emp.retireDate}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Cảnh báo thai sản:</span><span class="font-bold text-rose-600">${emp.maternityWarning}</span></div>
                         </div>
                     </div>
 
-                    <!-- TAB 2: CÁC THÔNG SỐ TÍNH LƯƠNG THEO MẪU ĐƠN VỊ -->
                     <div id="tab-content-luong-${emp.stt}" class="hidden space-y-4">
                         ${pay ? `
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3 bg-purple-50/40 p-4 rounded-xl border border-purple-200">
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Hệ số Lương CB:</span><span class="font-bold font-mono">${emp.salaryCoeff || '1.94'}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Phụ cấp CB:</span><span class="font-bold font-mono">${emp.allowance || '0'}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Hệ số Lương CB:</span><span class="font-bold font-mono">${emp.salaryCoeff}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Phụ cấp Lương CB:</span><span class="font-bold font-mono">${emp.allowance || '0'}</span></div>
                             <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Lương ký HĐLĐ:</span><span class="font-bold font-mono">${pay.luongHDLD.toLocaleString('vi-VN')} đ</span></div>
                             <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Lương CB Chuẩn:</span><span class="font-bold font-mono">${pay.luongCB_Chuan.toLocaleString('vi-VN')} đ</span></div>
                             
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Ngày công thời gian:</span><span class="font-black text-amber-900 font-mono">${emp.workDays || '20'} ngày</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Số công thời gian:</span><span class="font-black text-amber-900 font-mono">${emp.workDays} ngày</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Số công Lễ/Phép:</span><span class="font-bold font-mono">${emp.leaveDays || '0'} ngày</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Hệ số hoàn thành:</span><span class="font-bold font-mono">${emp.completionCoeff || '1.0'}</span></div>
                             <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Tổng Lương CB Thực tế:</span><span class="font-extrabold text-slate-800 font-mono">${pay.tongTienCB.toLocaleString('vi-VN')} đ</span></div>
+                            
                             <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Trừ BHTN (1%):</span><span class="font-bold text-rose-700 font-mono">-${pay.bhtn.toLocaleString('vi-VN')} đ</span></div>
                             <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Trừ BHXH+BHYT (9.5%):</span><span class="font-bold text-rose-700 font-mono">-${pay.bhxh_bhyt.toLocaleString('vi-VN')} đ</span></div>
+                            <div class="md:col-span-2 flex justify-between border-b pb-1"><span class="text-slate-700 font-bold">Thực Lĩnh Lương CB:</span><span class="font-extrabold text-emerald-800 font-mono">${pay.thucLinhCB.toLocaleString('vi-VN')} đ</span></div>
 
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Hệ số Lương CV:</span><span class="font-bold font-mono text-indigo-900">${emp.jobSalaryCoeff || '2.24'}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Hệ số Lương CV:</span><span class="font-bold font-mono text-indigo-900">${emp.jobSalaryCoeff}</span></div>
+                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Phụ cấp Lương CV:</span><span class="font-bold font-mono text-indigo-900">${emp.jobAllowance || '0'}</span></div>
                             <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Lương CV Thực Tế:</span><span class="font-extrabold text-indigo-900 font-mono">${pay.luongCV_ThucTe.toLocaleString('vi-VN')} đ</span></div>
                             <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Trừ Tạm Ứng:</span><span class="font-bold text-rose-800 font-mono">-${pay.tamUng.toLocaleString('vi-VN')} đ</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-700 font-bold">Thực Lĩnh Lương CV:</span><span class="font-extrabold text-emerald-800 font-mono">${pay.thucLinhCV.toLocaleString('vi-VN')} đ</span></div>
 
                             <div class="md:col-span-4 flex justify-between bg-emerald-100 p-3 rounded-lg border border-emerald-300 mt-2">
-                                <span class="text-emerald-900 font-black text-sm">THỰC LĨNH LƯƠNG THÁNG THỰC TẾ:</span>
+                                <span class="text-emerald-900 font-black text-sm">THỰC LĨNH LƯƠNG CUỐI CÙNG (LCB + LCV):</span>
                                 <span class="font-black text-emerald-900 text-base font-mono">${pay.tongThucLinhCuoiCung.toLocaleString('vi-VN')} VNĐ</span>
                             </div>
                         </div>` : `
@@ -542,6 +1215,57 @@
                         </div>`}
                     </div>
                 </div>
+            </div>`;
+        }
+
+        function renderUnitSummary() {
+            const box = document.getElementById('unitSummaryContainer');
+            const groups = {};
+
+            rawEmployees.forEach(e => {
+                const u = cleanUnitName(e.unit);
+                if (MASTER_UNITS.includes(u)) {
+                    if (!groups[u]) groups[u] = [];
+                    groups[u].push(e);
+                }
+            });
+
+            const activeUnitKeys = MASTER_UNITS.filter(u => groups[u] && groups[u].length > 0);
+            if (!activeUnitKeys.length) { box.innerHTML = ''; return; }
+            
+            box.innerHTML = `
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="px-4 py-3 bg-slate-50 border-b flex justify-between items-center">
+                    <h2 class="font-black text-slate-800 text-xs md:text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie text-emerald-600"></i>
+                        TỔNG HỢP NHÂN SỰ THEO ĐƠN VỊ CÔNG TÁC
+                    </h2>
+                    <span class="text-xs font-bold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full">${activeUnitKeys.length} đơn vị có nhân sự</span>
+                </div>
+                <div class="overflow-x-auto"><table class="w-full text-xs">
+                    <thead class="bg-slate-100 font-black text-slate-700 uppercase">
+                        <tr>
+                            <th class="p-2.5 text-center">STT</th>
+                            <th class="p-2.5 text-left">Tên Đơn Vị Công Tác</th>
+                            <th class="p-2.5 text-center">Tổng Nhân Sự</th>
+                            <th class="p-2.5 text-center">Nam</th>
+                            <th class="p-2.5 text-center">Nữ</th>
+                            <th class="p-2.5 text-center">Tổng Ngày Công TG</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">${activeUnitKeys.map((k, i) => {
+                        const list = groups[k];
+                        const days = list.reduce((s, e) => s + Number(e.workDays || 0), 0);
+                        return `<tr class="hover:bg-emerald-50/50 cursor-pointer transition" onclick="document.getElementById('unitFilter').value='${k}';applyFilters();">
+                            <td class="p-2.5 text-center font-bold text-slate-500">${i+1}</td>
+                            <td class="p-2.5 font-bold text-emerald-900">${k}</td>
+                            <td class="p-2.5 text-center font-black text-slate-800">${list.length}</td>
+                            <td class="p-2.5 text-center font-semibold text-slate-600">${list.filter(e=>e.gender==='Nam').length}</td>
+                            <td class="p-2.5 text-center font-semibold text-purple-700">${list.filter(e=>e.gender==='Nữ').length}</td>
+                            <td class="p-2.5 text-center font-black text-amber-800 font-mono">${days.toFixed(1)}</td>
+                        </tr>`;
+                    }).join('')}</tbody>
+                </table></div>
             </div>`;
         }
 
@@ -559,7 +1283,7 @@
                 <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                     <div class="bg-slate-50 p-4 border-b flex justify-between items-center font-black text-slate-800">
                         <span class="text-sm font-extrabold text-emerald-900">${u}</span>
-                        <span class="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-bold">${groups[u].length} hồ sơ nhân sự</span>
+                        <span class="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-bold">${groups[u].length} nhân sự</span>
                     </div>
                     <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                         ${groups[u].map(e => `
@@ -568,7 +1292,10 @@
                                     <div class="font-bold text-slate-800">${e.fullName}</div>
                                     <div class="text-xs text-slate-500">${e.title} - SĐT: ${e.phone}</div>
                                 </div>
-                                <button onclick="openPaySlipModal('${e.stt}')" class="bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"><i class="fa-solid fa-receipt"></i> Phiếu Lương / Zalo</button>
+                                <div class="flex gap-1.5">
+                                    <button onclick="openPaySlipModal('${e.stt}')" class="bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"><i class="fa-solid fa-receipt"></i> Phiếu Lương</button>
+                                    <button onclick="openModalByStt('${e.stt}')" class="bg-white border border-slate-200 px-2.5 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-50 text-emerald-800 transition shadow-sm">Xem Hồ Sơ</button>
+                                </div>
                             </div>`).join('')}
                     </div>
                 </div>`).join('') || '<div class="bg-white p-12 text-center rounded-2xl text-slate-400">Không có dữ liệu</div>';
@@ -581,83 +1308,19 @@
                     <td class="p-3 font-bold text-slate-800">${e.fullName}</td>
                     <td class="p-3 font-mono text-emerald-700">${e.phone}</td>
                     <td class="p-3 font-mono">${e.cccd}</td>
-                    <td class="p-3 font-mono text-indigo-900">${e.bhxh || '---'}</td>
                     <td class="p-3 font-bold text-emerald-800">${e.unit}</td>
                     <td class="p-3">${e.title}</td>
-                    <td class="p-3 text-center font-bold text-amber-900">${e.workDays || '20'}</td>
-                    <td class="p-3 text-center">
+                    <td class="p-3 text-center font-bold text-amber-900">${e.workDays}</td>
+                    <td class="p-3 text-center flex justify-center gap-1.5">
                         <button onclick="openPaySlipModal('${e.stt}')" class="bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1 rounded text-xs font-bold transition"><i class="fa-solid fa-receipt"></i> Phiếu Lương / Zalo</button>
+                        <button onclick="openModalByStt('${e.stt}')" class="bg-slate-100 hover:bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded text-xs font-bold transition">Xem Hồ Sơ</button>
                     </td>
-                </tr>`).join('') || '<tr><td colspan="9" class="p-8 text-center text-slate-400">Không có dữ liệu</td></tr>';
+                </tr>`).join('') || '<tr><td colspan="8" class="p-8 text-center text-slate-400">Không có dữ liệu</td></tr>';
         }
-
-        function openPaySlipModal(stt) {
-            const emp = rawEmployees.find(e => e.stt === String(stt));
-            if (!emp) return;
-            const pay = calculateEmployeePayroll(emp);
-            const modalContent = document.getElementById('paySlipModalContent');
-
-            if (!pay) {
-                modalContent.innerHTML = `
-                <div class="p-6 text-center space-y-4">
-                    <div class="text-amber-600 font-extrabold text-base"><i class="fa-solid fa-triangle-exclamation"></i> Đơn vị chưa có mẫu bảng lương chi tiết!</div>
-                    <p class="text-xs text-slate-500">Đơn vị "${emp.unit}" hiện chưa nạp file mẫu tính lương chi tiết.</p>
-                    <button onclick="closePaySlipModal()" class="px-4 py-2 bg-slate-200 text-slate-700 font-bold text-xs rounded-xl">Đóng</button>
-                </div>`;
-            } else {
-                const phoneClean = emp.phone.replace(/[^0-9]/g, '');
-                const zaloMessage = encodeURIComponent(
-`[PHIẾU LƯƠNG ĐIỆN TỬ THÁNG 05/2026 - VINAPACO]
-Kính gửi: ${emp.fullName} - ${emp.title} (${emp.unit})
---------------------------------
-• Công làm việc thực tế: ${emp.workDays || 20} ngày
-• Lương Căn Bản Thực Tế: ${pay.tongTienCB.toLocaleString('vi-VN')} đ
-• Lương Công Việc Thực Tế: ${pay.luongCV_ThucTe.toLocaleString('vi-VN')} đ
-• Trừ BHTN (1%): -${pay.bhtn.toLocaleString('vi-VN')} đ
-• Trừ BHXH + BHYT (9.5%): -${pay.bhxh_bhyt.toLocaleString('vi-VN')} đ
-• Trừ Tạm Ứng: -${pay.tamUng.toLocaleString('vi-VN')} đ
---------------------------------
-=> THỰC LĨNH CUỐI CÙNG: ${pay.tongThucLinhCuoiCung.toLocaleString('vi-VN')} VNĐ`
-                );
-
-                modalContent.innerHTML = `
-                <div class="space-y-4 text-xs">
-                    <div class="text-center border-b pb-3">
-                        <p class="font-extrabold text-emerald-900 text-xs">TỔNG CÔNG TY GIẤY VIỆT NAM - ${emp.unit.toUpperCase()}</p>
-                        <h2 class="font-black text-emerald-800 text-base md:text-lg mt-1">PHIẾU LƯƠNG ĐIỆN TỬ CÁ NHÂN</h2>
-                        <p class="text-slate-500 italic text-[9pt]">Mã NV: #${emp.stt} • Họ tên: <span class="font-bold text-slate-800">${emp.fullName}</span></p>
-                    </div>
-
-                    <div class="bg-purple-50/50 p-3.5 rounded-xl border border-purple-200 space-y-2">
-                        <div class="flex justify-between font-bold text-slate-800"><span>1. Lương Cơ Bản Thực Tế:</span><span class="font-mono">${pay.tongTienCB.toLocaleString('vi-VN')} đ</span></div>
-                        <div class="flex justify-between font-bold text-indigo-900"><span>2. Lương Công Việc Thực Tế:</span><span class="font-mono">${pay.luongCV_ThucTe.toLocaleString('vi-VN')} đ</span></div>
-                        <div class="flex justify-between text-rose-700"><span>- Trừ BHTN (1%):</span><span class="font-mono">-${pay.bhtn.toLocaleString('vi-VN')} đ</span></div>
-                        <div class="flex justify-between text-rose-700"><span>- Trừ BHXH + BHYT (9.5%):</span><span class="font-mono">-${pay.bhxh_bhyt.toLocaleString('vi-VN')} đ</span></div>
-                        <div class="flex justify-between text-rose-800"><span>- Trừ Tạm Ứng:</span><span class="font-mono">-${pay.tamUng.toLocaleString('vi-VN')} đ</span></div>
-                        <div class="flex justify-between bg-emerald-100 p-2.5 rounded-lg border border-emerald-300 font-black text-emerald-900 text-sm mt-2">
-                            <span>THỰC LĨNH LƯƠNG:</span>
-                            <span class="font-mono text-base">${pay.tongThucLinhCuoiCung.toLocaleString('vi-VN')} VNĐ</span>
-                        </div>
-                    </div>
-
-                    <div class="flex flex-wrap justify-between items-center gap-2 pt-2 border-t no-print">
-                        <button onclick="window.print()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl flex items-center gap-1.5">
-                            <i class="fa-solid fa-print"></i> In Phiếu Lương
-                        </button>
-
-                        <a href="https://zalo.me/${phoneClean}?text=${zaloMessage}" target="_blank" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-sm">
-                            <i class="fa-solid fa-paper-plane"></i> Gửi Phiếu Lương Qua Zalo
-                        </a>
-                    </div>
-                </div>`;
-            }
-
-            document.getElementById('paySlipModal').classList.remove('hidden');
-            document.getElementById('paySlipModal').classList.add('flex');
-        }
-        function closePaySlipModal() { document.getElementById('paySlipModal').classList.add('hidden'); document.getElementById('paySlipModal').classList.remove('flex'); }
 
         function openEditModal(stt) {
+            closeModal();
+            updateSalaryDatalists();
             const form = document.getElementById('employeeForm');
             form.reset();
             if (stt) {
@@ -665,17 +1328,29 @@ Kính gửi: ${emp.fullName} - ${emp.title} (${emp.unit})
                 if (!emp) return;
                 document.getElementById('editStt').value = emp.stt;
                 document.getElementById('inputFullName').value = emp.fullName;
-                document.getElementById('inputShortName').value = emp.shortName || '';
+                document.getElementById('inputShortName').value = emp.shortName;
                 document.getElementById('inputGender').value = emp.gender;
-                document.getElementById('inputDob').value = emp.dob || '';
-                document.getElementById('inputPhone').value = emp.phone || '';
-                document.getElementById('inputCccd').value = emp.cccd || '';
-                document.getElementById('inputBhxh').value = emp.bhxh || '';
+                document.getElementById('inputDob').value = emp.dob;
+                document.getElementById('inputPhone').value = emp.phone;
+                document.getElementById('inputCccd').value = emp.cccd;
+                document.getElementById('inputUnitCode').value = emp.unitCode;
                 document.getElementById('inputUnit').value = emp.unit;
-                document.getElementById('inputTitle').value = emp.title || '';
-                document.getElementById('inputEducation').value = emp.education || '';
-                document.getElementById('inputStartDate').value = emp.startDate || '';
-                document.getElementById('inputRetireDate').value = emp.retireDate || '';
+                document.getElementById('inputWorkDays').value = emp.workDays;
+                document.getElementById('inputLeaveDays').value = emp.leaveDays || '1';
+                document.getElementById('inputTitle').value = emp.title;
+                document.getElementById('inputStatus').value = emp.status || 'Đang làm việc';
+                document.getElementById('inputEducation').value = emp.education;
+                document.getElementById('inputStartDate').value = emp.startDate;
+                document.getElementById('inputBhxh').value = emp.bhxh;
+                document.getElementById('inputSalaryCoeff').value = emp.salaryCoeff;
+                document.getElementById('inputAllowance').value = emp.allowance;
+                document.getElementById('inputJobSalaryCoeff').value = emp.jobSalaryCoeff;
+                document.getElementById('inputJobAllowance').value = emp.jobAllowance;
+                document.getElementById('inputCompletionCoeff').value = emp.completionCoeff || '1.0';
+                document.getElementById('inputAdvanceAmount').value = emp.advanceAmount || '0';
+                document.getElementById('inputRetireDate').value = emp.retireDate;
+                document.getElementById('inputMaternityLeave').value = emp.maternityLeave;
+                document.getElementById('inputMaternityWarning').value = emp.maternityWarning;
             } else {
                 document.getElementById('editStt').value = '';
             }
@@ -684,7 +1359,7 @@ Kính gửi: ${emp.fullName} - ${emp.title} (${emp.unit})
         }
         function closeEditModal() { document.getElementById('editModal').classList.add('hidden'); document.getElementById('editModal').classList.remove('flex'); }
 
-        function saveEmployeeData(event) {
+        async function saveEmployeeData(event) {
             if (event) event.preventDefault();
             const stt = document.getElementById('editStt').value;
             const emp = {
@@ -695,13 +1370,25 @@ Kính gửi: ${emp.fullName} - ${emp.title} (${emp.unit})
                 dob: document.getElementById('inputDob').value.trim(),
                 phone: document.getElementById('inputPhone').value.trim(),
                 cccd: document.getElementById('inputCccd').value.trim(),
-                bhxh: document.getElementById('inputBhxh').value.trim(),
+                unitCode: cleanUnitCode(document.getElementById('inputUnitCode').value),
+                unitName: cleanUnitName(document.getElementById('inputUnit').value),
                 unit: cleanUnitName(document.getElementById('inputUnit').value),
+                workDays: document.getElementById('inputWorkDays').value.trim() || '20',
+                leaveDays: document.getElementById('inputLeaveDays').value.trim() || '1',
                 title: document.getElementById('inputTitle').value.trim(),
+                status: document.getElementById('inputStatus').value,
                 education: document.getElementById('inputEducation').value.trim(),
                 startDate: document.getElementById('inputStartDate').value.trim(),
+                bhxh: document.getElementById('inputBhxh').value.trim(),
+                salaryCoeff: document.getElementById('inputSalaryCoeff').value.trim(),
+                allowance: document.getElementById('inputAllowance').value.trim(),
+                jobSalaryCoeff: document.getElementById('inputJobSalaryCoeff').value.trim(),
+                jobAllowance: document.getElementById('inputJobAllowance').value.trim(),
+                completionCoeff: document.getElementById('inputCompletionCoeff').value.trim() || '1.0',
+                advanceAmount: document.getElementById('inputAdvanceAmount').value.trim() || '0',
                 retireDate: document.getElementById('inputRetireDate').value.trim(),
-                workDays: '20'
+                maternityLeave: document.getElementById('inputMaternityLeave').value.trim(),
+                maternityWarning: document.getElementById('inputMaternityWarning').value.trim()
             };
 
             if (stt) {
@@ -712,11 +1399,38 @@ Kính gửi: ${emp.fullName} - ${emp.title} (${emp.unit})
             }
             closeEditModal();
             initSystem();
-            saveToLocal();
+            await saveToCloud();
         }
+
+        async function deleteEmployee(stt) {
+            if (confirm("Bạn có chắc chắn muốn xóa nhân sự này?")) {
+                rawEmployees = rawEmployees.filter(e => e.stt !== String(stt));
+                initSystem();
+                await saveToCloud();
+            }
+        }
+
+        function openModalByStt(stt) {
+            const emp = rawEmployees.find(e => e.stt === String(stt));
+            if (!emp) return;
+            document.getElementById('modalContent').innerHTML = buildProfileCardHTML(emp);
+            document.getElementById('profileModal').classList.remove('hidden');
+            document.getElementById('profileModal').classList.add('flex');
+        }
+        function closeModal() { document.getElementById('profileModal').classList.add('hidden'); document.getElementById('profileModal').classList.remove('flex'); }
 
         document.addEventListener('DOMContentLoaded', () => {
             fetchCloudData(false);
+
+            const employeeForm = document.getElementById('employeeForm');
+            if (employeeForm) {
+                employeeForm.addEventListener('keydown', function(event) {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        saveEmployeeData(event);
+                    }
+                });
+            }
         });
     </script>
 </body>
