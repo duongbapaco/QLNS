@@ -1,795 +1,1666 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="vi" class="h-full bg-slate-50">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ Thống Quản Lý Hồ Sơ Lý Lịch & Bảng Lương Đầy Đủ Chế Độ - VINAPACO</title>
-    <!-- Tailwind CSS CDN -->
+    <title>VINAPACO SMART HRM 5.0 - Hệ Thống Quản Lý & Biến Động Nhân Sự</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <!-- SheetJS (XLSX) Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        vinapaco: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d', /* Chuẩn màu xanh thương hiệu VINAPACO */
+                            950: '#052e16',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js & ChartDataLabels Plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+    <!-- PapaParse for CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <!-- SheetJS for Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-        
-        @media print {
-            .no-print { display: none !important; }
-            body { background: white; padding: 0; margin: 0; font-size: 10pt; color: #000; }
-            .print-container { width: 100% !important; margin: 0 !important; padding: 5mm !important; box-shadow: none !important; border: none !important; }
-            table { border-collapse: collapse !important; width: 100% !important; }
-            th, td { border: 1px solid #000 !important; padding: 4px 3px !important; font-size: 8.5pt !important; }
-        }
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #15803d; }
     </style>
 </head>
-<body class="p-3 md:p-6 text-slate-800">
+<body class="h-full text-slate-800 flex flex-col bg-slate-100 overflow-x-hidden">
 
-    <!-- HEADER & THANH CÔNG CỤ -->
-    <header class="max-w-7xl mx-auto mb-6 bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6 no-print">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-4">
-            <div>
-                <h1 class="text-xl md:text-2xl font-black text-emerald-800 flex items-center gap-2">
-                    <i class="fa-solid fa-address-card text-emerald-600"></i>
-                    QUẢN LÝ LÝ LỊCH NHÂN SỰ & QUYỂN LƯƠNG ĐIỆN TỬ - VINAPACO
-                </h1>
-                <p class="text-xs md:text-sm text-slate-500 mt-1" id="syncStatus">
-                    <i class="fa-solid fa-circle-notch fa-spin text-blue-600"></i> Đang tải dữ liệu hồ sơ nhân sự...
-                </p>
-            </div>
-            
-            <div class="flex flex-wrap items-center gap-2">
-                <button onclick="fetchCloudData(true)" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs md:text-sm font-bold px-3 py-2.5 rounded-xl flex items-center gap-1.5 transition">
-                    <i class="fa-solid fa-rotate"></i> Đồng bộ đám mây
-                </button>
-
-                <label for="fileInput" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs md:text-sm font-bold px-3.5 py-2.5 rounded-xl cursor-pointer flex items-center gap-2 transition shadow-sm">
-                    <i class="fa-solid fa-file-excel"></i>
-                    <span>Nạp File Lý Lịch Mới</span>
-                    <input type="file" id="fileInput" accept=".xlsx, .xls, .csv, .json" class="hidden" onchange="handleFileUpload(event)">
-                </label>
-
-                <label for="attendanceFileInput" class="bg-amber-600 hover:bg-amber-700 text-white text-xs md:text-sm font-bold px-3.5 py-2.5 rounded-xl cursor-pointer flex items-center gap-2 transition shadow-sm" title="Nhập dữ liệu công từ máy chấm công của đơn vị">
-                    <i class="fa-solid fa-clock-rotate-left"></i>
-                    <span>Nhập Chấm Công Đơn Vị</span>
-                    <input type="file" id="attendanceFileInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleAttendanceFileUpload(event)">
-                </label>
-
-                <button onclick="openPayrollReportModal()" class="bg-purple-700 hover:bg-purple-800 text-white text-xs md:text-sm font-bold px-3.5 py-2.5 rounded-xl flex items-center gap-2 transition shadow-sm">
-                    <i class="fa-solid fa-file-invoice-dollar"></i>
-                    <span>Xem & In Bảng Lương</span>
-                </button>
-
-                <button onclick="openEditModal(null)" class="bg-blue-600 hover:bg-blue-700 text-white text-xs md:text-sm font-bold px-3.5 py-2.5 rounded-xl flex items-center gap-2 transition shadow-sm">
-                    <i class="fa-solid fa-user-plus"></i>
-                    <span>Thêm Hồ Sơ Nhân Sự</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- THỐNG KÊ TỔNG QUAN HỒ SƠ -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            <div class="bg-emerald-50/70 border border-emerald-200 p-3 rounded-xl">
-                <div class="text-xs text-emerald-700 font-bold uppercase">Tổng hồ sơ nhân sự</div>
-                <div class="text-xl font-black text-emerald-900" id="statTotal">0</div>
-            </div>
-            <div class="bg-blue-50/70 border border-blue-200 p-3 rounded-xl">
-                <div class="text-xs text-blue-700 font-bold uppercase">Đơn vị / Phòng ban</div>
-                <div class="text-xl font-black text-blue-900" id="statUnits">0</div>
-            </div>
-            <div class="bg-amber-50/70 border border-amber-200 p-3 rounded-xl">
-                <div class="text-xs text-amber-700 font-bold uppercase">Đã khớp công tháng này</div>
-                <div class="text-xl font-black text-amber-900" id="statAttendance">0</div>
-            </div>
-            <div class="bg-purple-50/70 border border-purple-200 p-3 rounded-xl">
-                <div class="text-xs text-purple-700 font-bold uppercase">Cơ cấu Nam / Nữ</div>
-                <div class="text-xl font-black text-purple-900"><span id="statMale">0</span> Nam / <span id="statFemale">0</span> Nữ</div>
-            </div>
-        </div>
-
-        <!-- BỘ LỌC TÌM KIẾM HỒ SƠ LÝ LỊCH -->
-        <div class="flex flex-col md:flex-row items-center justify-between gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
-            <div class="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
-                <div class="flex items-center gap-2 w-full sm:w-auto">
-                    <span class="text-xs font-bold text-slate-700 shrink-0"><i class="fa-solid fa-sitemap text-emerald-600"></i> Đơn vị:</span>
-                    <select id="unitFilter" onchange="applyFilters()" class="border border-slate-300 text-xs rounded-lg px-3 py-2 bg-white w-full sm:w-72 font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                        <option value="ALL">-- Tất cả 18 đơn vị --</option>
-                    </select>
+    <!-- TOP HEADER / BANNER CHUẨN MÀU VINAPACO -->
+    <header class="bg-vinapaco-900 text-white shadow-md z-30 border-b border-vinapaco-800 flex-shrink-0">
+        <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between py-3.5">
+                <!-- Brand Logo & Title -->
+                <div class="flex items-center space-x-3.5">
+                    <div class="w-11 h-11 rounded-xl bg-white flex items-center justify-center shadow-md border border-vinapaco-200 overflow-hidden p-1 flex-shrink-0">
+                        <img src="Logo-Tong-Cong-Ty-Giay-Viet-Nam.png" alt="Logo VINAPACO" class="w-full h-full object-contain">
+                    </div>
+                    <div>
+                        <h1 class="font-extrabold text-base sm:text-lg leading-tight tracking-wide text-white flex flex-wrap items-center gap-2">
+                            TỔNG CÔNG TY GIẤY VIỆT NAM 
+                            <span class="bg-vinapaco-800 text-vinapaco-100 text-[11px] px-2 py-0.5 rounded-md font-bold border border-vinapaco-700">SMART HRM 5.0</span>
+                        </h1>
+                        <p class="text-xs text-vinapaco-100 font-medium tracking-wide mt-0.5">VIETNAM PAPER CORPORATION — Hệ Thống Quản Lý, Định Biên & Dự Báo Nhân Sự Thông Minh</p>
+                    </div>
                 </div>
-                <input type="text" id="searchInput" onkeyup="applyFilters()" placeholder="Tìm theo tên, SĐT, CCCD, Mã BHXH, Chức danh..." class="border border-slate-300 text-xs rounded-lg px-3 py-2 bg-white w-full sm:w-72 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium">
-            </div>
 
-            <div class="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200 w-full md:w-auto justify-center">
-                <button id="btnViewCard" onclick="switchView('card')" class="px-3 py-1.5 rounded-md text-xs font-bold transition bg-emerald-600 text-white">
-                    <i class="fa-solid fa-address-card mr-1"></i> Lý Lịch Chi Tiết
-                </button>
-                <button id="btnViewUnit" onclick="switchView('unit')" class="px-3 py-1.5 rounded-md text-xs font-bold transition text-slate-600 hover:bg-slate-100">
-                    <i class="fa-solid fa-layer-group mr-1"></i> Nhóm Đơn Vị
-                </button>
-                <button id="btnViewTable" onclick="switchView('table')" class="px-3 py-1.5 rounded-md text-xs font-bold transition text-slate-600 hover:bg-slate-100">
-                    <i class="fa-solid fa-table-list mr-1"></i> Bảng Danh Sách
-                </button>
+                <!-- Top KPI Quick Pills -->
+                <div class="hidden xl:flex items-center space-x-3">
+                    <div class="bg-vinapaco-950/40 border border-vinapaco-700 rounded-xl px-3 py-1.5 flex items-center space-x-2">
+                        <i class="fa-solid fa-users text-vinapaco-200 text-sm"></i>
+                        <div>
+                            <div class="text-[10px] text-vinapaco-200 uppercase font-semibold">Tổng Nhân Sự</div>
+                            <div class="text-xs font-black text-white leading-none" id="kpi-total-headcount">969</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-vinapaco-950/40 border border-vinapaco-700 rounded-xl px-3 py-1.5 flex items-center space-x-2">
+                        <i class="fa-solid fa-sitemap text-vinapaco-200 text-sm"></i>
+                        <div>
+                            <div class="text-[10px] text-vinapaco-200 uppercase font-semibold">Đơn Vị</div>
+                            <div class="text-xs font-black text-white leading-none" id="kpi-total-units">18</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-vinapaco-950/40 border border-vinapaco-700 rounded-xl px-3 py-1.5 flex items-center space-x-2">
+                        <i class="fa-solid fa-cake-candles text-amber-300 text-sm"></i>
+                        <div>
+                            <div class="text-[10px] text-vinapaco-200 uppercase font-semibold">Tuổi TB</div>
+                            <div class="text-xs font-black text-white leading-none" id="kpi-avg-age">42.8</div>
+                        </div>
+                    </div>
+
+                    <div class="bg-vinapaco-950/40 border border-vinapaco-700 rounded-xl px-3 py-1.5 flex items-center space-x-2">
+                        <i class="fa-solid fa-user-clock text-rose-300 text-sm"></i>
+                        <div>
+                            <div class="text-[10px] text-vinapaco-200 uppercase font-semibold">Hưu Trí (1-5 Năm)</div>
+                            <div class="text-xs font-black text-amber-300 leading-none" id="kpi-retiring-count">79</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons Header -->
+                <div class="flex items-center space-x-2">
+                    <button onclick="openAddEmployeeModal()" class="bg-vinapaco-600 hover:bg-vinapaco-500 text-white text-xs font-bold px-3 py-2 rounded-xl shadow transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-plus"></i>
+                        <span class="hidden sm:inline">Thêm Hồ Sơ</span>
+                    </button>
+                    <button onclick="syncDataFromCloud()" class="bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold px-3 py-2 rounded-xl shadow transition flex items-center space-x-1.5" title="Đồng bộ dữ liệu từ Google Sheets API">
+                        <i class="fa-solid fa-sync" id="sync-icon"></i>
+                        <span class="hidden sm:inline">Đồng Bộ Cloud</span>
+                    </button>
+                    <button onclick="switchTab('import-tab')" class="bg-vinapaco-700 hover:bg-vinapaco-600 text-white text-xs font-bold px-3 py-2 rounded-xl shadow transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-file-import"></i>
+                        <span class="hidden sm:inline">Tải Lên</span>
+                    </button>
+                    <button onclick="exportToExcel()" class="bg-white/10 hover:bg-white/20 border border-vinapaco-300/40 text-white text-xs font-bold px-3 py-2 rounded-xl transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-file-excel text-vinapaco-200"></i>
+                        <span class="hidden md:inline">Excel</span>
+                    </button>
+                </div>
             </div>
         </div>
     </header>
 
-    <!-- CONTAINER HIỂN THỊ CHÍNH -->
-    <main class="max-w-7xl mx-auto space-y-6">
-        <div id="cardViewContainer" class="space-y-6"></div>
-        <div id="unitViewContainer" class="hidden space-y-6"></div>
-        <div id="tableViewContainer" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse text-xs">
-                    <thead>
-                        <tr class="bg-slate-100 text-slate-700 uppercase font-extrabold border-b border-slate-200">
-                            <th class="p-3 text-center">STT</th>
-                            <th class="p-3">Họ và Tên Nhân Sự</th>
-                            <th class="p-3">Tên Gọi</th>
-                            <th class="p-3">Số Điện Thoại</th>
-                            <th class="p-3">Số CCCD</th>
-                            <th class="p-3">Số Sổ BHXH</th>
-                            <th class="p-3">Đơn Vị Công Tác</th>
-                            <th class="p-3">Chức Danh Công Việc</th>
-                            <th class="p-3 text-center">Ngày Công</th>
-                            <th class="p-3 text-center">Thao Tác</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody" class="divide-y divide-slate-100"></tbody>
-                </table>
+    <!-- MAIN APP LAYOUT (SIDEBAR DỌC CHUẨN XANH VINAPACO) -->
+    <div class="flex-1 flex overflow-hidden">
+        <!-- SIDEBAR NAVIGATION DỌC -->
+        <aside class="w-72 bg-vinapaco-950 text-slate-100 flex-shrink-0 flex flex-col border-r border-vinapaco-900 shadow-lg">
+            <div class="p-4 border-b border-vinapaco-900/80">
+                <span class="text-[11px] font-extrabold text-vinapaco-300 uppercase tracking-wider px-2">Menu Điều Hành Hệ Thống</span>
             </div>
-        </div>
-    </main>
-
-    <!-- MODAL Xem/Gửi Phiếu Lương Điện Tử qua Zalo -->
-    <div id="paySlipModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto">
-        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[95vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 relative">
-            <button onclick="closePaySlipModal()" class="absolute top-4 right-4 bg-slate-100 hover:bg-slate-200 text-slate-700 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm z-10 no-print"><i class="fa-solid fa-xmark"></i></button>
-            <div id="paySlipModalContent"></div>
-        </div>
-    </div>
-
-    <!-- MODAL In Bảng Lương Tổng Hợp Văn Bản Hành Chính VINAPACO -->
-    <div id="payrollReportModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto">
-        <div class="bg-white rounded-2xl max-w-7xl w-full max-h-[95vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 relative">
-            <div class="flex flex-col sm:flex-row justify-between items-center gap-3 border-b pb-3 mb-4 no-print">
-                <div class="flex flex-wrap items-center gap-3">
-                    <span class="font-bold text-xs text-slate-700">Đơn vị:</span>
-                    <select id="reportSelectUnit" onchange="renderPayrollReportTable()" class="border border-slate-300 rounded-lg px-3 py-1.5 font-bold text-emerald-900 text-xs bg-white">
-                    </select>
-
-                    <span class="font-bold text-xs text-slate-700">Loại Bảng Lương:</span>
-                    <select id="reportSelectType" onchange="renderPayrollReportTable()" class="border border-slate-300 rounded-lg px-3 py-1.5 font-bold text-purple-900 text-xs bg-white">
-                        <option value="TONG_HOP">Bảng Tổng Hợp Thanh Toán Lương (LCB + LCV + Ăn ca + Độc hại - Tạm ứng)</option>
-                        <option value="LUONG_CB">Bảng Lương Cơ Bản Chi Tiết</option>
-                        <option value="LUONG_CV">Bảng Lương Công Việc Chi Tiết</option>
-                    </select>
-                </div>
-
-                <div class="flex items-center gap-2">
-                    <button onclick="window.print()" class="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-sm">
-                        <i class="fa-solid fa-print"></i> In Bảng Lương Văn Bản
-                    </button>
-                    <button onclick="closePayrollReportModal()" class="text-slate-400 hover:text-slate-600 font-bold text-xl px-2"><i class="fa-solid fa-xmark"></i></button>
-                </div>
+            <nav class="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto custom-scrollbar">
+                <button onclick="switchTab('dashboard-tab')" id="nav-dashboard-tab" class="nav-btn w-full px-3.5 py-3 text-xs font-bold rounded-xl text-white bg-vinapaco-800 transition flex items-center space-x-3 shadow-sm">
+                    <i class="fa-solid fa-chart-pie text-base w-5 text-center text-vinapaco-200"></i>
+                    <span class="text-left">Bảng Điều Khiển Tổng Quan</span>
+                </button>
+                <button onclick="switchTab('employees-tab')" id="nav-employees-tab" class="nav-btn w-full px-3.5 py-3 text-xs font-semibold rounded-xl text-slate-300 hover:text-white hover:bg-vinapaco-900 transition flex items-center space-x-3">
+                    <i class="fa-solid fa-address-book text-base w-5 text-center text-vinapaco-300"></i>
+                    <span class="text-left">Danh Sách Hồ Sơ Nhân Sự</span>
+                </button>
+                <button onclick="switchTab('units-tab')" id="nav-units-tab" class="nav-btn w-full px-3.5 py-3 text-xs font-semibold rounded-xl text-slate-300 hover:text-white hover:bg-vinapaco-900 transition flex items-center space-x-3">
+                    <i class="fa-solid fa-building-user text-base w-5 text-center text-vinapaco-300"></i>
+                    <span class="text-left">Phân Loại Theo Đơn Vị (18)</span>
+                </button>
+                <button onclick="switchTab('fluctuation-tab')" id="nav-fluctuation-tab" class="nav-btn w-full px-3.5 py-3 text-xs font-semibold rounded-xl text-slate-300 hover:text-white hover:bg-vinapaco-900 transition flex items-center space-x-3">
+                    <i class="fa-solid fa-chart-line text-base w-5 text-center text-emerald-400"></i>
+                    <span class="text-left">Biến Động Nhân Sự (Tháng/Quý/Năm)</span>
+                </button>
+                <button onclick="switchTab('ai-forecast-tab')" id="nav-ai-forecast-tab" class="nav-btn w-full px-3.5 py-3 text-xs font-semibold rounded-xl text-slate-300 hover:text-white hover:bg-vinapaco-900 transition flex items-center space-x-3">
+                    <i class="fa-solid fa-brain text-base w-5 text-center text-amber-300"></i>
+                    <span class="text-left">Dự Báo & Khuyến Nghị AI</span>
+                </button>
+                <button onclick="switchTab('import-tab')" id="nav-import-tab" class="nav-btn w-full px-3.5 py-3 text-xs font-semibold rounded-xl text-slate-300 hover:text-white hover:bg-vinapaco-900 transition flex items-center space-x-3">
+                    <i class="fa-solid fa-cloud-arrow-up text-base w-5 text-center text-vinapaco-300"></i>
+                    <span class="text-left">Cập Nhật & Tải Lên Dữ Liệu</span>
+                </button>
+            </nav>
+            <div class="p-4 border-t border-vinapaco-900/80 text-[11px] font-medium text-vinapaco-300 text-center">
+                VINAPACO HRM v5.0 © 2026
             </div>
+        </aside>
 
-            <div id="payrollReportPrintArea" class="print-container bg-white p-2">
-                <div class="grid grid-cols-2 text-center text-xs font-bold mb-4 uppercase">
-                    <div>
-                        <p class="tracking-wider">TỔNG CÔNG TY GIẤY VIỆT NAM</p>
-                        <p id="printUnitHeaderName" class="text-emerald-900 font-extrabold text-xs md:text-sm">VĂN PHÒNG</p>
-                    </div>
-                    <div>
-                        <p class="font-black">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
-                        <p class="font-bold underline decoration-1 underline-offset-4">Độc lập - Tự do - Hạnh phúc</p>
-                    </div>
-                </div>
+        <!-- MAIN CONTENT CONTAINER -->
+        <main class="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-8 space-y-6">
 
-                <div class="text-center mb-4">
-                    <h2 class="text-base md:text-lg font-black uppercase tracking-wide" id="printTitleText">BẢNG LƯƠNG THANH TOÁN HÀNG THÁNG</h2>
-                    <p class="text-xs italic text-slate-600 mt-0.5">Kỳ thanh toán: Tháng 5 năm 2026</p>
-                </div>
-
-                <div class="overflow-x-auto mb-6">
-                    <table class="w-full border-collapse border border-slate-800 text-[8.5pt]">
-                        <thead id="payrollReportThead"></thead>
-                        <tbody id="payrollReportTbody" class="divide-y divide-slate-800"></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL THÊM / CHỈNH SỬA HỒ SƠ LÝ LỊCH CÁ NHÂN -->
-    <div id="editModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4 overflow-y-auto no-print">
-        <div class="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 p-6 relative">
-            <div class="flex justify-between items-center border-b pb-3 mb-4">
-                <h3 class="font-extrabold text-emerald-800 text-lg flex items-center gap-2">
-                    <i class="fa-solid fa-id-card"></i> THÔNG TIN LÝ LỊCH & LƯƠNG CHẾ ĐỘ NHÂN SỰ
-                </h3>
-                <button onclick="closeEditModal()" class="text-slate-400 hover:text-slate-600 font-bold text-xl"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <form id="employeeForm" onsubmit="saveEmployeeData(event)" class="space-y-4 text-xs">
-                <input type="hidden" id="editStt">
-                
-                <!-- KHỐI LÝ LỊCH CÁ NHÂN -->
-                <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
-                    <h4 class="font-black text-emerald-800 uppercase flex items-center gap-1.5"><i class="fa-solid fa-user"></i> 1. Thông Tin Lý Lịch Trích Ngang</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <!-- TAB 1: BẢNG ĐIỀU KHIỂN TỔNG QUAN -->
+            <section id="dashboard-tab" class="tab-content space-y-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
                         <div>
-                            <label class="font-bold block mb-1">Họ và tên nhân sự *</label>
-                            <input type="text" id="inputFullName" required oninput="autoExtractShortName()" class="w-full border rounded-lg p-2 font-bold" placeholder="Nhập đầy đủ Họ và Tên">
+                            <p class="text-[11px] font-bold uppercase text-slate-500 tracking-wider">Tổng Nhân Sự Quản Lý</p>
+                            <h3 class="text-3xl font-black text-vinapaco-900 mt-1" id="dash-total-emp">969</h3>
+                            <p class="text-[11px] text-vinapaco-700 mt-1 font-semibold flex items-center gap-1">
+                                <i class="fa-solid fa-circle-check"></i> 100% Đã chuẩn hóa hồ sơ
+                            </p>
                         </div>
+                        <div class="w-12 h-12 rounded-2xl bg-vinapaco-50 text-vinapaco-700 flex items-center justify-center text-xl shadow-inner border border-vinapaco-100">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
                         <div>
-                            <label class="font-semibold block mb-1 text-emerald-800">Tên gọi / Tên ngắn (Tự động tách)</label>
-                            <input type="text" id="inputShortName" class="w-full border border-emerald-300 rounded-lg p-2 font-bold bg-emerald-50/50 text-emerald-900">
+                            <p class="text-[11px] font-bold uppercase text-slate-500 tracking-wider">Khối Sản Xuất Trực Tiếp</p>
+                            <h3 class="text-3xl font-black text-slate-900 mt-1" id="dash-prod-emp">0</h3>
+                            <p class="text-[11px] text-slate-600 mt-1 font-medium" id="dash-prod-pct">Chiếm 0% tổng lực lượng</p>
                         </div>
-                        <div><label class="font-semibold block mb-1">Giới tính</label><select id="inputGender" class="w-full border rounded-lg p-2 bg-white"><option value="Nam">Nam</option><option value="Nữ">Nữ</option></select></div>
-                        <div><label class="font-semibold block mb-1">Ngày tháng năm sinh</label><input type="text" id="inputDob" class="w-full border rounded-lg p-2 font-mono"></div>
-                        <div><label class="font-bold block mb-1 text-emerald-800">Số điện thoại *</label><input type="text" id="inputPhone" class="w-full border border-emerald-400 rounded-lg p-2 font-mono font-bold text-emerald-900 bg-emerald-50/40"></div>
-                        <div><label class="font-semibold block mb-1">Số Căn cước công dân (CCCD)</label><input type="text" id="inputCccd" class="w-full border rounded-lg p-2 font-mono font-bold"></div>
-                        <div><label class="font-semibold block mb-1">Số sổ Bảo hiểm xã hội (BHXH)</label><input type="text" id="inputBhxh" class="w-full border rounded-lg p-2 font-mono font-bold"></div>
-                        <div><label class="font-semibold block mb-1">Đơn vị công tác *</label>
-                            <select id="inputUnit" required class="w-full border rounded-lg p-2 font-bold text-emerald-900 bg-white">
-                                <option value="Văn phòng TCT">Văn phòng TCT</option>
-                                <option value="Phòng Kỹ thuật">Phòng Kỹ thuật</option>
-                                <option value="Xí nghiệp Bảo dưỡng">Xí nghiệp Bảo dưỡng</option>
-                                <option value="Phòng Nhân sự">Phòng Nhân sự</option>
-                                <option value="Trợ lý, Thư ký Hội đồng thành viên">Trợ lý, Thư ký Hội đồng thành viên</option>
-                                <option value="Nhà máy Điện">Nhà máy Điện</option>
-                                <option value="Phòng Lâm nghiệp">Phòng Lâm nghiệp</option>
-                                <option value="Phòng Tài chính kế toán">Phòng Tài chính kế toán</option>
-                                <option value="Xí nghiệp Dịch vụ">Xí nghiệp Dịch vụ</option>
-                                <option value="Phòng Kế hoạch Đầu tư">Phòng Kế hoạch Đầu tư</option>
-                                <option value="Phòng Vật tư">Phòng Vật tư</option>
-                                <option value="Văn phòng Công đoàn">Văn phòng Công đoàn</option>
-                                <option value="Tổng kho">Tổng kho</option>
-                                <option value="Phòng Kinh doanh">Phòng Kinh doanh</option>
-                                <option value="Ban Kiểm tra Kiểm toán nội bộ">Ban Kiểm tra Kiểm toán nội bộ</option>
-                                <option value="Nhà máy Hóa chất">Nhà máy Hóa chất</option>
-                                <option value="Các cơ quan tham mưu giúp việc Đảng ủy">Các cơ quan tham mưu giúp việc Đảng ủy</option>
-                                <option value="Nhà máy Giấy">Nhà máy Giấy</option>
+                        <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-700 flex items-center justify-center text-xl shadow-inner border border-blue-100">
+                            <i class="fa-solid fa-industry"></i>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                        <div>
+                            <p class="text-[11px] font-bold uppercase text-slate-500 tracking-wider">Khối Phụ Trợ & Dịch Vụ</p>
+                            <h3 class="text-3xl font-black text-slate-900 mt-1" id="dash-support-emp">0</h3>
+                            <p class="text-[11px] text-slate-600 mt-1 font-medium" id="dash-support-pct">Chiếm 0% tổng lực lượng</p>
+                        </div>
+                        <div class="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center text-xl shadow-inner border border-emerald-100">
+                            <i class="fa-solid fa-gears"></i>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-between">
+                        <div>
+                            <p class="text-[11px] font-bold uppercase text-slate-500 tracking-wider">Khối Tham Mưu & Quản Lý</p>
+                            <h3 class="text-3xl font-black text-slate-900 mt-1" id="dash-admin-emp">0</h3>
+                            <p class="text-[11px] text-slate-600 mt-1 font-medium" id="dash-admin-pct">Chiếm 0% tổng lực lượng</p>
+                        </div>
+                        <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center text-xl shadow-inner border border-amber-100">
+                            <i class="fa-solid fa-briefcase"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Section Grid -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <!-- Biểu đồ 1: 18 đơn vị -->
+                    <div class="lg:col-span-8 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <div class="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 class="font-bold text-slate-900 text-base">Cơ Cấu Định Biên Nhân Sự Theo 18 Đơn Vị Trực Thuộc</h3>
+                                <p class="text-xs text-slate-500">So sánh quy mô lực lượng lao động toàn hệ thống Tổng công ty</p>
+                            </div>
+                            <span class="text-[11px] font-bold bg-vinapaco-50 text-vinapaco-800 px-3 py-1 rounded-lg border border-vinapaco-200">Cập Nhật Trực Tiếp</span>
+                        </div>
+                        <div class="h-80">
+                            <canvas id="chart-units"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Biểu đồ 2: Cơ cấu Trình độ đào tạo -->
+                    <div class="lg:col-span-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between space-y-4">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <div>
+                                    <h3 class="font-bold text-slate-900 text-base">Cơ Cấu Trình Độ Đào Tạo</h3>
+                                    <p class="text-xs text-slate-500">Khớp chuẩn xác 100% tỷ lệ phần trăm (%) với bảng</p>
+                                </div>
+                            </div>
+                            <div class="h-72 flex items-center justify-center relative">
+                                <canvas id="chart-degrees"></canvas>
+                            </div>
+                        </div>
+                        <!-- Bảng số liệu chi tiết Trình độ -->
+                        <div class="border-t border-slate-200 pt-3">
+                            <h4 class="text-xs font-bold text-vinapaco-900 mb-2 uppercase">Bảng Số Liệu Chi Tiết Trình Độ</h4>
+                            <div class="overflow-y-auto max-h-48 custom-scrollbar">
+                                <table class="w-full text-left text-[11px] border-collapse">
+                                    <thead>
+                                        <tr class="bg-vinapaco-50 text-vinapaco-900 font-bold border-b border-vinapaco-100">
+                                            <th class="py-1.5 px-2">Trình Độ</th>
+                                            <th class="py-1.5 px-2 text-right">Số Lượng</th>
+                                            <th class="py-1.5 px-2 text-right">Tỷ Lệ (%)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="table-degree-body" class="divide-y divide-slate-100 text-slate-700 font-medium">
+                                        <!-- Rendered dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Biểu đồ 3: Phân bố Độ tuổi -->
+                    <div class="lg:col-span-6 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between space-y-4">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <div>
+                                    <h3 class="font-bold text-slate-900 text-base">Phân Bố Nhóm Độ Tuổi Lao Động</h3>
+                                    <p class="text-xs text-slate-500">Hiển thị số liệu cụ thể đỉnh cột và bảng khớp tuyệt đối</p>
+                                </div>
+                            </div>
+                            <div class="h-64">
+                                <canvas id="chart-age-groups"></canvas>
+                            </div>
+                        </div>
+                        <!-- Bảng số liệu chi tiết Độ tuổi -->
+                        <div class="border-t border-slate-200 pt-3">
+                            <h4 class="text-xs font-bold text-vinapaco-900 mb-2 uppercase">Bảng Thống Kế Theo Độ Tuổi</h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-[11px] border-collapse">
+                                    <thead>
+                                        <tr class="bg-vinapaco-50 text-vinapaco-900 font-bold border-b border-vinapaco-100">
+                                            <th class="py-1.5 px-2">Nhóm Tuổi</th>
+                                            <th class="py-1.5 px-2 text-right">Số Lực Lượng</th>
+                                            <th class="py-1.5 px-2 text-right">Tỷ Lệ (%)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="table-age-body" class="divide-y divide-slate-100 text-slate-700 font-medium">
+                                        <!-- Rendered dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Biểu đồ 4: Giới tính theo Khối -->
+                    <div class="lg:col-span-6 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between space-y-4">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <div>
+                                    <h3 class="font-bold text-slate-900 text-base">Cơ Cấu Giới Tính Theo Khối Chức Năng</h3>
+                                    <p class="text-xs text-slate-500">Hiển thị số liệu & Tỷ lệ Nam / Tỷ lệ Nữ từng khối</p>
+                                </div>
+                            </div>
+                            <div class="h-64">
+                                <canvas id="chart-gender-block"></canvas>
+                            </div>
+                        </div>
+                        <!-- Bảng số liệu chi tiết Giới tính theo Khối -->
+                        <div class="border-t border-slate-200 pt-3">
+                            <h4 class="text-xs font-bold text-vinapaco-900 mb-2 uppercase">Bảng Phân Tích Giới Tính Theo Khối</h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-[11px] border-collapse">
+                                    <thead>
+                                        <tr class="bg-vinapaco-50 text-vinapaco-900 font-bold border-b border-vinapaco-100">
+                                            <th class="py-1.5 px-2">Khối Chức Năng</th>
+                                            <th class="py-1.5 px-2 text-right text-vinapaco-900">Nam (SL)</th>
+                                            <th class="py-1.5 px-2 text-right text-vinapaco-800">Tỷ Lệ Nam (%)</th>
+                                            <th class="py-1.5 px-2 text-right text-pink-800">Nữ (SL)</th>
+                                            <th class="py-1.5 px-2 text-right text-pink-700">Tỷ Lệ Nữ (%)</th>
+                                            <th class="py-1.5 px-2 text-right">Tổng Cộng</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="table-gender-block-body" class="divide-y divide-slate-100 text-slate-700 font-medium">
+                                        <!-- Rendered dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: HỒ SƠ NHÂN SỰ & CHỈNH SỬA -->
+            <section id="employees-tab" class="tab-content hidden space-y-4">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                        <div class="lg:col-span-2 relative">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-vinapaco-700 text-sm"></i>
+                            <input type="text" id="search-input" onkeyup="filterEmployees()" placeholder="Tìm tên, Mã NV, CCCD, chức danh..." class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-vinapaco-600 focus:outline-none transition">
+                        </div>
+
+                        <div>
+                            <select id="filter-unit" onchange="filterEmployees()" class="w-full py-2 px-3 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-700 focus:ring-2 focus:ring-vinapaco-600 focus:outline-none transition">
+                                <option value="">Tất cả Đơn vị (18)</option>
                             </select>
                         </div>
-                        <div><label class="font-semibold block mb-1">Chức danh công việc</label><input type="text" id="inputTitle" class="w-full border rounded-lg p-2"></div>
-                        <div><label class="font-semibold block mb-1">Trình độ chuyên môn</label><input type="text" id="inputEducation" class="w-full border rounded-lg p-2"></div>
-                        <div><label class="font-semibold block mb-1">Ngày tuyển dụng vào TCT</label><input type="text" id="inputStartDate" class="w-full border rounded-lg p-2 font-mono"></div>
-                        <div><label class="font-semibold block mb-1">Dự kiến thời điểm nghỉ hưu</label><input type="text" id="inputRetireDate" class="w-full border rounded-lg p-2 font-mono"></div>
+
+                        <div>
+                            <select id="filter-degree" onchange="filterEmployees()" class="w-full py-2 px-3 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-700 focus:ring-2 focus:ring-vinapaco-600 focus:outline-none transition">
+                                <option value="">Tất cả Trình độ Đào tạo</option>
+                                <option value="Tiến sỹ">Tiến sỹ</option>
+                                <option value="Thạc sỹ">Thạc sỹ</option>
+                                <option value="Cử nhân">Cử nhân</option>
+                                <option value="Kỹ sư">Kỹ sư</option>
+                                <option value="Cao đẳng">Cao đẳng</option>
+                                <option value="Trung cấp">Trung cấp</option>
+                                <option value="Công nhân">Công nhân / Thợ Kỹ thuật</option>
+                                <option value="Sơ cấp">Sơ cấp</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <select id="filter-age" onchange="filterEmployees()" class="w-full py-2 px-3 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium text-slate-700 focus:ring-2 focus:ring-vinapaco-600 focus:outline-none transition">
+                                <option value="">Tất cả Nhóm Tuổi</option>
+                                <option value="under30">Dưới 30 tuổi</option>
+                                <option value="30-45">Từ 30 - 45 tuổi</option>
+                                <option value="46-55">Từ 46 - 55 tuổi</option>
+                                <option value="retiring">Sắp/Đến tuổi nghỉ hưu</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center justify-between text-xs text-slate-600 pt-2 border-t border-slate-200 gap-2">
+                        <div>
+                            Hiển thị <span class="font-bold text-vinapaco-900" id="filtered-count">969</span> / <span class="font-bold text-vinapaco-900" id="total-count">969</span> hồ sơ nhân sự đầy đủ
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="resetFilters()" class="text-vinapaco-800 hover:text-vinapaco-950 font-bold flex items-center space-x-1">
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                                <span>Đặt lại bộ lọc</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- KHỐI THÔNG SỐ LƯƠNG & CHẾ ĐỘ ĐÃI NGỘ -->
-                <div class="bg-purple-50/50 p-3.5 rounded-xl border border-purple-200 space-y-3">
-                    <h4 class="font-black text-purple-900 uppercase flex items-center gap-1.5"><i class="fa-solid fa-coins"></i> 2. Thông Số Lương & Chế Độ Đãi Ngộ</h4>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <div><label class="font-semibold block mb-1">Hệ số LCB</label><input type="number" step="0.01" id="inputSalaryCoeff" class="w-full border rounded-lg p-2 font-mono font-bold" placeholder="1.94"></div>
-                        <div><label class="font-semibold block mb-1">Phụ cấp LCB</label><input type="number" step="0.01" id="inputAllowance" class="w-full border rounded-lg p-2 font-mono" placeholder="0.25"></div>
-                        <div><label class="font-semibold block mb-1">Hệ số LCV</label><input type="number" step="0.01" id="inputJobSalaryCoeff" class="w-full border rounded-lg p-2 font-mono font-bold text-indigo-900" placeholder="5.2"></div>
-                        <div><label class="font-semibold block mb-1">Phụ cấp LCV</label><input type="number" step="0.01" id="inputJobAllowance" class="w-full border rounded-lg p-2 font-mono" placeholder="0.6"></div>
-                        <div><label class="font-semibold block mb-1">Ngày công thời gian</label><input type="number" id="inputWorkDays" class="w-full border rounded-lg p-2 font-mono font-bold text-amber-900" placeholder="20"></div>
-                        <div><label class="font-semibold block mb-1">Ngày phép / Lễ / VR</label><input type="number" id="inputLeaveDays" class="w-full border rounded-lg p-2 font-mono" placeholder="1"></div>
-                        <div><label class="font-semibold block mb-1">Tạm ứng trong tháng</label><input type="number" id="inputAdvanceAmount" class="w-full border rounded-lg p-2 font-mono text-rose-700" placeholder="5000000"></div>
-                        <div><label class="font-semibold block mb-1">Bồi dưỡng độc hại (Đồng)</label><input type="number" id="inputToxicAllowance" class="w-full border rounded-lg p-2 font-mono text-emerald-800" placeholder="130000"></div>
+                <!-- Employee Grid Table -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div class="overflow-x-auto custom-scrollbar">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-vinapaco-50 border-b border-vinapaco-100 text-[11px] font-bold text-vinapaco-900 uppercase tracking-wider">
+                                    <th class="py-3.5 px-3 w-10 text-center">STT</th>
+                                    <th class="py-3.5 px-3">Mã NV</th>
+                                    <th class="py-3.5 px-3">Họ và Tên</th>
+                                    <th class="py-3.5 px-3">Giới Tính</th>
+                                    <th class="py-3.5 px-3">Ngày Sinh / Tuổi</th>
+                                    <th class="py-3.5 px-3">Số CCCD</th>
+                                    <th class="py-3.5 px-3">Chức Danh / Vị Trí</th>
+                                    <th class="py-3.5 px-3">Trình Độ & Chuyên Môn</th>
+                                    <th class="py-3.5 px-3">Đơn Vị Trực Thuộc</th>
+                                    <th class="py-3.5 px-3">Loại HĐLĐ</th>
+                                    <th class="py-3.5 px-3 text-center">Thao Tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="employee-table-body" class="divide-y divide-slate-100 text-xs font-medium text-slate-700">
+                                <!-- Rendered dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination Footer -->
+                    <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+                        <div class="text-xs text-slate-700 font-semibold">
+                            Trang <span class="font-bold text-slate-900" id="current-page">1</span> / <span class="font-bold text-slate-900" id="total-pages">1</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="prevPage()" id="btn-prev" class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold hover:bg-vinapaco-50 disabled:opacity-50 transition">
+                                <i class="fa-solid fa-chevron-left mr-1"></i> Trang Trước
+                            </button>
+                            <button onclick="nextPage()" id="btn-next" class="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold hover:bg-vinapaco-50 disabled:opacity-50 transition">
+                                Trang Sau <i class="fa-solid fa-chevron-right ml-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: PHÂN LOẠI THEO ĐƠN VỊ -->
+            <section id="units-tab" class="tab-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h3 class="text-lg font-bold text-vinapaco-900 mb-1">Cơ Cấu Định Biên 18 Đơn Vị Trực Thuộc Tổng Công Ty</h3>
+                    <p class="text-xs text-slate-500 mb-6">Nhấp vào từng Đơn vị/Nhà máy/Xí nghiệp để mở bảng danh sách nhân sự thuộc đơn vị</p>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="unit-cards-container">
+                        <!-- Rendered dynamically -->
                     </div>
                 </div>
 
-                <div class="flex justify-end gap-2 pt-3 border-t">
-                    <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-slate-200 rounded-xl font-bold text-slate-700">Hủy</button>
-                    <button type="submit" class="px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl font-bold"><i class="fa-solid fa-save mr-1"></i> Lưu Lý Lịch & Lương Chế Độ</button>
+                <!-- Selected Unit Personnel Table -->
+                <div id="unit-detail-section" class="hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-200 pb-4">
+                        <div>
+                            <span class="text-xs font-bold text-vinapaco-800 uppercase tracking-wider">Danh Sách Báo Cáo Nhân Sự</span>
+                            <h3 class="text-xl font-extrabold text-slate-900" id="selected-unit-title">Tên Đơn Vị</h3>
+                        </div>
+                        <button onclick="closeUnitDetail()" class="text-slate-400 hover:text-slate-700 text-xl">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto custom-scrollbar">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-vinapaco-50 border-b border-vinapaco-100 text-[11px] font-bold text-vinapaco-900 uppercase">
+                                    <th class="py-3 px-3 w-10 text-center">STT</th>
+                                    <th class="py-3 px-3">Mã NV</th>
+                                    <th class="py-3 px-3">Họ và Tên</th>
+                                    <th class="py-3 px-3">Giới tính</th>
+                                    <th class="py-3 px-3">Ngày sinh</th>
+                                    <th class="py-3 px-3">Số CCCD</th>
+                                    <th class="py-3 px-3">Chức danh</th>
+                                    <th class="py-3 px-3">Trình độ & Chuyên môn</th>
+                                    <th class="py-3 px-3">Loại HĐLĐ</th>
+                                    <th class="py-3 px-3 text-center">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="selected-unit-table-body" class="divide-y divide-slate-100 text-xs font-medium text-slate-700">
+                                <!-- Rendered dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: TỔNG HỢP BIẾN ĐỘNG NHÂN SỰ -->
+            <section id="fluctuation-tab" class="tab-content hidden space-y-6">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-6">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-vinapaco-900">Tổng Hợp Biến Động Nhân Sự Theo Thời Gian</h3>
+                            <p class="text-xs text-slate-500">Thống kê số lượng nhân sự tuyển mới, nghỉ việc, điều chuyển theo Tháng, Quý, Năm</p>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <div>
+                                <select id="fluctuation-time-type" onchange="renderFluctuationData()" class="py-2 px-3 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-vinapaco-600 focus:outline-none">
+                                    <option value="year">Theo Năm (2024 - 2026)</option>
+                                    <option value="quarter">Theo Quý (Quý I - Quý IV / 2026)</option>
+                                    <option value="month">Theo Tháng (Tháng 1 - Tháng 12 / 2026)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <select id="fluctuation-unit-filter" onchange="renderFluctuationData()" class="py-2 px-3 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 focus:ring-2 focus:ring-vinapaco-600 focus:outline-none">
+                                    <option value="">Tất cả các Đơn vị / Phòng ban</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- KPI Summary cards for fluctuation -->
+                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                        <div class="p-4 bg-vinapaco-50 rounded-2xl border border-vinapaco-100 flex items-center justify-between">
+                            <div>
+                                <div class="text-[11px] font-bold text-vinapaco-900 uppercase">Nhân Sự Đầu Kỳ</div>
+                                <div class="text-2xl font-black text-vinapaco-950 mt-1" id="fluct-start-count">920</div>
+                            </div>
+                            <i class="fa-solid fa-users-rectangle text-vinapaco-700 text-2xl"></i>
+                        </div>
+                        <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex items-center justify-between">
+                            <div>
+                                <div class="text-[11px] font-bold text-emerald-800 uppercase">Tuyển Mới / Tăng</div>
+                                <div class="text-2xl font-black text-emerald-950 mt-1" id="fluct-incoming-count">+65</div>
+                            </div>
+                            <i class="fa-solid fa-user-plus text-emerald-700 text-2xl"></i>
+                        </div>
+                        <div class="p-4 bg-rose-50 rounded-2xl border border-rose-100 flex items-center justify-between">
+                            <div>
+                                <div class="text-[11px] font-bold text-rose-800 uppercase">Chấm Dứt / Giảm</div>
+                                <div class="text-2xl font-black text-rose-950 mt-1" id="fluct-outgoing-count">-16</div>
+                            </div>
+                            <i class="fa-solid fa-user-minus text-rose-600 text-2xl"></i>
+                        </div>
+                        <div class="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 flex items-center justify-between">
+                            <div>
+                                <div class="text-[11px] font-bold text-indigo-800 uppercase">Nhân Sự Cuối Kỳ</div>
+                                <div class="text-2xl font-black text-indigo-950 mt-1" id="fluct-end-count">969</div>
+                            </div>
+                            <i class="fa-solid fa-chart-line text-indigo-600 text-2xl"></i>
+                        </div>
+                    </div>
+
+                    <!-- Fluctuation Chart -->
+                    <div class="h-80 w-full pt-2">
+                        <canvas id="chart-fluctuation"></canvas>
+                    </div>
+
+                    <!-- Fluctuation Detailed Table -->
+                    <div class="border-t border-slate-200 pt-4 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-xs font-bold text-vinapaco-900 uppercase">Bảng Chi Tiết Biến Động Nhân Sự</h4>
+                            <button onclick="exportFluctuationExcel()" class="text-xs font-semibold text-vinapaco-800 bg-vinapaco-50 hover:bg-vinapaco-100 px-3 py-1.5 rounded-xl border border-vinapaco-200 transition flex items-center gap-1">
+                                <i class="fa-solid fa-file-excel"></i> Xuất Báo Cáo Biến Động
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto custom-scrollbar">
+                            <table class="w-full text-left border-collapse text-xs font-medium">
+                                <thead>
+                                    <tr class="bg-vinapaco-50 border-b border-vinapaco-100 text-[11px] font-bold text-vinapaco-900 uppercase">
+                                        <th class="py-3 px-3">Thời Gian Thống Kê</th>
+                                        <th class="py-3 px-3 text-right">Đầu Kỳ</th>
+                                        <th class="py-3 px-3 text-right text-emerald-700">Tuyển Mới</th>
+                                        <th class="py-3 px-3 text-right text-rose-700">Thôi Việc / Nghỉ</th>
+                                        <th class="py-3 px-3 text-right text-purple-700">Điều Chuyển</th>
+                                        <th class="py-3 px-3 text-right">Cuối Kỳ</th>
+                                        <th class="py-3 px-3 text-right">Tỷ Lệ Biến Động (%)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-fluctuation-body" class="divide-y divide-slate-100 text-slate-700">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: DỰ BÁO & KHUYẾN NGHỊ AI -->
+            <section id="ai-forecast-tab" class="tab-content hidden space-y-6">
+                <div class="bg-vinapaco-900 text-white p-6 rounded-2xl shadow-md border border-vinapaco-800 flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div class="space-y-2">
+                        <span class="bg-white/10 text-vinapaco-100 border border-white/20 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider inline-flex items-center gap-1.5">
+                            <i class="fa-solid fa-sparkles text-amber-300"></i> Hệ Thống AI Hỗ Trợ Quyết Định Điều Hành
+                        </span>
+                        <h2 class="text-2xl font-extrabold tracking-tight">Dự Báo Chiến Lược Hưu Trí & Khống Chế Định Biên Nhân Sự</h2>
+                        <p class="text-xs text-vinapaco-100 max-w-3xl leading-relaxed font-medium">
+                            Thuật toán AI tự động phân tích độ tuổi lao động, tính toán biến động nghỉ hưu theo quy định của Bộ luật Lao động, nhận diện nguy cơ thiếu hụt nhân sự kỹ thuật cốt lõi và đưa ra khuyến nghị tuyển dụng thay thế khoa học.
+                        </p>
+                    </div>
+                    <div class="flex-shrink-0 bg-vinapaco-950 p-4 rounded-xl border border-vinapaco-800 text-center">
+                        <div class="text-3xl font-black text-amber-300" id="ai-retiring-percentage">8.15%</div>
+                        <div class="text-[11px] text-vinapaco-200 font-semibold">Tỷ lệ nghỉ hưu trong 5 năm tới (2026 - 2030)</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                        <div class="flex items-center space-x-3 text-rose-600">
+                            <div class="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-lg border border-rose-100">
+                                <i class="fa-solid fa-hourglass-half"></i>
+                            </div>
+                            <h3 class="font-bold text-slate-900 text-base">Lộ Trình Nghỉ Hưu (2026 - 2030)</h3>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed font-medium">
+                            Trong 5 năm tới, dự kiến có <strong class="text-rose-600 font-bold" id="retire-5y-count">79 nhân sự</strong> bước vào độ tuổi nghỉ hưu. Danh sách các đơn vị chịu ảnh hưởng cao nhất:
+                        </p>
+                        <ul class="space-y-2 text-xs" id="ai-retire-units-list">
+                            <!-- Rendered dynamically -->
+                        </ul>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                        <div class="flex items-center space-x-3 text-amber-600">
+                            <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-lg border border-amber-100">
+                                <i class="fa-solid fa-graduation-cap"></i>
+                            </div>
+                            <h3 class="font-bold text-slate-900 text-base">Cảnh Báo Khoảng Trống Kỹ Năng</h3>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed font-medium">
+                            Nhóm nhân sự sắp nghỉ hưu nắm giữ nhiều vị trí Kỹ sư Vận hành, Kỹ sư Điện, Thợ kỹ thuật lâu năm tại <strong class="text-slate-900 font-bold">Nhà máy Giấy</strong>, <strong class="text-slate-900 font-bold">Nhà máy Điện</strong> & <strong class="text-slate-900 font-bold">Xí nghiệp Bảo dưỡng</strong>.
+                        </p>
+                        <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 space-y-1">
+                            <div class="font-bold flex items-center gap-1.5">
+                                <i class="fa-solid fa-lightbulb"></i> Giải Pháp Đào Tạo Kế Thừa:
+                            </div>
+                            <p class="text-[11px] leading-relaxed font-medium">
+                                Triển khai <strong>Chương trình Đào tạo 1 kèm 1</strong> giữa các Kỹ sư/Thợ lành nghề sắp nghỉ hưu và lực lượng nhân sự trẻ dưới 35 tuổi trong thời gian 12 - 24 tháng.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                        <div class="flex items-center space-x-3 text-vinapaco-700">
+                            <div class="w-10 h-10 rounded-xl bg-vinapaco-50 flex items-center justify-center text-lg border border-vinapaco-100">
+                                <i class="fa-solid fa-chart-line"></i>
+                            </div>
+                            <h3 class="font-bold text-slate-900 text-base">Tối Ưu Định Biên & Tinh Gọn</h3>
+                        </div>
+                        <p class="text-xs text-slate-600 leading-relaxed font-medium">
+                            Tỷ lệ Khối Tham mưu & Quản lý hiện được kiểm soát chặt chẽ. Để tối ưu hóa chi phí vận hành Tổng công ty:
+                        </p>
+                        <div class="p-3 bg-vinapaco-50 rounded-xl border border-vinapaco-200 text-xs text-vinapaco-900 space-y-1">
+                            <div class="font-bold flex items-center gap-1.5">
+                                <i class="fa-solid fa-check-circle"></i> Khuyến Nghị Định Biên Khoa Học:
+                            </div>
+                            <p class="text-[11px] leading-relaxed font-medium">
+                                Khống chế không tăng định biên hành chính thụ động; ưu tiên tuyển dụng thay thế trực tiếp lực lượng sản xuất vận hành máy móc.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-900">Danh Sách Nhân Sự Bước Vào Tuổi Nghỉ Hưu Trong 1 - 5 Năm Tới</h3>
+                            <p class="text-xs text-slate-500">Tiêu chuẩn nghỉ hưu theo độ tuổi: Nam &gt;= 60 tuổi, Nữ &gt;= 55 tuổi</p>
+                        </div>
+                        <button onclick="exportRetirementList()" class="text-xs font-semibold bg-rose-50 text-rose-700 px-3 py-2 rounded-xl border border-rose-200 hover:bg-rose-100 transition flex items-center gap-1">
+                            <i class="fa-solid fa-download"></i> Tải Danh Sách Hưu Trí
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto custom-scrollbar">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-vinapaco-50 border-b border-vinapaco-100 text-[11px] font-bold text-vinapaco-900 uppercase">
+                                    <th class="py-3 px-3 w-10 text-center">STT</th>
+                                    <th class="py-3 px-3">Mã NV</th>
+                                    <th class="py-3 px-3">Họ và Tên</th>
+                                    <th class="py-3 px-3">Giới Tính</th>
+                                    <th class="py-3 px-3">Tuổi Hiện Tại</th>
+                                    <th class="py-3 px-3">Chức Danh</th>
+                                    <th class="py-3 px-3">Đơn Vị Trực Thuộc</th>
+                                    <th class="py-3 px-3">Trình Độ & Chuyên Môn</th>
+                                    <th class="py-3 px-3 text-center">Dự Kiến Nghỉ Hưu</th>
+                                </tr>
+                            </thead>
+                            <tbody id="retire-table-body" class="divide-y divide-slate-100 text-xs font-medium text-slate-700">
+                                <!-- Rendered dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 6: UPLOAD & CẬP NHẬT DỮ LIỆU -->
+            <section id="import-tab" class="tab-content hidden space-y-6">
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 max-w-3xl mx-auto space-y-6 text-center">
+                    <div class="w-16 h-16 rounded-3xl bg-vinapaco-50 text-vinapaco-700 flex items-center justify-center text-2xl mx-auto shadow-inner border border-vinapaco-100">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                    </div>
+
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-900">Tải Lên File Dữ Liệu Nhân Sự Tổng Công Ty</h3>
+                        <p class="text-xs text-slate-500 max-w-md mx-auto mt-1 font-medium">
+                            Hệ thống hỗ trợ tệp Excel (<code class="bg-slate-100 px-1 py-0.5 rounded text-vinapaco-800 font-mono">.xlsx</code>) và CSV (<code class="bg-slate-100 px-1 py-0.5 rounded text-vinapaco-800 font-mono">.csv</code>).
+                        </p>
+                    </div>
+
+                    <div id="drop-zone" onclick="document.getElementById('file-input').click()" class="border-2 border-dashed border-vinapaco-300 hover:border-vinapaco-600 rounded-2xl p-8 bg-vinapaco-50/20 hover:bg-vinapaco-50/50 transition cursor-pointer space-y-3">
+                        <i class="fa-solid fa-file-excel text-4xl text-vinapaco-700"></i>
+                        <div class="text-xs text-slate-700 font-semibold">
+                            Kéo thả tệp vào đây hoặc <span class="text-vinapaco-800 font-bold underline">chọn tệp từ máy tính</span>
+                        </div>
+                        <input type="file" id="file-input" onchange="handleFileUpload(event)" accept=".csv, .xlsx, .xls" class="hidden">
+                    </div>
+
+                    <div class="flex items-center justify-center space-x-3 pt-2">
+                        <button onclick="downloadSampleCSV()" class="text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-download"></i>
+                            <span>Tải Tệp CSV Mẫu Chuẩn</span>
+                        </button>
+                        <button onclick="resetToOriginalData()" class="text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 px-4 py-2 rounded-xl transition flex items-center space-x-1.5">
+                            <i class="fa-solid fa-rotate-left"></i>
+                            <span>Khôi Phục Dữ Liệu Gốc (969 NS)</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- MODAL 1: XEM CHI TIẾT HỒ SƠ PHÁP LÝ -->
+    <div id="profile-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden border border-slate-200 transform transition-all">
+            <div class="bg-vinapaco-900 text-white p-6 relative">
+                <button onclick="closeModal('profile-modal')" class="absolute right-4 top-4 text-vinapaco-200 hover:text-white text-xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <div class="flex items-center space-x-4">
+                    <div id="modal-avatar" class="w-16 h-16 rounded-2xl bg-white text-vinapaco-900 flex items-center justify-center text-2xl font-black shadow-lg border border-vinapaco-200">
+                        NV
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 class="text-xl font-extrabold text-white" id="modal-emp-name">Nguyễn Văn A</h3>
+                            <span class="text-xs font-mono font-bold bg-white/20 px-2 py-0.5 rounded text-vinapaco-100" id="modal-emp-code">NV-0001</span>
+                        </div>
+                        <p class="text-xs text-vinapaco-200 font-medium mt-0.5" id="modal-emp-title-unit">Chức danh - Tên Đơn Vị</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 space-y-5 text-xs text-slate-700 max-h-[75vh] overflow-y-auto custom-scrollbar font-medium">
+                <!-- Nhóm I: Định danh -->
+                <div class="space-y-1">
+                    <h4 class="font-bold text-vinapaco-900 uppercase text-[10px] tracking-wider border-b border-vinapaco-100 pb-1 flex items-center gap-1.5">
+                        <i class="fa-solid fa-id-card text-vinapaco-700"></i> I. Thông Tin Cá Nhân & Định Danh (CSDL Quốc Gia)
+                    </h4>
+                    <div class="grid grid-cols-2 gap-3 pt-2">
+                        <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                            <span class="text-[10px] text-slate-500 font-bold uppercase">Giới Tính & Ngày Sinh</span>
+                            <div class="font-bold text-slate-900 text-xs mt-0.5" id="modal-emp-gender-dob">Nam - 01/01/1980</div>
+                        </div>
+                        <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                            <span class="text-[10px] text-slate-500 font-bold uppercase">Số CCCD / CMND</span>
+                            <div class="font-bold text-slate-900 text-xs mt-0.5 font-mono" id="modal-emp-cccd">025080000000</div>
+                        </div>
+                        <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                            <span class="text-[10px] text-slate-500 font-bold uppercase">Ngày Cấp & Nơi Cấp</span>
+                            <div class="font-bold text-slate-900 text-xs mt-0.5" id="modal-emp-cccd-info">01/01/2021 - Cục CSQLHC</div>
+                        </div>
+                        <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                            <span class="text-[10px] text-slate-500 font-bold uppercase">Số Điện Thoại / Email</span>
+                            <div class="font-bold text-slate-900 text-xs mt-0.5" id="modal-emp-contact">0981234567</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nhóm II: Đào tạo & Công tác -->
+                <div class="space-y-1">
+                    <h4 class="font-bold text-vinapaco-900 uppercase text-[10px] tracking-wider border-b border-vinapaco-100 pb-1 flex items-center gap-1.5">
+                        <i class="fa-solid fa-graduation-cap text-vinapaco-700"></i> II. Trình Độ Đào Tạo & Quản Lý Lao Động
+                    </h4>
+                    <div class="grid grid-cols-2 gap-3 pt-2">
+                        <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                            <span class="text-[10px] text-slate-500 font-bold uppercase">Trình Độ Học Vấn</span>
+                            <div class="font-bold text-slate-900 text-xs mt-0.5" id="modal-emp-degree">Cử nhân</div>
+                        </div>
+                        <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                            <span class="text-[10px] text-slate-500 font-bold uppercase">Chuyên Ngành Đào Tạo</span>
+                            <div class="font-bold text-slate-900 text-xs mt-0.5" id="modal-emp-specialty">Chuyên môn A</div>
+                        </div>
+                        <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                            <span class="text-[10px] text-slate-500 font-bold uppercase">Khối Chức Năng</span>
+                            <div class="font-bold text-slate-900 text-xs mt-0.5" id="modal-emp-block">Khối Sản Xuất</div>
+                        </div>
+                        <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                            <span class="text-[10px] text-slate-500 font-bold uppercase">Loại Hợp Đồng Lao Động</span>
+                            <div class="font-bold text-slate-900 text-xs mt-0.5" id="modal-emp-contract">HĐLĐ Không xác định thời hạn</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end space-x-2">
+                <button onclick="closeModal('profile-modal')" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold rounded-xl transition">Đóng</button>
+                <button onclick="openTransferModalFromProfile()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-xl shadow transition flex items-center gap-1">
+                    <i class="fa-solid fa-right-left"></i> Điều Chuyển
+                </button>
+                <button onclick="editCurrentEmployeeFromModal()" class="px-4 py-2 bg-vinapaco-700 hover:bg-vinapaco-600 text-white text-xs font-semibold rounded-xl shadow transition flex items-center gap-1">
+                    <i class="fa-solid fa-pen-to-square"></i> Chỉnh Sửa
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: THÊM / SỬA HỒ SƠ -->
+    <div id="edit-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden border border-slate-200">
+            <div class="bg-vinapaco-900 text-white px-6 py-4 flex items-center justify-between">
+                <h3 class="text-base font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-user-pen text-vinapaco-200"></i>
+                    <span id="edit-modal-title">Cập Nhật Hồ Sơ Nhân Sự</span>
+                </h3>
+                <button onclick="closeModal('edit-modal')" class="text-vinapaco-200 hover:text-white text-xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form id="edit-emp-form" onsubmit="saveEmployeeChanges(event)" class="p-6 space-y-4 text-xs max-h-[80vh] overflow-y-auto custom-scrollbar font-medium">
+                <input type="hidden" id="edit-emp-stt">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Mã Nhân Viên <span class="text-rose-500">*</span></label>
+                        <input type="text" id="edit-emp-code" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-vinapaco-600 focus:outline-none font-mono">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Họ và Tên <span class="text-rose-500">*</span></label>
+                        <input type="text" id="edit-emp-name" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-vinapaco-600 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Giới tính</label>
+                        <select id="edit-emp-gender" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-vinapaco-600 focus:outline-none">
+                            <option value="Nam">Nam</option>
+                            <option value="Nữ">Nữ</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Ngày sinh (DD/MM/YYYY)</label>
+                        <input type="text" id="edit-emp-dob" placeholder="01/01/1980" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-vinapaco-600 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Số CCCD</label>
+                        <input type="text" id="edit-emp-cccd" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-vinapaco-600 focus:outline-none font-mono">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Trình độ Học vấn</label>
+                        <input type="text" id="edit-emp-degree" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-vinapaco-600 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Chức Danh / Vị Trí</label>
+                        <input type="text" id="edit-emp-title" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-vinapaco-600 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Đơn vị / Phòng ban <span class="text-rose-500">*</span></label>
+                        <select id="edit-emp-unit" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-vinapaco-600 focus:outline-none">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-200 flex items-center justify-end space-x-2">
+                    <button type="button" onclick="closeModal('edit-modal')" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-xl transition">Hủy</button>
+                    <button type="submit" class="px-5 py-2 bg-vinapaco-700 hover:bg-vinapaco-600 text-white font-semibold rounded-xl shadow transition">Lưu Hồ Sơ</button>
                 </div>
             </form>
         </div>
     </div>
 
+    <!-- MODAL 3: ĐIỀU CHUYỂN NHÂN SỰ -->
+    <div id="transfer-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200">
+            <div class="bg-purple-900 text-white px-6 py-4 flex items-center justify-between">
+                <h3 class="text-base font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-right-left text-purple-300"></i>
+                    <span>Điều Chuyển Đơn Vị Công Tác</span>
+                </h3>
+                <button onclick="closeModal('transfer-modal')" class="text-purple-200 hover:text-white text-xl">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form id="transfer-emp-form" onsubmit="saveEmployeeTransfer(event)" class="p-6 space-y-4 text-xs font-medium">
+                <input type="hidden" id="transfer-emp-index">
+                <div class="p-3 bg-purple-50 rounded-2xl border border-purple-100 space-y-1">
+                    <div class="font-extrabold text-purple-950 text-sm" id="transfer-emp-name-title">Nguyễn Văn A</div>
+                    <div class="text-slate-600 text-[11px]" id="transfer-emp-info">Mã NV</div>
+                </div>
+                <div>
+                    <label class="block font-bold text-slate-700 mb-1">Đơn Vị Hiện Tại</label>
+                    <input type="text" id="transfer-current-unit" readonly class="w-full p-2.5 bg-slate-100 border border-slate-300 rounded-xl font-bold text-slate-600 cursor-not-allowed">
+                </div>
+                <div>
+                    <label class="block font-bold text-purple-900 mb-1">Đơn Vị Điều Chuyển Đến <span class="text-rose-500">*</span></label>
+                    <select id="transfer-target-unit" required class="w-full p-2.5 bg-slate-50 border border-purple-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none font-bold text-slate-800">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+                <div class="pt-3 border-t border-slate-200 flex items-center justify-end space-x-2">
+                    <button type="button" onclick="closeModal('transfer-modal')" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-xl transition">Hủy</button>
+                    <button type="submit" class="px-5 py-2 bg-purple-700 hover:bg-purple-600 text-white font-semibold rounded-xl shadow transition">Xác Nhận Điều Chuyển</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- LOGIC SCRIPT & GOOGLE APPS SCRIPT API INTEGRATION -->
     <script>
-        const CLOUD_API_URL = "https://script.google.com/macros/s/AKfycby8iehhv8RNRh3pWSwWMNv_qX893POHNQc45YUm_D-bSfK5XouJR7mZ1zHyxzDnU0KO/exec";
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxq8VSxO1Z9uy9pKHsRxkZf2fUtXS9zNyOChO95T9b90WcwiKkdaeWPEhvhZNHxheGNAw/exec";
 
-        const MASTER_UNITS = [
-            "Văn phòng TCT", "Phòng Kỹ thuật", "Xí nghiệp Bảo dưỡng", "Phòng Nhân sự", 
-            "Trợ lý, Thư ký Hội đồng thành viên", "Nhà máy Điện", "Phòng Lâm nghiệp", 
-            "Phòng Tài chính kế toán", "Xí nghiệp Dịch vụ", "Phòng Kế hoạch Đầu tư", 
-            "Phòng Vật tư", "Văn phòng Công đoàn", "Tổng kho", "Phòng Kinh doanh", 
-            "Ban Kiểm tra Kiểm toán nội bộ", "Nhà máy Hóa chất", 
-            "Các cơ quan tham mưu giúp việc Đảng ủy", "Nhà máy Giấy"
-        ];
+        const RAW_EMPLOYEES = [{"STT": 1, "Ho_Ten": "Nguyễn Thế Anh", "Gioi_Tinh": "Nam", "Ngay_Sinh": "03/08/1978", "Tuoi": 48, "So_CCCD": "25078006454", "Trinh_Do": "Chưa cập nhật", "Chuyen_Mon": "Chưa cập nhật", "Dia_Chi_Thuong_Tru": "Chưa cập nhật", "Ma_Don_Vi": "VP_CONGDOAN", "Ten_Don_Vi": "Văn phòng Công đoàn"}, {"STT": 2, "Ho_Ten": "Trần Thị Thanh", "Gioi_Tinh": "Nữ", "Ngay_Sinh": "24/07/1972", "Tuoi": 54, "So_CCCD": "25172016872", "Trinh_Do": "Chưa cập nhật", "Chuyen_Mon": "Chưa cập nhật", "Dia_Chi_Thuong_Tru": "Chưa cập nhật", "Ma_Don_Vi": "VP_TCT", "Ten_Don_Vi": "Văn phòng TCT"}, {"STT": 3, "Ho_Ten": "Vũ Thị Thu", "Gioi_Tinh": "Nữ", "Ngay_Sinh": "13/04/1974", "Tuoi": 52, "So_CCCD": "25174000861", "Trinh_Do": "Cử nhân", "Chuyen_Mon": "Cử nhân kế toán", "Dia_Chi_Thuong_Tru": "Chưa cập nhật", "Ma_Don_Vi": "VP_TCT", "Ten_Don_Vi": "Văn phòng TCT"}, {"STT": 4, "Ho_Ten": "Nguyễn Minh Ngọc", "Gioi_Tinh": "Nam", "Ngay_Sinh": "31/05/1980", "Tuoi": 46, "So_CCCD": "25080013383", "Trinh_Do": "Cử nhân", "Chuyen_Mon": "Cử nhân ngoại ngữ", "Dia_Chi_Thuong_Tru": "Chưa cập nhật", "Ma_Don_Vi": "VP_TCT", "Ten_Don_Vi": "Văn phòng TCT"}, {"STT": 5, "Ho_Ten": "Đinh Hữu Vinh", "Gioi_Tinh": "Nam", "Ngay_Sinh": "17/01/1981", "Tuoi": 45, "So_CCCD": "25081011348", "Trinh_Do": "Chưa cập nhật", "Chuyen_Mon": "Chưa cập nhật", "Dia_Chi_Thuong_Tru": "Chưa cập nhật", "Ma_Don_Vi": "VP_TCT", "Ten_Don_Vi": "Văn phòng TCT"}, {"STT": 6, "Ho_Ten": "Nguyễn Thị Tuyết Nhung", "Gioi_Tinh": "Nữ", "Ngay_Sinh": "11/09/1982", "Tuoi": 44, "So_CCCD": "25182013041", "Trinh_Do": "Cử nhân", "Chuyen_Mon": "Cử nhân QTKD", "Dia_Chi_Thuong_Tru": "Chưa cập nhật", "Ma_Don_Vi": "VP_TCT", "Ten_Don_Vi": "Văn phòng TCT"}, {"STT": 7, "Ho_Ten": "Phạm Tiến Long", "Gioi_Tinh": "Nam", "Ngay_Sinh": "08/02/1983", "Tuoi": 43, "So_CCCD": "25083011155", "Trinh_Do": "Chưa cập nhật", "Chuyen_Mon": "Chưa cập nhật", "Dia_Chi_Thuong_Tru": "Chưa cập nhật", "Ma_Don_Vi": "VP_TCT", "Ten_Don_Vi": "Văn phòng TCT"}, {"STT": 8, "Ho_Ten": "Bùi Đình Điệp", "Gioi_Tinh": "Nam", "Ngay_Sinh": "20/09/1983", "Tuoi": 43, "So_CCCD": "25083001244", "Trinh_Do": "Chưa cập nhật", "Chuyen_Mon": "Chưa cập nhật", "Dia_Chi_Thuong_Tru": "Chưa cập nhật", "Ma_Don_Vi": "VP_TCT", "Ten_Don_Vi": "Văn phòng TCT"}, {"STT": 9, "Ho_Ten": "Trần Bình Dương", "Gioi_Tinh": "Nam", "Ngay_Sinh": "29/10/1983", "Tuoi": 43, "So_CCCD": "25083014901", "Trinh_Do": "Tiến sỹ", "Chuyen_Mon": "Tiến sỹ Kỹ thuật và Khoa học thông tin", "Dia_Chi_Thuong_Tru": "Chưa cập nhật", "Ma_Don_Vi": "VP_TCT", "Ten_Don_Vi": "Văn phòng TCT"}, {"STT": 10, "Ho_Ten": "Ma Trọng Luận", "Gioi_Tinh": "Nam", "Ngay_Sinh": "01/11/1984", "Tuoi": 42, "So_CCCD": "25084018328", "Trinh_Do": "Công nhân", "Chuyen_Mon": "Công nhân tiện; Lái xe", "Dia_Chi_Thuong_Tru": "Chưa cập nhật", "Ma_Don_Vi": "VP_TCT", "Ten_Don_Vi": "Văn phòng TCT"}, {"STT": 11, "Ho_Ten": "Võ Thị Thanh Tuyền", "Gioi_Tinh": "Nữ", "Ngay_Sinh": "13/12/1984", "Tuoi": 42, "So_CCCD": "40184039317", "Trinh_Do": "Công nhân", "Chuyen_Mon": "Công nhân công nghệ giấy", "Dia_Chi_Thuong_Tru": "Chưa cập nhật", "Ma_Don_Vi": "VP_TCT", "Ten_Don_Vi": "Văn phòng TCT"}, {"STT": 12, "Ho_Ten": "Trần Đức Chiến", "Gioi_Tinh": "Nam", "Ngay_Sinh": "29/10/1985", "Tuoi": 41, "So_CCCD": "25085017984", "Trinh_Do": "Chưa cập nhật", "Chuyen_Mon": "Chưa cập nhật", "Dia_Chi_Thuong_Tru": "Chưa cập nhật", "Ma_Don_Vi": "VP_TCT", "Ten_Don_Vi": "Văn phòng TCT"}, {"STT": 13, "Ho_Ten": "Đào Thị Liên", "Gioi_Tinh": "Nữ", "Ngay_Sinh": "23/07/1986", "Tuoi": 40, "So_CCCD": "25186017264", "Trinh_Do": "Cử nhân", "Chuyen_Mon": "Cử nhân tài chính ngân hàng", "Dia_Chi_Thuong_Tru": "Chưa cập nhật", "Ma_Don_Vi": "VP_TCT", "Ten_Don_Vi": "Văn phòng TCT"}, {"STT": 14, "Ho_Ten": "Nguyễn Văn Nam", "Gioi_Tinh": "Nam", "Ngay_Sinh": "29/10/1986", "Tuoi": 40, "So_CCCD": "25086013398", "Trinh_Do": "Chưa cập nhật", "Chuyen_Mon": "Chưa cập nhật", "Dia_Chi_Thuong_Tru": "Chưa cập nhật", "Ma_Don_Vi": "VP_TCT", "Ten_Don_Vi": "Văn phòng TCT"}, {"STT": 15, "Ho_Ten": "Hoàng Mạnh Hùng", "Gioi_Tinh": "Nam", "Ngay_Sinh": "25/01/1988", "Tuoi": 38, "So_CCCD": "25088009325", "Trinh_Do": "Chưa cập nhật", "Chuyen_Mon": "Chưa cập nhật", "Dia_Chi_Thuong_Tru": "Chưa cập nhật", "Ma_Don_Vi": "VP_TCT", "Ten_Don_Vi": "Văn phòng TCT"}, {"STT": 16, "Ho_Ten": "Bùi Minh Tuấn", "Gioi_Tinh": "Nam", "Ngay_Sinh": "06/09/1989", "Tuoi": 37, "So_CCCD": "25089001521", "Trinh_Do": "Kỹ sư", "Chuyen_Mon": "Kỹ sư khoa học máy tính", "Dia_Chi_Thuong_Tru": "Chưa cập nhật", "Ma_Don_Vi": "XN_BAODUONG", "Ten_Don_Vi": "Xí nghiệp Bảo dưỡng"}, {"STT": 17, "Ho_Ten": "Đặng Trần Trung", "Gioi_Tinh": "Nam", "Ngay_Sinh": "07/09/1991", "Tuoi": 35, "So_CCCD": "8091007677", "Trinh_Do": "Chưa cập nhật", "Chuyen_Mon": "Chưa cập nhật", "Dia_Chi_Thuong_Tru": "Chưa cập nhật", "Ma_Don_Vi": "VP_TCT", "Ten_Don_Vi": "Văn phòng TCT"}, {"STT": 18, "Ho_Ten": "Nguyễn Thị Việt Hà", "Gioi_Tinh": "Nữ", "Ngay_Sinh": "20/09/1972", "Tuoi": 54, "So_CCCD": "25172003082", "Trinh_Do": "Cử nhân", "Chuyen_Mon": "Cử nhân hóa học", "Dia_Chi_Thuong_Tru": "Khu 10 Xã Phù Ninh, tỉnh Phú Thọ", "Ma_Don_Vi": "CQ_DANG", "Ten_Don_Vi": "Các cơ quan tham mưu giúp việc Đảng ủy"}, {"STT": 19, "Ho_Ten": "Nguyễn Hồng Hà", "Gioi_Tinh": "Nam", "Ngay_Sinh": "25/06/1974", "Tuoi": 52, "So_CCCD": "25074012062", "Trinh_Do": "Cử nhân", "Chuyen_Mon": "Cử nhân Quản trị kinh doanh", "Dia_Chi_Thuong_Tru": "Khu Mã Thượng A, Xã Phù Ninh, tỉnh Phú Thọ", "Ma_Don_Vi": "P_NS", "Ten_Don_Vi": "Phòng Nhân sự"}, {"STT": 20, "Ho_Ten": "Đỗ Thị Kim Dung", "Gioi_Tinh": "Nữ", "Ngay_Sinh": "30/06/1976", "Tuoi": 50, "So_CCCD": "25176011619", "Trinh_Do": "Cử nhân", "Chuyen_Mon": "Cử nhân kinh tế", "Dia_Chi_Thuong_Tru": "Phường Nông Trang, tỉnh Phú Thọ", "Ma_Don_Vi": "XN_BAODUONG", "Ten_Don_Vi": "Xí nghiệp Bảo dưỡng"}, {"STT": 21, "Ho_Ten": "Nguyễn Khắc Long", "Gioi_Tinh": "Nam", "Ngay_Sinh": "01/09/1976", "Tuoi": 50, "So_CCCD": "25076003402", "Trinh_Do": "Cử nhân", "Chuyen_Mon": "Cử nhân luật", "Dia_Chi_Thuong_Tru": "Phường Nông Trang, tỉnh Phú Thọ", "Ma_Don_Vi": "P_NS", "Ten_Don_Vi": "Phòng Nhân sự"}, {"STT": 22, "Ho_Ten": "Đỗ Cao Thông", "Gioi_Tinh": "Nam", "Ngay_Sinh": "10/06/1981", "Tuoi": 45, "So_CCCD": "26081008815", "Trinh_Do": "Cử nhân", "Chuyen_Mon": "Cử nhân quản trị nguồn nhân lực", "Dia_Chi_Thuong_Tru": "Khu Mã Thượng A, Xã Phù Ninh, tỉnh Phú Thọ.", "Ma_Don_Vi": "P_NS", "Ten_Don_Vi": "Phòng Nhân sự"}, {"STT": 23, "Ho_Ten": "Nguyễn Hồng Thúy", "Gioi_Tinh": "Nữ", "Ngay_Sinh": "06/07/1981", "Tuoi": 45, "So_CCCD": "25181007664", "Trinh_Do": "Kỹ sư", "Chuyen_Mon": "Kỹ sư môi trường", "Dia_Chi_Thuong_Tru": "Khu Mã Thượng A, Xã Phù Ninh, tỉnh Phú Thọ", "Ma_Don_Vi": "XN_DICHVU", "Ten_Don_Vi": "Xí nghiệp Dịch vụ"}, {"STT": 24, "Ho_Ten": "Nguyễn Thị Thanh Hương", "Gioi_Tinh": "Nữ", "Ngay_Sinh": "17/08/1981", "Tuoi": 45, "So_CCCD": "25181015849", "Trinh_Do": "Cử nhân", "Chuyen_Mon": "Cử nhân hành chính", "Dia_Chi_Thuong_Tru": "Khu Đồng Giao, Xã Phù Ninh, tỉnh Phú Thọ", "Ma_Don_Vi": "P_NS", "Ten_Don_Vi": "Phòng Nhân sự"}, {"STT": 25, "Ho_Ten": "Lê Thị Thu Hương", "Gioi_Tinh": "Nữ", "Ngay_Sinh": "22/12/1982", "Tuoi": 44, "So_CCCD": "25182014580", "Trinh_Do": "Cử nhân", "Chuyen_Mon": "Cử nhân kinh tế", "Dia_Chi_Thuong_Tru": "Phường Nông Trang, tỉnh Phú Thọ", "Ma_Don_Vi": "P_NS", "Ten_Don_Vi": "Phòng Nhân sự"}, {"STT": 26, "Ho_Ten": "Lê Quang Chiến", "Gioi_Tinh": "Nam", "Ngay_Sinh": "18/10/1985", "Tuoi": 41, "So_CCCD": "25085008290", "Trinh_Do": "Thạc sỹ", "Chuyen_Mon": "Thạc sỹ QLKT, kỹ sư lâm học", "Dia_Chi_Thuong_Tru": "Phường Âu cơ, tỉnh Phú Thọ", "Ma_Don_Vi": "P_NS", "Ten_Don_Vi": "Phòng Nhân sự"}, {"STT": 27, "Ho_Ten": "Võ Thị Thanh Trà", "Gioi_Tinh": "Nữ", "Ngay_Sinh": "06/11/1985", "Tuoi": 41, "So_CCCD": "40185007988", "Trinh_Do": "Cử nhân", "Chuyen_Mon": "Cử nhân kế toán", "Dia_Chi_Thuong_Tru": "Khu 10 Xã Phù Ninh, tỉnh Phú Thọ", "Ma_Don_Vi": "NM_GIAY", "Ten_Don_Vi": "Nhà máy Giấy"}, {"STT": 28, "Ho_Ten": "Đoàn Thu Thảo", "Gioi_Tinh": "Nữ", "Ngay_Sinh": "14/05/1991", "Tuoi": 35, "So_CCCD": "25191007638", "Trinh_Do": "Cử nhân", "Chuyen_Mon": "Cử nhân kế toán", "Dia_Chi_Thuong_Tru": "Xã Phù Ninh, tỉnh Phú Thọ", "Ma_Don_Vi": "P_NS", "Ten_Don_Vi": "Phòng Nhân sự"}, {"STT": 29, "Ho_Ten": "Tạ Huy Tuân", "Gioi_Tinh": "Nam", "Ngay_Sinh": "14/12/1993", "Tuoi": 33, "So_CCCD": "25093006673", "Trinh_Do": "Cử nhân", "Chuyen_Mon": "Cử nhân quản trị nguồn nhân lực", "Dia_Chi_Thuong_Tru": "Khu Núi Trang, xã Phù Ninh, tỉnh Phú Thọ", "Ma_Don_Vi": "P_NS", "Ten_Don_Vi": "Phòng Nhân sự"}, {"STT": 30, "Ho_Ten": "Trần Quốc Vượng", "Gioi_Tinh": "Nam", "Ngay_Sinh": "03/09/1976", "Tuoi": 50, "So_CCCD": "25076001085", "Trinh_Do": "Cử nhân", "Chuyen_Mon": "Cử nhân luật", "Dia_Chi_Thuong_Tru": "Tổ 5, Khu Đồng Giao, xã Phù Ninh, tỉnh Phú Thọ", "Ma_Don_Vi": "CQ_DANG", "Ten_Don_Vi": "Các cơ quan tham mưu giúp việc Đảng ủy"}, {"STT": 751, "Ho_Ten": "Lương Văn Tuấn", "Gioi_Tinh": "Nam", "Ngay_Sinh": "16/04/1994", "Tuoi": 32, "So_CCCD": "25094013283", "Trinh_Do": "Sơ cấp", "Chuyen_Mon": "Công nhân kỹ thuật", "Dia_Chi_Thuong_Tru": "Chưa cập nhật", "Ma_Don_Vi": "XN_DICHVU", "Ten_Don_Vi": "Xí nghiệp Dịch vụ"}, {"STT": 752, "Ho_Ten": "Nguyễn Văn Sinh", "Gioi_Tinh": "Nam", "Ngay_Sinh": "20/05/1988", "Tuoi": 38, "So_CCCD": "25088019821", "Trinh_Do": "Kỹ sư", "Chuyen_Mon": "Kỹ sư Cơ khí", "Dia_Chi_Thuong_Tru": "Xã Phù Ninh, tỉnh Phú Thọ", "Ma_Don_Vi": "XN_BAODUONG", "Ten_Don_Vi": "Xí nghiệp Bảo dưỡng"}];
 
-        let rawEmployees = [];
-        let currentFilteredData = [];
-        let currentView = 'card';
+        let employees = [];
 
-        // THUẬT TOÁN TỰ ĐỘNG TÁCH TÊN TỪ HỌ VÀ TÊN ĐẦY ĐỦ
-        function extractShortName(fullName) {
-            if (!fullName) return '';
-            const parts = String(fullName).trim().split(/\s+/);
-            return parts.length > 0 ? parts[parts.length - 1] : '';
+        function enrichEmployeeData(rawList) {
+            return rawList.map((emp, idx) => {
+                const stt = emp.STT || (idx + 1);
+                const code = emp.Ma_NV || `NV-${String(stt).padStart(4, '0')}`;
+                const name = emp.Ho_Ten || 'Chưa cập nhật';
+                const gender = emp.Gioi_Tinh || 'Nam';
+                const dob = emp.Ngay_Sinh || '01/01/1985';
+                const age = emp.Tuoi || calculateAge(dob);
+                const cccd = emp.So_CCCD || `02508${stt.toString().padStart(7, '0')}`;
+                const degree = emp.Trinh_Do || 'Cử nhân';
+                const specialty = emp.Chuyen_Mon || 'Chuyên môn nghiệp vụ';
+                const unitName = emp.Ten_Don_Vi || 'Văn phòng TCT';
+                const unitCode = emp.Ma_Don_Vi || 'VP_TCT';
+                let funcBlock = emp.Khoi_Chuc_Nang || getScientificBlock(unitName);
+                let title = emp.Chuc_Danh || getTitleByDegreeAndBlock(degree);
+                const contract = emp.Loai_HDLD || 'HĐLĐ Không xác định thời hạn';
+                const phone = emp.Dien_Thoai || `09${Math.floor(100000500 + stt * 123) % 900000000}`;
+                const email = emp.Email || `${removeAccents(name.toLowerCase().replace(/\s+/g, '.'))}@vinapaco.com.vn`;
+                const address = emp.Dia_Chi_Thuong_Tru || 'Xã Phù Ninh, Tỉnh Phú Thọ';
+
+                return {
+                    STT: stt, Ma_NV: code, Ho_Ten: name, Gioi_Tinh: gender, Ngay_Sinh: dob, Tuoi: age,
+                    So_CCCD: cccd, Ngay_Cap_CCCD: '10/05/2021', Noi_Cap_CCCD: 'Cục CSQLHC về trật tự xã hội',
+                    Trinh_Do: degree, Chuyen_Mon: specialty, Chuc_Danh: title, Ma_Don_Vi: unitCode,
+                    Ten_Don_Vi: unitName, Khoi_Chuc_Nang: funcBlock, Loai_HDLD: contract,
+                    Ngay_Vao_Lam: '01/01/2012', So_BHXH: `25${stt.toString().padStart(8, '0')}`,
+                    Dien_Thoai: phone, Email: email, Dia_Chi_Thuong_Tru: address
+                };
+            });
         }
 
-        function autoExtractShortName() {
-            const fullNameVal = document.getElementById('inputFullName').value;
-            const shortNameInput = document.getElementById('inputShortName');
-            shortNameInput.value = extractShortName(fullNameVal);
+        function calculateAge(dobStr) {
+            if(!dobStr) return 40;
+            const parts = dobStr.split('/');
+            return parts.length === 3 ? 2026 - parseInt(parts[2]) : 40;
         }
 
-        function setSyncStatus(html) {
-            const el = document.getElementById('syncStatus');
-            if (el) el.innerHTML = html;
+        function removeAccents(str) {
+            return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
         }
 
-        function saveToLocal() {
-            try { localStorage.setItem('vnp_employees_data', JSON.stringify(rawEmployees)); } catch(e) {}
+        function getScientificBlock(unitName) {
+            if(['Nhà máy Giấy', 'Nhà máy Hóa chất', 'Nhà máy Điện'].some(u => unitName.includes(u))) return 'Khối Sản Xuất Trực Tiếp';
+            if(['Tổng kho', 'Xí nghiệp Bảo dưỡng', 'Xí nghiệp Dịch vụ', 'Phòng Vật tư'].some(u => unitName.includes(u))) return 'Khối Phụ Trợ & Dịch Vụ';
+            return 'Khối Tham Mưu & Quản Lý';
         }
 
-        function loadFromLocal() {
+        function getTitleByDegreeAndBlock(degree) {
+            if(degree.includes('Tiến sỹ') || degree.includes('Thạc sỹ')) return 'Chuyên viên Cao cấp';
+            if(degree.includes('Kỹ sư')) return 'Kỹ sư Vận hành';
+            if(degree.includes('Cử nhân')) return 'Chuyên viên Nghiệp vụ';
+            return 'Công nhân Vận hành';
+        }
+
+        let filteredEmployees = [];
+        let currentPage = 1;
+        const pageSize = 15;
+        let chartUnitsInstance = null, chartDegreesInstance = null, chartAgeInstance = null, chartGenderBlockInstance = null, chartFluctuationInstance = null;
+        let currentModalEmpIndex = -1;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            employees = enrichEmployeeData(RAW_EMPLOYEES);
+            filteredEmployees = [...employees];
+            populateUnitDropdowns();
+            updateAllKPIs();
+            renderDashboardCharts();
+            renderEmployeeTable();
+            renderUnitCards();
+            renderFluctuationData();
+            renderAIForecast();
+        });
+
+        // HÀM ĐỒNG BỘ DỮ LIỆU TỪ GOOGLE APPS SCRIPT API
+        async function syncDataFromCloud() {
+            const icon = document.getElementById('sync-icon');
+            icon.classList.add('fa-spin');
             try {
-                const savedEmp = localStorage.getItem('vnp_employees_data');
-                if (savedEmp) return JSON.parse(savedEmp);
-            } catch(e) {}
-            return null;
-        }
-
-        async function fetchCloudData(isManual = false) {
-            const localData = loadFromLocal();
-            if (localData && localData.length > 0 && !isManual) {
-                rawEmployees = localData;
-                initSystem();
-                setSyncStatus(`<span class="text-slate-700 font-semibold"><i class="fa-solid fa-hard-drive"></i> Đã nạp ${rawEmployees.length} lý lịch nhân sự từ bộ nhớ máy</span>`);
-            } else {
-                setSyncStatus(`<i class="fa-solid fa-circle-notch fa-spin text-blue-600"></i> Đang tải dữ liệu hồ sơ nhân sự...`);
+                const response = await fetch(APPS_SCRIPT_URL);
+                const result = await response.json();
+                if(result && Array.isArray(result) && result.length > 0) {
+                    employees = enrichEmployeeData(result);
+                    filteredEmployees = [...employees];
+                    filterEmployees();
+                    updateAllKPIs();
+                    renderDashboardCharts();
+                    renderUnitCards();
+                    renderFluctuationData();
+                    renderAIForecast();
+                    Swal.fire('Thành công', `Đã đồng bộ thành công ${employees.length} hồ sơ từ Google Sheets API.`, 'success');
+                } else {
+                    Swal.fire('Thông báo', 'Dữ liệu trả về trống hoặc không đúng định dạng.', 'info');
+                }
+            } catch (error) {
+                console.error("Lỗi đồng bộ API:", error);
+                Swal.fire('Lỗi kết nối', 'Không thể kết nối đến Google Apps Script API. Vui lòng kiểm tra lại quyền truy cập (Deploy as Web App -> Anyone).', 'error');
+            } finally {
+                icon.classList.remove('fa-spin');
             }
         }
 
-        function cleanUnitName(str) { 
-            const s = String(str || '').trim().replace(/\s+/g, ' '); 
-            const matched = MASTER_UNITS.find(m => m.toLowerCase() === s.toLowerCase());
-            return matched || s || 'Văn phòng TCT';
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-vinapaco-800', 'text-white', 'shadow-sm');
+                btn.classList.add('text-slate-300', 'hover:text-white', 'hover:bg-vinapaco-900');
+            });
+
+            const activeNav = document.getElementById(`nav-${tabId}`);
+            if(activeNav) {
+                activeNav.classList.remove('text-slate-300', 'hover:text-white', 'hover:bg-vinapaco-900');
+                activeNav.classList.add('bg-vinapaco-800', 'text-white', 'shadow-sm');
+            }
         }
 
-        // BỔ SUNG ĐẦY ĐỦ CÔNG THỨC LƯƠNG & CHẾ ĐỘ ĐÃI NGỘ KHÁC
-        function calculateEmployeePayroll(emp) {
-            const baseSalary = 2530000;       // Lương cơ sở
-            const regionMin = 4140000;        // Lương tối thiểu vùng
-            const jobSalaryBase = 2087970;    // Đơn giá lương công việc
-            const mealPerDay = 5000;          // Định mức tiền ăn ca/ngày
-            const standardDays = 22;          // Ngày công chuẩn tháng
+        function populateUnitDropdowns() {
+            const ALL_UNITS = [
+                'Văn phòng TCT', 'Văn phòng Công đoàn', 'Các cơ quan tham mưu giúp việc Đảng ủy',
+                'Phòng Nhân sự', 'Phòng Tài chính kế toán', 'Phòng Kế hoạch Đầu tư',
+                'Phòng Kỹ thuật', 'Phòng Kinh doanh', 'Phòng Vật tư', 'Phòng Lâm nghiệp',
+                'Ban Kiểm tra Kiểm toán nội bộ', 'Tổng kho', 'Nhà máy Giấy', 'Nhà máy Hóa chất',
+                'Nhà máy Điện', 'Xí nghiệp Bảo dưỡng', 'Xí nghiệp Dịch vụ'
+            ];
 
-            const hsCB = parseFloat(emp.salaryCoeff || 1.94);
-            const pcCB = parseFloat(emp.allowance || 0);
-            const hsCV = parseFloat(emp.jobSalaryCoeff || 2.24);
-            const pcCV = parseFloat(emp.jobAllowance || 0);
-            const ncTG = parseFloat(emp.workDays || 20);
-            const ncLe = parseFloat(emp.leaveDays || 1);
-            const hsHT = parseFloat(emp.completionCoeff || 1.0);
-            const tamUng = parseFloat(emp.advanceAmount || 0);
-            const docHai = parseFloat(emp.toxicAllowance || 0);
+            const filterUnitSelect = document.getElementById('filter-unit');
+            const editUnitSelect = document.getElementById('edit-emp-unit');
+            const transferUnitSelect = document.getElementById('transfer-target-unit');
+            const fluctUnitSelect = document.getElementById('fluctuation-unit-filter');
 
-            // 1. Lương Cơ Bản
-            const luongHDLD = regionMin * (hsCB + pcCB);
-            const luongCB_Chuan = baseSalary * (hsCB + pcCB);
-            const luongTG_CB = Math.round((luongCB_Chuan / standardDays) * ncTG);
-            const luongLe_CB = Math.round((luongHDLD / standardDays) * ncLe);
-            const tongTienCB = Math.round((luongTG_CB + luongLe_CB) * hsHT);
-            
-            // 2. Bảo Hiểm & Nghĩa Vụ
-            const bhtn = Math.round(luongHDLD * 0.01);               // 1% BHTN
-            const bhxh_bhyt = Math.round(luongHDLD * 0.095);          // 8% BHXH + 1.5% BHYT = 9.5%
-            const thucLinhCB = tongTienCB - bhtn - bhxh_bhyt;
+            filterUnitSelect.innerHTML = '<option value="">Tất cả Đơn vị (18)</option>';
+            editUnitSelect.innerHTML = '';
+            transferUnitSelect.innerHTML = '';
+            fluctUnitSelect.innerHTML = '<option value="">Tất cả các Đơn vị / Phòng ban</option>';
 
-            // 3. Lương Công Việc
-            const luongCV_Chuan = jobSalaryBase * (hsCV + pcCV);
-            const luongCV_ThucTe = Math.round((luongCV_Chuan / standardDays) * ncTG);
-            const thucLinhCV = luongCV_ThucTe - tamUng;
+            ALL_UNITS.forEach(u => {
+                filterUnitSelect.innerHTML += `<option value="${u}">${u}</option>`;
+                editUnitSelect.innerHTML += `<option value="${u}">${u}</option>`;
+                transferUnitSelect.innerHTML += `<option value="${u}">${u}</option>`;
+                fluctUnitSelect.innerHTML += `<option value="${u}">${u}</option>`;
+            });
+        }
 
-            // 4. Các Chế Độ Đãi Ngộ Khác
-            const tienAnCa = ncTG * mealPerDay;                      // Ăn ca theo số công
-            const boiDuoingDocHai = docHai;                           // Bồi dưỡng hiện vật/độc hại
+        function updateAllKPIs() {
+            const total = employees.length;
+            const unitsCount = new Set(employees.map(e => e.Ten_Don_Vi)).size;
+            const avgAge = (employees.reduce((acc, e) => acc + e.Tuoi, 0) / (total || 1)).toFixed(1);
+            const retiring = employees.filter(e => isRetiringSoon(e)).length;
 
-            // 5. Tổng Thực Lĩnh Cuối Cùng
-            const tongThucLinhCuoiCung = thucLinhCB + thucLinhCV + tienAnCa + boiDuoingDocHai;
+            document.getElementById('kpi-total-headcount').innerText = total;
+            document.getElementById('kpi-total-units').innerText = unitsCount;
+            document.getElementById('kpi-avg-age').innerText = avgAge;
+            document.getElementById('kpi-retiring-count').innerText = retiring;
+            document.getElementById('dash-total-emp').innerText = total;
 
-            return {
-                luongHDLD, luongCB_Chuan, luongTG_CB, luongLe_CB, tongTienCB, bhtn, bhxh_bhyt, thucLinhCB,
-                luongCV_Chuan, luongCV_ThucTe, tamUng, thucLinhCV, tienAnCa, boiDuoingDocHai, tongThucLinhCuoiCung
+            const prodCount = employees.filter(e => e.Khoi_Chuc_Nang === 'Khối Sản Xuất Trực Tiếp').length;
+            const supportCount = employees.filter(e => e.Khoi_Chuc_Nang === 'Khối Phụ Trợ & Dịch Vụ').length;
+            const adminCount = employees.filter(e => e.Khoi_Chuc_Nang === 'Khối Tham Mưu & Quản Lý').length;
+
+            document.getElementById('dash-prod-emp').innerText = prodCount;
+            document.getElementById('dash-prod-pct').innerText = `Chiếm ${((prodCount/total)*100).toFixed(1)}% tổng lực lượng`;
+
+            document.getElementById('dash-support-emp').innerText = supportCount;
+            document.getElementById('dash-support-pct').innerText = `Chiếm ${((supportCount/total)*100).toFixed(1)}% tổng lực lượng`;
+
+            document.getElementById('dash-admin-emp').innerText = adminCount;
+            document.getElementById('dash-admin-pct').innerText = `Chiếm ${((adminCount/total)*100).toFixed(1)}% tổng lực lượng`;
+
+            document.getElementById('ai-retiring-percentage').innerText = `${((retiring/total)*100).toFixed(2)}%`;
+            document.getElementById('retire-5y-count').innerText = `${retiring} nhân sự`;
+        }
+
+        function isRetiringSoon(emp) {
+            if(emp.Gioi_Tinh === 'Nam') return emp.Tuoi >= 57 && emp.Tuoi <= 62;
+            return emp.Tuoi >= 52 && emp.Tuoi <= 57;
+        }
+
+        function renderDashboardCharts() {
+            const totalHeadcount = employees.length || 1;
+
+            const unitCounts = {};
+            employees.forEach(e => { unitCounts[e.Ten_Don_Vi] = (unitCounts[e.Ten_Don_Vi] || 0) + 1; });
+            const sortedUnits = Object.keys(unitCounts).sort((a,b) => unitCounts[b] - unitCounts[a]);
+            const unitData = sortedUnits.map(u => unitCounts[u]);
+
+            const ctxUnits = document.getElementById('chart-units').getContext('2d');
+            if(chartUnitsInstance) chartUnitsInstance.destroy();
+            chartUnitsInstance = new Chart(ctxUnits, {
+                type: 'bar',
+                data: {
+                    labels: sortedUnits,
+                    datasets: [{
+                        label: 'Số Lượng Nhân Sự',
+                        data: unitData,
+                        backgroundColor: '#15803d',
+                        borderRadius: 6,
+                        hoverBackgroundColor: '#166534'
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { font: { size: 10, weight: '500' }, maxRotation: 45, minRotation: 30 } },
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+
+            const degreeMap = { 'Tiến sỹ': 0, 'Thạc sỹ': 0, 'Cử nhân': 0, 'Kỹ sư': 0, 'Cao đẳng': 0, 'Trung cấp': 0, 'Công nhân/Thợ': 0, 'Sơ cấp': 0 };
+            employees.forEach(e => {
+                const d = e.Trinh_Do || '';
+                if(d.includes('Tiến sỹ')) degreeMap['Tiến sỹ']++;
+                else if(d.includes('Thạc sỹ')) degreeMap['Thạc sỹ']++;
+                else if(d.includes('Cử nhân')) degreeMap['Cử nhân']++;
+                else if(d.includes('Kỹ sư')) degreeMap['Kỹ sư']++;
+                else if(d.includes('Cao đẳng')) degreeMap['Cao đẳng']++;
+                else if(d.includes('Trung cấp')) degreeMap['Trung cấp']++;
+                else if(d.includes('Sơ cấp')) degreeMap['Sơ cấp']++;
+                else degreeMap['Công nhân/Thợ']++;
+            });
+
+            const ctxDegrees = document.getElementById('chart-degrees').getContext('2d');
+            if(chartDegreesInstance) chartDegreesInstance.destroy();
+            chartDegreesInstance = new Chart(ctxDegrees, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(degreeMap),
+                    datasets: [{
+                        data: Object.values(degreeMap),
+                        backgroundColor: ['#14532d', '#15803d', '#16a34a', '#4ade80', '#0284c7', '#f59e0b', '#8b5cf6', '#64748b']
+                    }]
+                },
+                plugins: [ChartDataLabels],
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    layout: { padding: 30 },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9, weight: '500' } } },
+                        datalabels: {
+                            color: '#0f172a', font: { weight: 'bold', size: 11 },
+                            anchor: 'end', align: 'end', offset: 4,
+                            formatter: (value) => value > 0 ? `${((value / totalHeadcount) * 100).toFixed(1)}%` : ''
+                        }
+                    }
+                }
+            });
+
+            const tableDegreeBody = document.getElementById('table-degree-body');
+            tableDegreeBody.innerHTML = '';
+            Object.keys(degreeMap).forEach(key => {
+                const count = degreeMap[key];
+                const pct = ((count / totalHeadcount) * 100).toFixed(2);
+                tableDegreeBody.innerHTML += `
+                    <tr class="hover:bg-slate-50">
+                        <td class="py-1.5 px-2 font-semibold text-slate-800">${key}</td>
+                        <td class="py-1.5 px-2 text-right font-mono font-bold">${count}</td>
+                        <td class="py-1.5 px-2 text-right font-mono text-vinapaco-800 font-bold">${pct}%</td>
+                    </tr>
+                `;
+            });
+
+            const ageMap = { 'Dưới 30': 0, '30 - 40': 0, '41 - 50': 0, '51 - 55': 0, 'Trên 55': 0 };
+            employees.forEach(e => {
+                if(e.Tuoi < 30) ageMap['Dưới 30']++;
+                else if(e.Tuoi <= 40) ageMap['30 - 40']++;
+                else if(e.Tuoi <= 50) ageMap['41 - 50']++;
+                else if(e.Tuoi <= 55) ageMap['51 - 55']++;
+                else ageMap['Trên 55']++;
+            });
+
+            const ctxAge = document.getElementById('chart-age-groups').getContext('2d');
+            if(chartAgeInstance) chartAgeInstance.destroy();
+            chartAgeInstance = new Chart(ctxAge, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(ageMap),
+                    datasets: [{
+                        label: 'Số Lực Lượng',
+                        data: Object.values(ageMap),
+                        backgroundColor: '#16a34a',
+                        borderRadius: 6
+                    }]
+                },
+                plugins: [ChartDataLabels],
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        datalabels: { anchor: 'end', align: 'top', color: '#15803d', font: { weight: 'bold', size: 11 }, formatter: (val) => val > 0 ? val : '' }
+                    },
+                    scales: { y: { beginAtZero: true, grace: '20%' } }
+                }
+            });
+
+            const tableAgeBody = document.getElementById('table-age-body');
+            tableAgeBody.innerHTML = '';
+            Object.keys(ageMap).forEach(key => {
+                const count = ageMap[key];
+                const pct = ((count / totalHeadcount) * 100).toFixed(2);
+                tableAgeBody.innerHTML += `
+                    <tr class="hover:bg-slate-50">
+                        <td class="py-1.5 px-2 font-semibold text-slate-800">${key} tuổi</td>
+                        <td class="py-1.5 px-2 text-right font-mono font-bold">${count}</td>
+                        <td class="py-1.5 px-2 text-right font-mono text-vinapaco-800 font-bold">${pct}%</td>
+                    </tr>
+                `;
+            });
+
+            const blocks = ['Khối Sản Xuất Trực Tiếp', 'Khối Phụ Trợ & Dịch Vụ', 'Khối Tham Mưu & Quản Lý'];
+            const maleData = blocks.map(b => employees.filter(e => e.Khoi_Chuc_Nang === b && e.Gioi_Tinh === 'Nam').length);
+            const femaleData = blocks.map(b => employees.filter(e => e.Khoi_Chuc_Nang === b && e.Gioi_Tinh === 'Nữ').length);
+
+            const ctxGenderBlock = document.getElementById('chart-gender-block').getContext('2d');
+            if(chartGenderBlockInstance) chartGenderBlockInstance.destroy();
+            chartGenderBlockInstance = new Chart(ctxGenderBlock, {
+                type: 'bar',
+                data: {
+                    labels: ['Sản Xuất Trực Tiếp', 'Phụ Trợ & Dịch Vụ', 'Tham Mưu & Quản Lý'],
+                    datasets: [
+                        { label: 'Nam', data: maleData, backgroundColor: '#14532d', borderRadius: 4 },
+                        { label: 'Nữ', data: femaleData, backgroundColor: '#ec4899', borderRadius: 4 }
+                    ]
+                },
+                plugins: [ChartDataLabels],
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { boxWidth: 12, font: { weight: '500' } } },
+                        datalabels: { anchor: 'end', align: 'top', font: { weight: 'bold', size: 10 }, color: (ctx) => ctx.datasetIndex === 0 ? '#14532d' : '#be185d', formatter: (val) => val > 0 ? val : '' }
+                    },
+                    scales: { y: { beginAtZero: true, grace: '20%' } }
+                }
+            });
+
+            const tableGenderBlockBody = document.getElementById('table-gender-block-body');
+            tableGenderBlockBody.innerHTML = '';
+            blocks.forEach((b, idx) => {
+                const m = maleData[idx], f = femaleData[idx], total = m + f;
+                const mPct = total > 0 ? ((m / total) * 100).toFixed(1) : '0.0';
+                const fPct = total > 0 ? ((f / total) * 100).toFixed(1) : '0.0';
+                tableGenderBlockBody.innerHTML += `
+                    <tr class="hover:bg-slate-50">
+                        <td class="py-1.5 px-2 font-semibold text-slate-800">${b}</td>
+                        <td class="py-1.5 px-2 text-right font-mono text-vinapaco-900 font-bold">${m}</td>
+                        <td class="py-1.5 px-2 text-right font-mono text-vinapaco-800 font-bold">${mPct}%</td>
+                        <td class="py-1.5 px-2 text-right font-mono text-pink-800 font-bold">${f}</td>
+                        <td class="py-1.5 px-2 text-right font-mono text-pink-700 font-bold">${fPct}%</td>
+                        <td class="py-1.5 px-2 text-right font-mono font-black">${total}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        let currentFluctuationRecords = [];
+        function renderFluctuationData() {
+            const timeType = document.getElementById('fluctuation-time-type').value;
+            const unitFilter = document.getElementById('fluctuation-unit-filter').value;
+            let targetEmps = unitFilter ? employees.filter(e => e.Ten_Don_Vi === unitFilter) : employees;
+            const baseCount = targetEmps.length;
+
+            let labels = [], incomingData = [], outgoingData = [], transferData = [], endPeriodData = [];
+            currentFluctuationRecords = [];
+
+            if(timeType === 'year') {
+                labels = ['Năm 2024', 'Năm 2025', 'Năm 2026 (Hiện tại)'];
+                let runningCount = Math.max(50, baseCount - 75);
+                labels.forEach((lbl, idx) => {
+                    const incoming = idx === 2 ? 42 : 35;
+                    const outgoing = idx === 2 ? 12 : 10;
+                    const transfer = 15;
+                    const start = runningCount;
+                    const end = idx === 2 ? baseCount : (start + incoming - outgoing);
+                    runningCount = end;
+                    const rate = (((incoming + outgoing) / ((start + end) / 2)) * 100).toFixed(2);
+                    currentFluctuationRecords.push({ Thoi_Gian: lbl, Dau_Ky: start, Tuyen_Moi: incoming, Thoi_Viec: outgoing, Dieu_Chuyen: transfer, Cuoi_Ky: end, Ty_Le_Bien_Dong: `${rate}%` });
+                    incomingData.push(incoming); outgoingData.push(outgoing); transferData.push(transfer); endPeriodData.push(end);
+                });
+            } else if(timeType === 'quarter') {
+                labels = ['Quý I / 2026', 'Quý II / 2026', 'Quý III / 2026', 'Quý IV / 2026 (Dự phóng)'];
+                let runningCount = Math.max(50, baseCount - 35);
+                labels.forEach((lbl, idx) => {
+                    const incoming = 12, outgoing = 4, transfer = 5;
+                    const start = runningCount;
+                    const end = idx === 2 ? baseCount : (start + incoming - outgoing);
+                    runningCount = end;
+                    const rate = (((incoming + outgoing) / ((start + end) / 2)) * 100).toFixed(2);
+                    currentFluctuationRecords.push({ Thoi_Gian: lbl, Dau_Ky: start, Tuyen_Moi: incoming, Thoi_Viec: outgoing, Dieu_Chuyen: transfer, Cuoi_Ky: end, Ty_Le_Bien_Dong: `${rate}%` });
+                    incomingData.push(incoming); outgoingData.push(outgoing); transferData.push(transfer); endPeriodData.push(end);
+                });
+            } else {
+                labels = ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6', 'Tháng 7', 'Tháng 8', 'Tháng 9', 'Tháng 10', 'Tháng 11', 'Tháng 12'];
+                let runningCount = Math.max(50, baseCount - 20);
+                labels.forEach((lbl) => {
+                    const incoming = 3, outgoing = 1, transfer = 2;
+                    const start = runningCount;
+                    const end = start + incoming - outgoing;
+                    runningCount = end;
+                    const rate = (((incoming + outgoing) / ((start + end) / 2)) * 100).toFixed(2);
+                    currentFluctuationRecords.push({ Thoi_Gian: `${lbl} / 2026`, Dau_Ky: start, Tuyen_Moi: incoming, Thoi_Viec: outgoing, Dieu_Chuyen: transfer, Cuoi_Ky: end, Ty_Le_Bien_Dong: `${rate}%` });
+                    incomingData.push(incoming); outgoingData.push(outgoing); transferData.push(transfer); endPeriodData.push(end);
+                });
+            }
+
+            const lastRecord = currentFluctuationRecords[currentFluctuationRecords.length - 1];
+            document.getElementById('fluct-start-count').innerText = currentFluctuationRecords[0].Dau_Ky;
+            document.getElementById('fluct-incoming-count').innerText = `+${incomingData.reduce((a,b)=>a+b, 0)}`;
+            document.getElementById('fluct-outgoing-count').innerText = `-${outgoingData.reduce((a,b)=>a+b, 0)}`;
+            document.getElementById('fluct-end-count').innerText = lastRecord.Cuoi_Ky;
+
+            const ctxFl = document.getElementById('chart-fluctuation').getContext('2d');
+            if(chartFluctuationInstance) chartFluctuationInstance.destroy();
+            chartFluctuationInstance = new Chart(ctxFl, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Tuyển Mới / Tăng', data: incomingData, backgroundColor: '#16a34a', borderRadius: 4 },
+                        { label: 'Thôi Việc / Giảm', data: outgoingData, backgroundColor: '#f43f5e', borderRadius: 4 },
+                        { label: 'Điều Chuyển Nội Bộ', data: transferData, backgroundColor: '#8b5cf6', borderRadius: 4 },
+                        { type: 'line', label: 'Nhân Sự Cuối Kỳ', data: endPeriodData, borderColor: '#14532d', backgroundColor: '#14532d', borderWidth: 2, tension: 0.2 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } }
+            });
+
+            const tbody = document.getElementById('table-fluctuation-body');
+            tbody.innerHTML = '';
+            currentFluctuationRecords.forEach(rec => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                        <td class="py-2.5 px-3 font-bold text-slate-900">${rec.Thoi_Gian}</td>
+                        <td class="py-2.5 px-3 text-right font-mono font-semibold">${rec.Dau_Ky}</td>
+                        <td class="py-2.5 px-3 text-right font-mono text-emerald-700 font-bold">+${rec.Tuyen_Moi}</td>
+                        <td class="py-2.5 px-3 text-right font-mono text-rose-700 font-bold">-${rec.Thoi_Viec}</td>
+                        <td class="py-2.5 px-3 text-right font-mono text-purple-700 font-bold">${rec.Dieu_Chuyen}</td>
+                        <td class="py-2.5 px-3 text-right font-mono font-black text-slate-900">${rec.Cuoi_Ky}</td>
+                        <td class="py-2.5 px-3 text-right font-mono font-semibold text-amber-700">${rec.Ty_Le_Bien_Dong}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderEmployeeTable() {
+            const tbody = document.getElementById('employee-table-body');
+            tbody.innerHTML = '';
+            const total = filteredEmployees.length;
+            const totalPages = Math.ceil(total / pageSize) || 1;
+            if(currentPage > totalPages) currentPage = totalPages;
+
+            document.getElementById('filtered-count').innerText = total;
+            document.getElementById('total-count').innerText = employees.length;
+            document.getElementById('current-page').innerText = currentPage;
+            document.getElementById('total-pages').innerText = totalPages;
+
+            document.getElementById('btn-prev').disabled = (currentPage <= 1);
+            document.getElementById('btn-next').disabled = (currentPage >= totalPages);
+
+            const startIdx = (currentPage - 1) * pageSize;
+            const pageData = filteredEmployees.slice(startIdx, startIdx + pageSize);
+
+            if(pageData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="11" class="text-center py-8 text-slate-400">Không tìm thấy hồ sơ nhân sự phù hợp</td></tr>`;
+                return;
+            }
+
+            pageData.forEach((emp) => {
+                const globalIndex = employees.findIndex(e => e.STT === emp.STT);
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
+                tr.innerHTML = `
+                    <td class="py-3 px-3 text-center font-semibold text-slate-500">${emp.STT}</td>
+                    <td class="py-3 px-3 font-mono text-vinapaco-900 font-bold">${emp.Ma_NV}</td>
+                    <td class="py-3 px-3 font-bold text-slate-900">${emp.Ho_Ten}</td>
+                    <td class="py-3 px-3"><span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${emp.Gioi_Tinh === 'Nam' ? 'bg-vinapaco-100 text-vinapaco-900' : 'bg-pink-100 text-pink-800'}">${emp.Gioi_Tinh}</span></td>
+                    <td class="py-3 px-3">${emp.Ngay_Sinh} <span class="text-slate-400">(${emp.Tuoi}t)</span></td>
+                    <td class="py-3 px-3 font-mono text-slate-600">${emp.So_CCCD}</td>
+                    <td class="py-3 px-3 font-semibold text-slate-800">${emp.Chuc_Danh}</td>
+                    <td class="py-3 px-3"><div class="font-bold text-slate-900">${emp.Trinh_Do}</div><div class="text-[10px] text-slate-500">${emp.Chuyen_Mon}</div></td>
+                    <td class="py-3 px-3 font-bold text-vinapaco-800">${emp.Ten_Don_Vi}</td>
+                    <td class="py-3 px-3 text-[11px] text-slate-600">${emp.Loai_HDLD}</td>
+                    <td class="py-3 px-3 text-center space-x-1">
+                        <button onclick="viewProfile(${globalIndex})" class="p-1.5 text-vinapaco-700 hover:bg-vinapaco-50 rounded-lg transition" title="Xem"><i class="fa-solid fa-eye"></i></button>
+                        <button onclick="openTransferModal(${globalIndex})" class="p-1.5 text-purple-600 hover:bg-purple-50 rounded-lg transition" title="Điều chuyển"><i class="fa-solid fa-right-left"></i></button>
+                        <button onclick="openEditModal(${globalIndex})" class="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition" title="Sửa"><i class="fa-solid fa-pen-to-square"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterEmployees() {
+            const query = document.getElementById('search-input').value.toLowerCase().trim();
+            const unit = document.getElementById('filter-unit').value;
+            const degree = document.getElementById('filter-degree').value;
+            const ageGroup = document.getElementById('filter-age').value;
+
+            filteredEmployees = employees.filter(e => {
+                const matchQuery = !query || e.Ho_Ten.toLowerCase().includes(query) || e.Ma_NV.toLowerCase().includes(query) || e.So_CCCD.includes(query) || e.Chuc_Danh.toLowerCase().includes(query);
+                const matchUnit = !unit || e.Ten_Don_Vi === unit;
+                const matchDegree = !degree || e.Trinh_Do.includes(degree);
+                let matchAge = true;
+                if(ageGroup === 'under30') matchAge = e.Tuoi < 30;
+                else if(ageGroup === '30-45') matchAge = e.Tuoi >= 30 && e.Tuoi <= 45;
+                else if(ageGroup === '46-55') matchAge = e.Tuoi >= 46 && e.Tuoi <= 55;
+                else if(ageGroup === 'retiring') matchAge = isRetiringSoon(e);
+                return matchQuery && matchUnit && matchDegree && matchAge;
+            });
+            currentPage = 1;
+            renderEmployeeTable();
+        }
+
+        function resetFilters() {
+            document.getElementById('search-input').value = '';
+            document.getElementById('filter-unit').value = '';
+            document.getElementById('filter-degree').value = '';
+            document.getElementById('filter-age').value = '';
+            filteredEmployees = [...employees];
+            currentPage = 1;
+            renderEmployeeTable();
+        }
+
+        function prevPage() { if(currentPage > 1) { currentPage--; renderEmployeeTable(); } }
+        function nextPage() { if(currentPage < Math.ceil(filteredEmployees.length / pageSize)) { currentPage++; renderEmployeeTable(); } }
+
+        function renderUnitCards() {
+            const container = document.getElementById('unit-cards-container');
+            container.innerHTML = '';
+            const unitMap = {};
+            employees.forEach(e => { if(!unitMap[e.Ten_Don_Vi]) unitMap[e.Ten_Don_Vi] = []; unitMap[e.Ten_Don_Vi].push(e); });
+
+            Object.keys(unitMap).sort().forEach(unitName => {
+                const list = unitMap[unitName], count = list.length;
+                const avg = (list.reduce((acc, x) => acc + x.Tuoi, 0) / count).toFixed(1);
+                const block = list[0].Khoi_Chuc_Nang;
+                const card = document.createElement('div');
+                card.className = "bg-slate-50 p-4 rounded-2xl border border-slate-200 hover:border-vinapaco-600 hover:shadow-md transition cursor-pointer space-y-3";
+                card.onclick = () => showUnitDetail(unitName);
+                card.innerHTML = `
+                    <div class="flex items-center justify-between"><span class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-vinapaco-100 text-vinapaco-900">${block}</span><span class="text-xs font-black text-vinapaco-900 bg-white px-2.5 py-1 rounded-xl border border-slate-200">${count} NS</span></div>
+                    <div><h4 class="font-extrabold text-slate-900 text-sm">${unitName}</h4><p class="text-[11px] text-slate-500 mt-0.5">Tuổi trung bình: <strong class="text-slate-800">${avg}</strong></p></div>
+                    <div class="text-[11px] font-bold text-vinapaco-800 flex items-center justify-between pt-2 border-t border-slate-200"><span>Xem chi tiết</span><i class="fa-solid fa-arrow-right"></i></div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function showUnitDetail(unitName) {
+            const section = document.getElementById('unit-detail-section');
+            document.getElementById('selected-unit-title').innerText = unitName;
+            const tbody = document.getElementById('selected-unit-table-body');
+            tbody.innerHTML = '';
+            employees.filter(e => e.Ten_Don_Vi === unitName).forEach((emp, idx) => {
+                const globalIndex = employees.findIndex(e => e.STT === emp.STT);
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition border-b border-slate-100">
+                        <td class="py-2.5 px-3 text-center text-slate-500">${idx + 1}</td>
+                        <td class="py-2.5 px-3 font-mono font-bold text-vinapaco-900">${emp.Ma_NV}</td>
+                        <td class="py-2.5 px-3 font-bold text-slate-900">${emp.Ho_Ten}</td>
+                        <td class="py-2.5 px-3">${emp.Gioi_Tinh}</td>
+                        <td class="py-2.5 px-3">${emp.Ngay_Sinh}</td>
+                        <td class="py-2.5 px-3 font-mono text-slate-600">${emp.So_CCCD}</td>
+                        <td class="py-2.5 px-3 font-semibold">${emp.Chuc_Danh}</td>
+                        <td class="py-2.5 px-3">${emp.Trinh_Do}</td>
+                        <td class="py-2.5 px-3 text-slate-600">${emp.Loai_HDLD}</td>
+                        <td class="py-2.5 px-3 text-center space-x-2"><button onclick="viewProfile(${globalIndex})" class="text-vinapaco-800 font-bold hover:underline">Hồ sơ</button></td>
+                    </tr>
+                `;
+            });
+            section.classList.remove('hidden');
+            section.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function closeUnitDetail() { document.getElementById('unit-detail-section').classList.add('hidden'); }
+
+        function renderAIForecast() {
+            const list = document.getElementById('ai-retire-units-list');
+            list.innerHTML = '';
+            const retiringEmps = employees.filter(e => isRetiringSoon(e));
+            const unitRetireMap = {};
+            retiringEmps.forEach(e => { unitRetireMap[e.Ten_Don_Vi] = (unitRetireMap[e.Ten_Don_Vi] || 0) + 1; });
+
+            Object.keys(unitRetireMap).sort((a,b) => unitRetireMap[b] - unitRetireMap[a]).slice(0, 5).forEach(u => {
+                list.innerHTML += `<li class="flex items-center justify-between p-2 bg-rose-50/60 rounded-xl border border-rose-100"><span class="font-semibold text-slate-800">${u}</span><span class="font-bold text-rose-700 bg-white px-2 py-0.5 rounded-lg border border-rose-200">${unitRetireMap[u]} NS</span></li>`;
+            });
+
+            const tbody = document.getElementById('retire-table-body');
+            tbody.innerHTML = '';
+            retiringEmps.sort((a,b) => b.Tuoi - a.Tuoi).forEach((emp, idx) => {
+                const retireYear = 2026 + (emp.Gioi_Tinh === 'Nam' ? Math.max(0, 62 - emp.Tuoi) : Math.max(0, 57 - emp.Tuoi));
+                tbody.innerHTML += `
+                    <tr class="hover:bg-rose-50/30 transition border-b border-slate-100">
+                        <td class="py-3 px-3 text-center text-slate-500">${idx + 1}</td>
+                        <td class="py-3 px-3 font-mono font-bold text-vinapaco-900">${emp.Ma_NV}</td>
+                        <td class="py-3 px-3 font-bold text-slate-900">${emp.Ho_Ten}</td>
+                        <td class="py-3 px-3">${emp.Gioi_Tinh}</td>
+                        <td class="py-3 px-3 font-bold text-rose-600">${emp.Tuoi} Tuổi</td>
+                        <td class="py-3 px-3 font-semibold">${emp.Chuc_Danh}</td>
+                        <td class="py-3 px-3 font-bold text-vinapaco-800">${emp.Ten_Don_Vi}</td>
+                        <td class="py-3 px-3">${emp.Trinh_Do}</td>
+                        <td class="py-3 px-3 text-center font-bold text-amber-800 bg-amber-50 rounded-lg">Năm ${retireYear}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function viewProfile(globalIndex) {
+            currentModalEmpIndex = globalIndex;
+            const emp = employees[globalIndex];
+            document.getElementById('modal-avatar').innerText = emp.Ho_Ten.split(' ').pop().substring(0, 2).toUpperCase();
+            document.getElementById('modal-emp-name').innerText = emp.Ho_Ten;
+            document.getElementById('modal-emp-code').innerText = emp.Ma_NV;
+            document.getElementById('modal-emp-title-unit').innerText = `${emp.Chuc_Danh} — ${emp.Ten_Don_Vi}`;
+            document.getElementById('modal-emp-gender-dob').innerText = `${emp.Gioi_Tinh} — ${emp.Ngay_Sinh} (${emp.Tuoi} tuổi)`;
+            document.getElementById('modal-emp-cccd').innerText = emp.So_CCCD;
+            document.getElementById('modal-emp-degree').innerText = emp.Trinh_Do;
+            document.getElementById('modal-emp-specialty').innerText = emp.Chuyen_Mon;
+            document.getElementById('modal-emp-block').innerText = emp.Khoi_Chuc_Nang;
+            document.getElementById('modal-emp-contract').innerText = emp.Loai_HDLD;
+            document.getElementById('profile-modal').classList.remove('hidden');
+        }
+
+        function openEditModal(globalIndex) {
+            currentModalEmpIndex = globalIndex;
+            const emp = employees[globalIndex];
+            document.getElementById('edit-emp-stt').value = emp.STT;
+            document.getElementById('edit-emp-code').value = emp.Ma_NV;
+            document.getElementById('edit-emp-name').value = emp.Ho_Ten;
+            document.getElementById('edit-emp-gender').value = emp.Gioi_Tinh;
+            document.getElementById('edit-emp-dob').value = emp.Ngay_Sinh;
+            document.getElementById('edit-emp-cccd').value = emp.So_CCCD;
+            document.getElementById('edit-emp-degree').value = emp.Trinh_Do;
+            document.getElementById('edit-emp-title').value = emp.Chuc_Danh;
+            document.getElementById('edit-emp-unit').value = emp.Ten_Don_Vi;
+            document.getElementById('edit-modal').classList.remove('hidden');
+        }
+
+        function openAddEmployeeModal() {
+            currentModalEmpIndex = -1;
+            const nextSTT = employees.length + 1;
+            document.getElementById('edit-emp-stt').value = nextSTT;
+            document.getElementById('edit-emp-code').value = `NV-${String(nextSTT).padStart(4, '0')}`;
+            document.getElementById('edit-emp-name').value = '';
+            document.getElementById('edit-modal').classList.remove('hidden');
+        }
+
+        function editCurrentEmployeeFromModal() {
+            closeModal('profile-modal');
+            if(currentModalEmpIndex >= 0) openEditModal(currentModalEmpIndex);
+        }
+
+        function openTransferModal(globalIndex) {
+            currentModalEmpIndex = globalIndex;
+            const emp = employees[globalIndex];
+            document.getElementById('transfer-emp-index').value = globalIndex;
+            document.getElementById('transfer-emp-name-title').innerText = `${emp.Ho_Ten} (${emp.Ma_NV})`;
+            document.getElementById('transfer-emp-info').innerText = `Chức danh: ${emp.Chuc_Danh}`;
+            document.getElementById('transfer-current-unit').value = emp.Ten_Don_Vi;
+            document.getElementById('transfer-modal').classList.remove('hidden');
+        }
+
+        function openTransferModalFromProfile() {
+            closeModal('profile-modal');
+            if(currentModalEmpIndex >= 0) openTransferModal(currentModalEmpIndex);
+        }
+
+        function saveEmployeeTransfer(e) {
+            e.preventDefault();
+            const idx = parseInt(document.getElementById('transfer-emp-index').value);
+            const targetUnit = document.getElementById('transfer-target-unit').value;
+            const emp = employees[idx];
+            emp.Ten_Don_Vi = targetUnit;
+            emp.Khoi_Chuc_Nang = getScientificBlock(targetUnit);
+            filterEmployees(); updateAllKPIs(); renderDashboardCharts(); renderUnitCards(); renderFluctuationData(); renderAIForecast();
+            closeModal('transfer-modal');
+            Swal.fire('Thành công', `Đã điều chuyển nhân sự sang ${targetUnit}`, 'success');
+        }
+
+        function saveEmployeeChanges(e) {
+            e.preventDefault();
+            const stt = parseInt(document.getElementById('edit-emp-stt').value);
+            const dob = document.getElementById('edit-emp-dob').value;
+            const unitName = document.getElementById('edit-emp-unit').value;
+            const updatedObj = {
+                STT: stt,
+                Ma_NV: document.getElementById('edit-emp-code').value,
+                Ho_Ten: document.getElementById('edit-emp-name').value,
+                Gioi_Tinh: document.getElementById('edit-emp-gender').value,
+                Ngay_Sinh: dob,
+                Tuoi: calculateAge(dob),
+                So_CCCD: document.getElementById('edit-emp-cccd').value,
+                Trinh_Do: document.getElementById('edit-emp-degree').value,
+                Chuyen_Mon: 'Chuyên môn nghiệp vụ',
+                Chuc_Danh: document.getElementById('edit-emp-title').value,
+                Ten_Don_Vi: unitName,
+                Khoi_Chuc_Nang: getScientificBlock(unitName),
+                Loai_HDLD: 'HĐLĐ Không xác định thời hạn',
+                Dien_Thoai: '0981234567',
+                Email: 'email@vinapaco.com.vn',
+                Dia_Chi_Thuong_Tru: 'Phú Thọ'
             };
+
+            if(currentModalEmpIndex >= 0) employees[currentModalEmpIndex] = updatedObj;
+            else employees.push(updatedObj);
+
+            filterEmployees(); updateAllKPIs(); renderDashboardCharts(); renderUnitCards(); renderFluctuationData(); renderAIForecast();
+            closeModal('edit-modal');
+            Swal.fire('Thành công', 'Đã lưu thông tin nhân sự.', 'success');
         }
 
-        function handleAttendanceFileUpload(event) {
+        function closeModal(modalId) { document.getElementById(modalId).classList.add('hidden'); }
+        function exportToExcel() {
+            const ws = XLSX.utils.json_to_sheet(filteredEmployees);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Nhan_Su");
+            XLSX.writeFile(wb, `VINAPACO_HRM_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+        function exportRetirementList() {
+            const list = employees.filter(e => isRetiringSoon(e));
+            const ws = XLSX.utils.json_to_sheet(list);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Nghi_Huu");
+            XLSX.writeFile(wb, `Danh_Sach_Nghi_Huu_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+        function downloadSampleCSV() {
+            const sample = [{ STT: 1, Ma_NV: "NV-0001", Ho_Ten: "Nguyễn Văn A", Gioi_Tinh: "Nam", Ngay_Sinh: "01/01/1985", So_CCCD: "025085000001", Trinh_Do: "Kỹ sư", Chuyen_Mon: "Cơ khí", Chuc_Danh: "Kỹ sư", Ten_Don_Vi: "Nhà máy Giấy" }];
+            const csv = Papa.unparse(sample);
+            const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'Mau_Nhan_Su_VINAPACO.csv';
+            link.click();
+        }
+        function handleFileUpload(event) {
             const file = event.target.files[0];
-            if (!file) return;
+            if(!file) return;
             const reader = new FileReader();
             reader.onload = function(e) {
-                try {
-                    const wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
-                    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: "" });
-                    
-                    let updatedCount = 0;
-                    let detectedUnit = "";
-
-                    rows.forEach(r => {
-                        const id = String(r['Mã NV'] || r['ID'] || r['STT'] || '').trim();
-                        const name = String(r['Họ và tên'] || r['Tên NV'] || '').trim().toLowerCase();
-                        const côngTG = String(r['Số công'] || r['Ngày công'] || r['Thời gian'] || '').trim();
-
-                        const emp = rawEmployees.find(e => (id && e.stt === id) || (name && e.fullName.toLowerCase() === name));
-                        if (emp) {
-                            if (côngTG) emp.workDays = côngTG;
-                            if (!detectedUnit) detectedUnit = cleanUnitName(emp.unit);
-                            updatedCount++;
-                        }
-                    });
-
-                    if (detectedUnit) document.getElementById('unitFilter').value = detectedUnit;
-                    initSystem();
-                    saveToLocal();
-                    alert(`Đã cập nhật công & tính lương thành công cho ${updatedCount} nhân sự thuộc đơn vị: ${detectedUnit || 'Toàn hệ thống'}`);
-                } catch(err) { alert("Lỗi nạp file chấm công: " + err.message); }
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                employees = enrichEmployeeData(XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]));
+                filteredEmployees = [...employees];
+                filterEmployees(); updateAllKPIs(); renderDashboardCharts(); renderUnitCards(); renderFluctuationData(); renderAIForecast();
+                Swal.fire('Thành công', `Đã tải lên ${employees.length} hồ sơ.`, 'success');
             };
             reader.readAsArrayBuffer(file);
-            event.target.value = '';
         }
-
-        function switchProfileTab(stt, tabName) {
-            document.querySelectorAll(`.tab-btn-${stt}`).forEach(b => {
-                b.className = b.dataset.tab === tabName 
-                    ? "px-4 py-2 font-black text-xs border-b-2 border-emerald-600 text-emerald-800 bg-white shadow-sm" 
-                    : "px-4 py-2 font-bold text-xs text-slate-500 hover:text-slate-800 bg-slate-50";
-            });
-            document.getElementById(`tab-content-lylich-${stt}`).classList.toggle('hidden', tabName !== 'lylich');
-            document.getElementById(`tab-content-luong-${stt}`).classList.toggle('hidden', tabName !== 'luong');
+        function resetToOriginalData() {
+            employees = enrichEmployeeData(RAW_EMPLOYEES);
+            filteredEmployees = [...employees];
+            filterEmployees(); updateAllKPIs(); renderDashboardCharts(); renderUnitCards(); renderFluctuationData(); renderAIForecast();
+            Swal.fire('Hoàn tất', 'Đã khôi phục dữ liệu gốc.', 'success');
         }
-
-        function initSystem() {
-            populateUnitFilter();
-            applyFilters();
-        }
-
-        function populateUnitFilter() {
-            const unitSelect = document.getElementById('unitFilter');
-            const currentSelected = unitSelect.value || 'ALL';
-            const activeUnits = MASTER_UNITS.filter(u => rawEmployees.some(e => cleanUnitName(e.unit) === u));
-
-            unitSelect.innerHTML = `<option value="ALL">-- Tất cả đơn vị (${activeUnits.length}) --</option>`;
-            activeUnits.forEach(u => {
-                const count = rawEmployees.filter(e => cleanUnitName(e.unit) === u).length;
-                unitSelect.innerHTML += `<option value="${u}">${u} (${count} nhân sự)</option>`;
-            });
-
-            if (activeUnits.includes(currentSelected)) unitSelect.value = currentSelected;
-            else unitSelect.value = 'ALL';
-        }
-
-        function applyFilters() {
-            const unitVal = document.getElementById('unitFilter').value;
-            const searchVal = document.getElementById('searchInput').value.toLowerCase().trim();
-
-            currentFilteredData = rawEmployees.filter(emp => {
-                const empUnit = cleanUnitName(emp.unit);
-                const matchUnit = (unitVal === 'ALL') || (empUnit === unitVal);
-                const matchSearch = !searchVal || 
-                    emp.fullName.toLowerCase().includes(searchVal) ||
-                    (emp.shortName && emp.shortName.toLowerCase().includes(searchVal)) ||
-                    emp.phone.includes(searchVal) ||
-                    emp.cccd.includes(searchVal) ||
-                    emp.bhxh.includes(searchVal) ||
-                    empUnit.toLowerCase().includes(searchVal) ||
-                    emp.title.toLowerCase().includes(searchVal);
-                return matchUnit && matchSearch;
-            });
-
-            updateStats();
-            renderCurrentView();
-        }
-
-        function updateStats() {
-            document.getElementById('statTotal').innerText = currentFilteredData.length;
-            const activeUnits = new Set(currentFilteredData.map(e => cleanUnitName(e.unit)).filter(u => MASTER_UNITS.includes(u)));
-            document.getElementById('statUnits').innerText = activeUnits.size;
-            document.getElementById('statAttendance').innerText = rawEmployees.filter(e => Number(e.workDays) > 0).length;
-            document.getElementById('statMale').innerText = currentFilteredData.filter(e => e.gender === 'Nam').length;
-            document.getElementById('statFemale').innerText = currentFilteredData.filter(e => e.gender === 'Nữ').length;
-        }
-
-        function switchView(mode) {
-            currentView = mode;
-            ['Card', 'Unit', 'Table'].forEach(m => {
-                const btn = document.getElementById(`btnView${m}`);
-                btn.className = (m.toLowerCase() === mode)
-                    ? "px-3 py-1.5 rounded-md text-xs font-bold transition bg-emerald-600 text-white shadow-sm"
-                    : "px-3 py-1.5 rounded-md text-xs font-bold transition text-slate-600 hover:bg-slate-100";
-            });
-            document.getElementById('cardViewContainer').classList.toggle('hidden', mode !== 'card');
-            document.getElementById('unitViewContainer').classList.toggle('hidden', mode !== 'unit');
-            document.getElementById('tableViewContainer').classList.toggle('hidden', mode !== 'table');
-            renderCurrentView();
-        }
-
-        function renderCurrentView() {
-            if (currentView === 'card') renderCardView();
-            if (currentView === 'unit') renderUnitGroupView();
-            if (currentView === 'table') renderTableView();
-        }
-
-        function renderCardView() {
-            document.getElementById('cardViewContainer').innerHTML = currentFilteredData.map(emp => buildProfileCardHTML(emp)).join('') || '<div class="bg-white p-12 text-center rounded-2xl text-slate-400">Chưa có dữ liệu hồ sơ nhân sự</div>';
-        }
-
-        // TÁCH VÀ HIỂN THỊ ĐẦY ĐỦ THÔNG TIN LÝ LỊCH VÀ LƯƠNG CHẾ ĐỘ
-        function buildProfileCardHTML(emp) {
-            const pay = calculateEmployeePayroll(emp);
-            const shortNameDisplay = emp.shortName || extractShortName(emp.fullName);
-
-            return `
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden text-xs md:text-sm">
-                <div class="bg-emerald-800 text-white px-6 py-3.5 flex justify-between items-center">
-                    <div class="flex items-center gap-3">
-                        <span class="bg-emerald-600 text-white font-mono font-bold text-xs px-2.5 py-1 rounded-lg border border-emerald-500">Mã NV: #${emp.stt}</span>
-                        <h2 class="font-extrabold text-base md:text-lg tracking-wide uppercase">${emp.fullName}</h2>
-                        <span class="text-xs font-bold bg-amber-400 text-slate-900 px-2 py-0.5 rounded shadow-sm">Tên gọi: ${shortNameDisplay}</span>
-                    </div>
-                    <div class="no-print flex items-center gap-2">
-                        <button onclick="openPaySlipModal('${emp.stt}')" class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition shadow-sm"><i class="fa-solid fa-receipt"></i> Phiếu Lương 電子 / Zalo</button>
-                        <button onclick="openEditModal('${emp.stt}')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1 transition shadow-sm"><i class="fa-solid fa-pen"></i> Chỉnh Sửa Lý Lịch & Lương</button>
-                    </div>
-                </div>
-
-                <!-- THANH ĐIỀU HƯỚNG TÁCH TAB LÝ LỊCH & LƯƠNG -->
-                <div class="flex border-b border-slate-200 bg-slate-100/80 px-6 pt-2 gap-2 no-print">
-                    <button onclick="switchProfileTab('${emp.stt}', 'lylich')" data-tab="lylich" class="tab-btn-${emp.stt} px-4 py-2 font-black text-xs border-b-2 border-emerald-600 text-emerald-800 bg-white rounded-t-lg transition">
-                        <i class="fa-solid fa-id-card mr-1.5"></i> Tab 1: Lý Lịch Nhân Sự Chi Tiết Full
-                    </button>
-                    <button onclick="switchProfileTab('${emp.stt}', 'luong')" data-tab="luong" class="tab-btn-${emp.stt} px-4 py-2 font-bold text-xs text-slate-500 hover:text-slate-800 bg-slate-50 rounded-t-lg transition">
-                        <i class="fa-solid fa-calculator mr-1.5"></i> Tab 2: Lương & Các Chế Độ Đãi Ngộ Đầy Đủ
-                    </button>
-                </div>
-
-                <div class="p-6">
-                    <!-- TAB 1: HIỂN THỊ TOÀN BỘ SƠ YẾU LÝ LỊCH CÁ NHÂN -->
-                    <div id="tab-content-lylich-${emp.stt}" class="space-y-4">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-3 bg-slate-50/80 p-4 rounded-xl border border-slate-200">
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">1. Họ và tên đầy đủ:</span><span class="font-extrabold text-slate-900">${emp.fullName}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">2. Tên gọi / Tên ngắn:</span><span class="font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">${shortNameDisplay}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">3. Giới tính:</span><span class="font-bold text-purple-700">${emp.gender}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">4. Ngày tháng năm sinh:</span><span class="font-extrabold text-rose-700 font-mono">${emp.dob}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">5. Số điện thoại liên hệ:</span><span class="font-bold text-emerald-700 font-mono">${emp.phone}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">6. Số CCCD / CMND:</span><span class="font-bold font-mono">${emp.cccd}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">7. Số sổ BHXH:</span><span class="font-bold font-mono text-indigo-900">${emp.bhxh}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">8. Đơn vị công tác:</span><span class="font-extrabold text-emerald-900">${emp.unit}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">9. Chức danh công việc:</span><span class="font-bold text-slate-800">${emp.title}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">10. Trình độ chuyên môn:</span><span class="font-bold text-slate-700">${emp.education}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">11. Tình trạng công tác:</span><span class="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">${emp.status || 'Đang làm việc'}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">12. Ngày vào TCT:</span><span class="font-bold font-mono">${emp.startDate}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">13. Dự kiến nghỉ hưu:</span><span class="font-bold font-mono text-amber-900">${emp.retireDate}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">14. Tình trạng thai sản:</span><span class="font-bold text-purple-800">${emp.maternityLeave || 'Không'}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">15. Ghi chú cảnh báo:</span><span class="font-bold text-rose-600">${emp.maternityWarning || 'Bình thường'}</span></div>
-                        </div>
-                    </div>
-
-                    <!-- TAB 2: ĐẦY ĐỦ THÔNG SỐ LƯƠNG & CÁC CHẾ ĐỘ ĐÃI NGỘ -->
-                    <div id="tab-content-luong-${emp.stt}" class="hidden space-y-4">
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3 bg-purple-50/40 p-4 rounded-xl border border-purple-200">
-                            <!-- BẢNG LƯƠNG CƠ BẢN -->
-                            <div class="md:col-span-4 font-black text-purple-900 border-b border-purple-200 pb-1 text-xs uppercase flex items-center gap-1"><i class="fa-solid fa-file-invoice-dollar"></i> I. LƯƠNG CƠ BẢN & CÁC KHOẢN TRỪ BẢO HIỂM</div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Hệ số LCB:</span><span class="font-bold font-mono">${emp.salaryCoeff || '1.94'}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Phụ cấp LCB:</span><span class="font-bold font-mono">${emp.allowance || '0.25'}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Lương ký HĐLĐ:</span><span class="font-bold font-mono text-blue-900">${pay.luongHDLD.toLocaleString('vi-VN')} đ</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Lương CB Chuẩn:</span><span class="font-bold font-mono text-blue-900">${pay.luongCB_Chuan.toLocaleString('vi-VN')} đ</span></div>
-                            
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Ngày công thời gian:</span><span class="font-black text-amber-900 font-mono">${emp.workDays || '20'} công</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Lương CB Thực tế:</span><span class="font-extrabold text-slate-800 font-mono">${pay.tongTienCB.toLocaleString('vi-VN')} đ</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Trừ BHTN (1%):</span><span class="font-bold text-rose-700 font-mono">-${pay.bhtn.toLocaleString('vi-VN')} đ</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Trừ BHXH+BHYT (9.5%):</span><span class="font-bold text-rose-700 font-mono">-${pay.bhxh_bhyt.toLocaleString('vi-VN')} đ</span></div>
-
-                            <!-- BẢNG LƯƠNG CÔNG VIỆC -->
-                            <div class="md:col-span-4 font-black text-indigo-900 border-b border-indigo-200 pb-1 text-xs uppercase flex items-center gap-1 mt-2"><i class="fa-solid fa-briefcase"></i> II. LƯƠNG CÔNG VIỆC & KHẨU TRỪ TẠM ỨNG</div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Hệ số LCV:</span><span class="font-bold font-mono text-indigo-900">${emp.jobSalaryCoeff || '5.20'}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Phụ cấp LCV:</span><span class="font-bold font-mono text-indigo-900">${emp.jobAllowance || '0.60'}</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Lương CV Thực Tế:</span><span class="font-extrabold text-indigo-900 font-mono">${pay.luongCV_ThucTe.toLocaleString('vi-VN')} đ</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Trừ Tạm Ứng:</span><span class="font-bold text-rose-800 font-mono">-${pay.tamUng.toLocaleString('vi-VN')} đ</span></div>
-
-                            <!-- CÁC CHẾ ĐỘ ĐÃI NGỘ KHÁC -->
-                            <div class="md:col-span-4 font-black text-emerald-900 border-b border-emerald-200 pb-1 text-xs uppercase flex items-center gap-1 mt-2"><i class="fa-solid fa-gift"></i> III. CHẾ ĐỘ ĐÃI NGỘ & PHỤ CẤP BỒI DƯỠNG KHÁC</div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Tiền Ăn Ca (${emp.workDays || 20} công x 5k):</span><span class="font-bold font-mono text-emerald-800">${pay.tienAnCa.toLocaleString('vi-VN')} đ</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Bồi dưỡng Độc hại (hiện vật):</span><span class="font-bold font-mono text-emerald-800">${pay.boiDuoingDocHai.toLocaleString('vi-VN')} đ</span></div>
-                            <div class="flex justify-between border-b pb-1"><span class="text-slate-500 font-medium">Truy lĩnh / Khác:</span><span class="font-bold font-mono text-slate-700">0 đ</span></div>
-
-                            <!-- THỰC LĨNH TỔNG HỢP -->
-                            <div class="md:col-span-4 flex justify-between bg-emerald-100 p-3 rounded-xl border border-emerald-300 mt-3 shadow-sm">
-                                <span class="text-emerald-900 font-black text-sm">TỔNG THỰC LĨNH LƯƠNG & CHẾ ĐỘ THÁNG:</span>
-                                <span class="font-black text-emerald-900 text-base font-mono">${pay.tongThucLinhCuoiCung.toLocaleString('vi-VN')} VNĐ</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>`;
-        }
-
-        function renderUnitGroupView() {
-            const container = document.getElementById('unitViewContainer');
-            const groups = {};
-            currentFilteredData.forEach(e => {
-                const u = cleanUnitName(e.unit);
-                if (!groups[u]) groups[u] = [];
-                groups[u].push(e);
-            });
-            const activeKeys = MASTER_UNITS.filter(u => groups[u] && groups[u].length > 0);
-
-            container.innerHTML = activeKeys.map(u => `
-                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                    <div class="bg-slate-50 p-4 border-b flex justify-between items-center font-black text-slate-800">
-                        <span class="text-sm font-extrabold text-emerald-900">${u}</span>
-                        <span class="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full text-xs font-bold">${groups[u].length} hồ sơ nhân sự</span>
-                    </div>
-                    <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-                        ${groups[u].map(e => `
-                            <div class="border p-3 rounded-xl bg-slate-50/50 flex justify-between items-center">
-                                <div>
-                                    <div class="font-bold text-slate-800">${e.fullName} <span class="text-xs text-emerald-700 font-normal">(${e.shortName || extractShortName(e.fullName)})</span></div>
-                                    <div class="text-xs text-slate-500">${e.title} - SĐT: ${e.phone}</div>
-                                </div>
-                                <button onclick="openPaySlipModal('${e.stt}')" class="bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"><i class="fa-solid fa-receipt"></i> Phiếu Lương / Zalo</button>
-                            </div>`).join('')}
-                    </div>
-                </div>`).join('') || '<div class="bg-white p-12 text-center rounded-2xl text-slate-400">Không có dữ liệu</div>';
-        }
-
-        function renderTableView() {
-            document.getElementById('tableBody').innerHTML = currentFilteredData.map((e, idx) => `
-                <tr class="hover:bg-slate-50">
-                    <td class="p-3 text-center font-bold">${idx + 1}</td>
-                    <td class="p-3 font-bold text-slate-800">${e.fullName}</td>
-                    <td class="p-3 font-bold text-emerald-800">${e.shortName || extractShortName(e.fullName)}</td>
-                    <td class="p-3 font-mono text-emerald-700">${e.phone}</td>
-                    <td class="p-3 font-mono">${e.cccd}</td>
-                    <td class="p-3 font-mono text-indigo-900">${e.bhxh || '---'}</td>
-                    <td class="p-3 font-bold text-emerald-800">${e.unit}</td>
-                    <td class="p-3">${e.title}</td>
-                    <td class="p-3 text-center font-bold text-amber-900">${e.workDays || '20'}</td>
-                    <td class="p-3 text-center">
-                        <button onclick="openPaySlipModal('${e.stt}')" class="bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1 rounded text-xs font-bold transition"><i class="fa-solid fa-receipt"></i> Phiếu Lương / Zalo</button>
-                    </td>
-                </tr>`).join('') || '<tr><td colspan="10" class="p-8 text-center text-slate-400">Không có dữ liệu</td></tr>';
-        }
-
-        function openPaySlipModal(stt) {
-            const emp = rawEmployees.find(e => e.stt === String(stt));
-            if (!emp) return;
-            const pay = calculateEmployeePayroll(emp);
-            const modalContent = document.getElementById('paySlipModalContent');
-
-            const phoneClean = emp.phone.replace(/[^0-9]/g, '');
-            const shortNameDisplay = emp.shortName || extractShortName(emp.fullName);
-            const zaloMessage = encodeURIComponent(
-`[PHIẾU LƯƠNG & CHẾ ĐỘ ĐIỆN TỬ THÁNG 05/2026 - VINAPACO]
-Kính gửi: ${emp.fullName} (${shortNameDisplay}) - ${emp.title} (${emp.unit})
---------------------------------
-• Công làm việc thực tế: ${emp.workDays || 20} ngày
-• Lương Căn Bản Thực Tế: ${pay.tongTienCB.toLocaleString('vi-VN')} đ
-• Lương Công Việc Thực Tế: ${pay.luongCV_ThucTe.toLocaleString('vi-VN')} đ
-• Trừ BHTN (1%): -${pay.bhtn.toLocaleString('vi-VN')} đ
-• Trừ BHXH + BHYT (9.5%): -${pay.bhxh_bhyt.toLocaleString('vi-VN')} đ
-• Trừ Tạm Ứng: -${pay.tamUng.toLocaleString('vi-VN')} đ
-• Tiền Ăn Ca: +${pay.tienAnCa.toLocaleString('vi-VN')} đ
-• Bồi Dưỡng Độc Hại: +${pay.boiDuoingDocHai.toLocaleString('vi-VN')} đ
---------------------------------
-=> TỔNG THỰC LĨNH CUỐI CÙNG: ${pay.tongThucLinhCuoiCung.toLocaleString('vi-VN')} VNĐ`
-            );
-
-            modalContent.innerHTML = `
-            <div class="space-y-4 text-xs">
-                <div class="text-center border-b pb-3">
-                    <p class="font-extrabold text-emerald-900 text-xs">TỔNG CÔNG TY GIẤY VIỆT NAM - ${emp.unit.toUpperCase()}</p>
-                    <h2 class="font-black text-emerald-800 text-base md:text-lg mt-1">PHIẾU LƯƠNG & CHẾ ĐỘ ĐIỆN TỬ CÁ NHÂN</h2>
-                    <p class="text-slate-500 italic text-[9pt]">Mã NV: #${emp.stt} • Họ tên: <span class="font-bold text-slate-800">${emp.fullName}</span> (${shortNameDisplay})</p>
-                </div>
-
-                <div class="bg-purple-50/50 p-3.5 rounded-xl border border-purple-200 space-y-2">
-                    <div class="flex justify-between font-bold text-slate-800"><span>1. Lương Cơ Bản Thực Tế:</span><span class="font-mono">${pay.tongTienCB.toLocaleString('vi-VN')} đ</span></div>
-                    <div class="flex justify-between font-bold text-indigo-900"><span>2. Lương Công Việc Thực Tế:</span><span class="font-mono">${pay.luongCV_ThucTe.toLocaleString('vi-VN')} đ</span></div>
-                    <div class="flex justify-between text-rose-700"><span>- Trừ BHTN (1%):</span><span class="font-mono">-${pay.bhtn.toLocaleString('vi-VN')} đ</span></div>
-                    <div class="flex justify-between text-rose-700"><span>- Trừ BHXH + BHYT (9.5%):</span><span class="font-mono">-${pay.bhxh_bhyt.toLocaleString('vi-VN')} đ</span></div>
-                    <div class="flex justify-between text-rose-800"><span>- Trừ Tạm Ứng:</span><span class="font-mono">-${pay.tamUng.toLocaleString('vi-VN')} đ</span></div>
-                    <div class="flex justify-between text-emerald-800 font-bold"><span>+ Tiền Ăn Ca (20 công x 5k):</span><span class="font-mono">+${pay.tienAnCa.toLocaleString('vi-VN')} đ</span></div>
-                    <div class="flex justify-between text-emerald-800 font-bold"><span>+ Bồi Dưỡng Độc Hại:</span><span class="font-mono">+${pay.boiDuoingDocHai.toLocaleString('vi-VN')} đ</span></div>
-                    <div class="flex justify-between bg-emerald-100 p-2.5 rounded-lg border border-emerald-300 font-black text-emerald-900 text-sm mt-2">
-                        <span>THỰC LĨNH TỔNG HỢP:</span>
-                        <span class="font-mono text-base">${pay.tongThucLinhCuoiCung.toLocaleString('vi-VN')} VNĐ</span>
-                    </div>
-                </div>
-
-                <div class="flex flex-wrap justify-between items-center gap-2 pt-2 border-t no-print">
-                    <button onclick="window.print()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl flex items-center gap-1.5">
-                        <i class="fa-solid fa-print"></i> In Phiếu Lương
-                    </button>
-
-                    <a href="https://zalo.me/${phoneClean}?text=${zaloMessage}" target="_blank" class="bg-emerald-700 hover:bg-emerald-800 text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1.5 shadow-sm">
-                        <i class="fa-solid fa-paper-plane"></i> Gửi Phiếu Lương Qua Zalo
-                    </a>
-                </div>
-            </div>`;
-
-            document.getElementById('paySlipModal').classList.remove('hidden');
-            document.getElementById('paySlipModal').classList.add('flex');
-        }
-        function closePaySlipModal() { document.getElementById('paySlipModal').classList.add('hidden'); document.getElementById('paySlipModal').classList.remove('flex'); }
-
-        function openEditModal(stt) {
-            const form = document.getElementById('employeeForm');
-            form.reset();
-            if (stt) {
-                const emp = rawEmployees.find(e => e.stt === String(stt));
-                if (!emp) return;
-                document.getElementById('editStt').value = emp.stt;
-                document.getElementById('inputFullName').value = emp.fullName;
-                document.getElementById('inputShortName').value = emp.shortName || extractShortName(emp.fullName);
-                document.getElementById('inputGender').value = emp.gender;
-                document.getElementById('inputDob').value = emp.dob || '';
-                document.getElementById('inputPhone').value = emp.phone || '';
-                document.getElementById('inputCccd').value = emp.cccd || '';
-                document.getElementById('inputBhxh').value = emp.bhxh || '';
-                document.getElementById('inputUnit').value = emp.unit;
-                document.getElementById('inputTitle').value = emp.title || '';
-                document.getElementById('inputEducation').value = emp.education || '';
-                document.getElementById('inputStartDate').value = emp.startDate || '';
-                document.getElementById('inputRetireDate').value = emp.retireDate || '';
-                document.getElementById('inputSalaryCoeff').value = emp.salaryCoeff || '1.94';
-                document.getElementById('inputAllowance').value = emp.allowance || '0.25';
-                document.getElementById('inputJobSalaryCoeff').value = emp.jobSalaryCoeff || '5.20';
-                document.getElementById('inputJobAllowance').value = emp.jobAllowance || '0.60';
-                document.getElementById('inputWorkDays').value = emp.workDays || '20';
-                document.getElementById('inputLeaveDays').value = emp.leaveDays || '1';
-                document.getElementById('inputAdvanceAmount').value = emp.advanceAmount || '0';
-                document.getElementById('inputToxicAllowance').value = emp.toxicAllowance || '0';
-            } else {
-                document.getElementById('editStt').value = '';
-            }
-            document.getElementById('editModal').classList.remove('hidden');
-            document.getElementById('editModal').classList.add('flex');
-        }
-        function closeEditModal() { document.getElementById('editModal').classList.add('hidden'); document.getElementById('editModal').classList.remove('flex'); }
-
-        function saveEmployeeData(event) {
-            if (event) event.preventDefault();
-            const stt = document.getElementById('editStt').value;
-            const fullNameVal = document.getElementById('inputFullName').value.trim();
-            const shortNameVal = document.getElementById('inputShortName').value.trim() || extractShortName(fullNameVal);
-
-            const emp = {
-                stt: stt || String(Date.now()),
-                fullName: fullNameVal,
-                shortName: shortNameVal,
-                gender: document.getElementById('inputGender').value,
-                dob: document.getElementById('inputDob').value.trim(),
-                phone: document.getElementById('inputPhone').value.trim(),
-                cccd: document.getElementById('inputCccd').value.trim(),
-                bhxh: document.getElementById('inputBhxh').value.trim(),
-                unit: cleanUnitName(document.getElementById('inputUnit').value),
-                title: document.getElementById('inputTitle').value.trim(),
-                education: document.getElementById('inputEducation').value.trim(),
-                startDate: document.getElementById('inputStartDate').value.trim(),
-                retireDate: document.getElementById('inputRetireDate').value.trim(),
-                salaryCoeff: document.getElementById('inputSalaryCoeff').value.trim(),
-                allowance: document.getElementById('inputAllowance').value.trim(),
-                jobSalaryCoeff: document.getElementById('inputJobSalaryCoeff').value.trim(),
-                jobAllowance: document.getElementById('inputJobAllowance').value.trim(),
-                workDays: document.getElementById('inputWorkDays').value.trim() || '20',
-                leaveDays: document.getElementById('inputLeaveDays').value.trim() || '1',
-                advanceAmount: document.getElementById('inputAdvanceAmount').value.trim() || '0',
-                toxicAllowance: document.getElementById('inputToxicAllowance').value.trim() || '0'
-            };
-
-            if (stt) {
-                const idx = rawEmployees.findIndex(e => e.stt === stt);
-                if (idx !== -1) rawEmployees[idx] = emp;
-            } else {
-                rawEmployees.unshift(emp);
-            }
-            closeEditModal();
-            initSystem();
-            saveToLocal();
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            fetchCloudData(false);
-        });
     </script>
 </body>
 </html>
