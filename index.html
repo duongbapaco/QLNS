@@ -137,7 +137,7 @@
     <div class="app-header mb-4 d-md-flex justify-content-between align-items-center">
         <div>
             <h4 class="fw-bold mb-1"><i class="fa-solid fa-users-gear text-primary me-2"></i>HỆ THỐNG QUẢN TRỊ & DỰ BÁO NHÂN SỰ TOÀN DIỆN</h4>
-            <p class="mb-0 text-slate-300 opacity-75 small">Tính Tuổi Nghỉ Hưu Theo Luật Mới (NĐ 135/2020) | Phân Loại Tên Đơn Vị | Đồng Bộ Drive API</p>
+            <p class="mb-0 text-slate-300 opacity-75 small">Tự Động Tính Năm Nghỉ Hưu NĐ 135 | Phân Loại Tên Đơn Vị | Google Drive API</p>
         </div>
         <div class="mt-3 mt-md-0 no-print d-flex gap-2 flex-wrap">
             <button class="btn btn-warning fw-bold text-dark" id="btnAuthDrive" onclick="handleAuthClick()">
@@ -356,7 +356,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-bold">Ngày sinh (DD/MM/YYYY)</label>
-                        <input type="text" class="form-control" id="mDob" placeholder="DD/MM/YYYY" onchange="autoCalcRetirementModal()">
+                        <input type="text" class="form-control" id="mDob" placeholder="DD/MM/YYYY" onkeyup="autoCalcRetirementModal()" onchange="autoCalcRetirementModal()">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-bold">Dự kiến về hưu (NĐ 135)</label>
@@ -486,14 +486,14 @@
         searchTimer = setTimeout(filterData, 150);
     }
 
-    // HÀM TÍNH TUỔI NGHỈ HƯU THEO BỘ LUẬT LAO ĐỘNG MỚI (NGHỊ ĐỊNH 135/2020/NĐ-CP)
+    // TÍNH TUỔI NGHỈ HƯU THEO NGHỊ ĐỊNH 135/2020/NĐ-CP
     function calculateRetirementDateNewLaw(dobStr, gender, isNndh) {
-        if (!dobStr || dobStr === '-') return '-';
+        if (!dobStr || dobStr === '-' || dobStr === 'null' || dobStr === 'undefined') return '-';
         const formattedDob = formatDateVN(dobStr);
         if (formattedDob.length < 10) return '-';
 
         const day = parseInt(formattedDob.substring(0, 2));
-        const month = parseInt(formattedDob.substring(3, 5)) - 1; // 0-11
+        const month = parseInt(formattedDob.substring(3, 5)) - 1;
         const year = parseInt(formattedDob.substring(6, 10));
 
         if (isNaN(day) || isNaN(month) || isNaN(year)) return '-';
@@ -511,7 +511,7 @@
             else if (year === 1966) { addYears = 61; addMonths = 6; }
             else if (year === 1967) { addYears = 61; addMonths = 9; }
             else { addYears = 62; addMonths = 0; }
-        } else { // Nữ
+        } else {
             if (year <= 1965) { addYears = 55; addMonths = 0; }
             else if (year === 1966) { addYears = 55; addMonths = 4; }
             else if (year === 1967) { addYears = 55; addMonths = 8; }
@@ -530,7 +530,6 @@
             else { addYears = 60; addMonths = 0; }
         }
 
-        // Nếu là lao động Nặng nhọc độc hại -> Nghỉ hưu sớm 5 năm
         if (isNndh === 'Có' || isNndh === true) {
             addYears -= 5;
         }
@@ -555,9 +554,7 @@
 
     function gapiLoaded() {
         gapi.load('client', async () => {
-            await gapi.client.init({
-                discoveryDocs: [DISCOVERY_DOC],
-            });
+            await gapi.client.init({ discoveryDocs: [DISCOVERY_DOC] });
             gapiInited = true;
         });
     }
@@ -806,7 +803,6 @@
             const genderVal = (colIdx.gender >= 0 && ['X','NỮ','FEMALE','1'].includes(String(row[colIdx.gender]).trim().toUpperCase())) ? 'Nữ' : 'Nam';
             const nndhVal = (colIdx.nndh >= 0 && ['1','X','CÓ'].includes(String(row[colIdx.nndh]).trim().toUpperCase())) ? 'Có' : 'Không';
             
-            // TỰ ĐỘNG TÍNH NGÀY HƯU THEO NGHỊ ĐỊNH 135/2020 NẾU TRONG EXCEL TRỐNG
             let retirementVal = colIdx.retirement >= 0 && row[colIdx.retirement] ? formatDateVN(row[colIdx.retirement]) : '';
             if (!retirementVal || retirementVal === '-') {
                 retirementVal = calculateRetirementDateNewLaw(dobFormatted, genderVal, nndhVal);
@@ -847,7 +843,7 @@
             saveLocalCache();
             renderUnitCards();
             renderForecastsAndCharts();
-            alert(`Nhập thành công ${parsedList.length} hồ sơ nhân sự (Đã tính tự động tuổi nghỉ hưu theo NĐ 135/2020)!`);
+            alert(`Nhập thành công ${parsedList.length} hồ sơ nhân sự (Đã tự động tính tuổi nghỉ hưu NĐ 135/2020)!`);
         }
     }
 
@@ -1028,6 +1024,7 @@
         });
     }
 
+    // MỞ MODAL XEM/SỬA: TỰ ĐỘNG TÍNH LẠI NĂM NGHỈ HƯU NẾU TRƯỚC ĐÓ ĐANG LÀ DẤU GẠCH NGHĨA (-)
     function openEditModal(filteredIndex) {
         const emp = currentFilteredEmployees[filteredIndex];
         if (!emp) return;
@@ -1042,7 +1039,6 @@
         document.getElementById('mBhxh').value = emp.bhxh || '';
         document.getElementById('mCccd').value = emp.cccd || '';
         document.getElementById('mDob').value = emp.dob || '';
-        document.getElementById('mRetirement').value = emp.retirement || '';
 
         document.getElementById('mUnitName').value = emp.unitName || '';
         document.getElementById('mUnit').value = emp.unit || '';
@@ -1063,6 +1059,13 @@
         document.getElementById('mJobSalaryCoeff').value = emp.jobSalaryCoeff || 0;
         document.getElementById('mJobAllowance').value = emp.jobAllowance || 0;
         document.getElementById('mPositionHistory').value = emp.positionHistory || '';
+
+        // ĐẢM BẢO TÍNH LẠI NGAY NĂM NGHỈ HƯU
+        let retirementVal = emp.retirement;
+        if (!retirementVal || retirementVal === '-' || retirementVal === 'null') {
+            retirementVal = calculateRetirementDateNewLaw(emp.dob, emp.gender, emp.nndh);
+        }
+        document.getElementById('mRetirement').value = retirementVal || '-';
 
         document.getElementById('directEditModal').style.display = 'flex';
     }
@@ -1172,8 +1175,12 @@
         // DỰ BÁO NGHỈ HƯU LUẬT MỚI (2026 - 2035)
         const retireYearCounts = {};
         globalEmployees.forEach(e => {
-            if (e.retirement) {
-                const year = extractYear(e.retirement);
+            let rVal = e.retirement;
+            if (!rVal || rVal === '-') {
+                rVal = calculateRetirementDateNewLaw(e.dob, e.gender, e.nndh);
+            }
+            if (rVal && rVal !== '-') {
+                const year = extractYear(rVal);
                 if (year >= '2026' && year <= '2035') {
                     retireYearCounts[year] = (retireYearCounts[year] || 0) + 1;
                 }
