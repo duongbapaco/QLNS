@@ -133,7 +133,7 @@
     <div class="app-header mb-4 d-md-flex justify-content-between align-items-center">
         <div>
             <h4 class="fw-bold mb-1"><i class="fa-solid fa-users-gear text-primary me-2"></i>HỆ THỐNG QUẢN TRỊ & DỰ BÁO NHÂN SỰ TOÀN DIỆN</h4>
-            <p class="mb-0 text-slate-300 opacity-75 small">Tự Động Hợp Nhất Đơn Vị | Đồng Bộ Drive TCT Dùng Chung | Chuẩn NĐ 135/2020</p>
+            <p class="mb-0 text-slate-300 opacity-75 small">Bổ Sung Trường Tôn Giáo, Địa Chỉ Thường Trú & Tên Gọi Khác | Chuẩn NĐ 135/2020</p>
         </div>
         <div class="mt-3 mt-md-0 no-print d-flex gap-2 flex-wrap">
             <button class="btn btn-warning fw-bold text-dark" id="btnSyncUpload" onclick="saveToDriveShared()">
@@ -155,7 +155,7 @@
     <ul class="nav nav-tabs mb-4 no-print" id="customAppTabs">
         <li class="nav-item">
             <button class="nav-link active" id="btn-tab-units" onclick="switchTab('units')">
-                <i class="fa-solid fa-sitemap me-2"></i>Thẻ Phân Loại Tên Đơn Vị (Tự Động Hợp Nhất)
+                <i class="fa-solid fa-sitemap me-2"></i>Thẻ Phân Loại Tên Đơn Vị
             </button>
         </li>
         <li class="nav-item">
@@ -176,7 +176,7 @@
             <div class="upload-area" onclick="document.getElementById('excelFileInput').click()">
                 <i class="fa-solid fa-cloud-arrow-up fs-2 text-primary mb-1"></i>
                 <h6 class="fw-bold text-dark mb-1">Nhấp vào đây để chọn file Excel (.xlsx, .xls, .csv)</h6>
-                <p class="text-muted small mb-0">Hệ thống tự động gom nhóm, hợp nhất theo Tên Đơn Vị và xóa thẻ trống cũ</p>
+                <p class="text-muted small mb-0">Hệ thống tự động đọc thêm cột Tôn giáo, Địa chỉ thường trú, Tên gọi khác</p>
                 <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelUpload(event)">
             </div>
         </div>
@@ -187,7 +187,7 @@
                 <div class="col-md-5">
                     <div class="input-group">
                         <span class="input-group-text bg-white border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
-                        <input type="text" id="searchInput" class="form-control border-start-0" placeholder="Tra cứu Tên NV, Tên Đơn Vị, SĐT, CCCD..." onkeyup="debouncedSearch()">
+                        <input type="text" id="searchInput" class="form-control border-start-0" placeholder="Tra cứu Tên NV, Tên gọi khác, Đơn Vị, Địa chỉ, SĐT..." onkeyup="debouncedSearch()">
                     </div>
                 </div>
                 <div class="col-md-3">
@@ -329,23 +329,35 @@
                         <input type="text" class="form-control" id="mName" required>
                     </div>
                     <div class="col-md-3">
+                        <label class="form-label fw-bold">Tên gọi khác (Bí danh)</label>
+                        <input type="text" class="form-control" id="mOtherName" placeholder="Tên gọi khác nếu có">
+                    </div>
+                    <div class="col-md-3">
                         <label class="form-label fw-bold">Số điện thoại</label>
                         <input type="text" class="form-control" id="mPhone">
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <label class="form-label fw-bold">Giới tính</label>
                         <select class="form-select" id="mGender" onchange="autoCalcRetirementModal()">
                             <option value="Nam">Nam</option>
                             <option value="Nữ">Nữ</option>
                         </select>
                     </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold">Tôn giáo</label>
+                        <input type="text" class="form-control" id="mReligion" placeholder="Không / Phật giáo...">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Địa chỉ thường trú</label>
+                        <input type="text" class="form-control" id="mAddress" placeholder="Địa chỉ ghi theo hộ khẩu / CCCD">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Số CCCD</label>
+                        <input type="text" class="form-control" id="mCccd">
+                    </div>
                     <div class="col-md-3">
                         <label class="form-label fw-bold">Số sổ BHXH</label>
                         <input type="text" class="form-control" id="mBhxh">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label fw-bold">Số CCCD</label>
-                        <input type="text" class="form-control" id="mCccd">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-bold">Ngày sinh (DD/MM/YYYY)</label>
@@ -360,7 +372,7 @@
                 <h6 class="fw-bold text-primary border-bottom pb-2 mb-3"><i class="fa-solid fa-briefcase me-2"></i>2. Trình Độ & Tình Trạng Công Tác</h6>
                 <div class="row g-3 mb-4">
                     <div class="col-md-4">
-                        <label class="form-label fw-bold">Tên Đơn Vị Mới (Để Hợp Nhất) <span class="text-danger">*</span></label>
+                        <label class="form-label fw-bold">Tên Đơn Vị <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="mUnitName" required placeholder="Nhập tên đơn vị chuẩn để hợp nhất...">
                     </div>
                     <div class="col-md-2">
@@ -447,13 +459,12 @@
         </div>
         <div class="d-flex justify-content-end gap-2 p-3 bg-light rounded-bottom border-top">
             <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Đóng</button>
-            <button type="button" class="btn btn-primary fw-bold" onclick="saveEmployeeDetail()">Lưu & Hợp Nhất Đơn Vị</button>
+            <button type="button" class="btn btn-primary fw-bold" onclick="saveEmployeeDetail()">Lưu hồ sơ nhân sự</button>
         </div>
     </div>
 </div>
 
 <script>
-    // DÁN WEB APP URL CỦA GOOGLE APPS SCRIPT VÀO ĐÂY ĐỂ ĐỒNG BỘ TỰ ĐỘNG CHO TOÀN TỔNG CÔNG TY
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxH2uwwCbljQWc7grNKe-Mb_Yh_zVYO40WkOYeq9fd7oeFGrwDf0D2sqUEDj-XGQVWP/exec';
 
     let globalEmployees = [];
@@ -472,7 +483,6 @@
         searchTimer = setTimeout(filterData, 150);
     }
 
-    // ĐỒNG BỘ DÙNG CHUNG TOÀN TCT QUA APPS SCRIPT
     async function saveToDriveShared() {
         if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes('YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL')) {
             saveLocalCache();
@@ -676,6 +686,9 @@
         const colIdx = {
             stt: findColIdx(['stt', 'mã nv']),
             name: findColIdx(['họ và tên', 'họ tên', 'tên']),
+            otherName: findColIdx(['tên gọi khác', 'bí danh', 'tên khác']),
+            religion: findColIdx(['tôn giáo', 'đạo']),
+            address: findColIdx(['địa chỉ', 'thường trú', 'hộ khẩu']),
             phone: findColIdx(['điện thoại', 'sđt', 'phone']),
             bhxh: findColIdx(['bhxh', 'bảo hiểm', 'sổ']),
             cccd: findColIdx(['cccd', 'cmnd', 'căn cước']),
@@ -728,6 +741,9 @@
             parsedList.push({
                 stt: colIdx.stt >= 0 && row[colIdx.stt] ? String(row[colIdx.stt]).trim() : (parsedList.length + 1),
                 name: name,
+                otherName: colIdx.otherName >= 0 && row[colIdx.otherName] ? String(row[colIdx.otherName]).trim() : '',
+                religion: colIdx.religion >= 0 && row[colIdx.religion] ? String(row[colIdx.religion]).trim() : 'Không',
+                address: colIdx.address >= 0 && row[colIdx.address] ? String(row[colIdx.address]).trim() : '',
                 phone: colIdx.phone >= 0 && row[colIdx.phone] ? String(row[colIdx.phone]).trim() : '',
                 bhxh: colIdx.bhxh >= 0 && row[colIdx.bhxh] ? String(row[colIdx.bhxh]).trim().replace('.0', '') : '',
                 cccd: colIdx.cccd >= 0 && row[colIdx.cccd] ? String(row[colIdx.cccd]).trim().replace('.0', '') : '',
@@ -768,7 +784,6 @@
         localStorage.setItem('hr_gdrive_real_data', JSON.stringify(globalEmployees));
     }
 
-    // HIỂN THỊ THẺ ĐƠN VỊ TỰ ĐỘNG GOM NHÓM & XÓA THẺ CŨ KHÔNG CÒN NHÂN SỰ
     function renderUnitCards() {
         const grid = document.getElementById('unitCardsGrid');
         grid.innerHTML = '';
@@ -787,7 +802,6 @@
             unitMap[uName].count++;
         });
 
-        // Nếu thẻ đang chọn không còn nhân sự nào thuộc về nó nữa -> Reset về 'ALL'
         if (selectedUnitName !== 'ALL' && !unitMap[selectedUnitName]) {
             selectedUnitName = 'ALL';
         }
@@ -844,6 +858,8 @@
         currentFilteredEmployees = globalEmployees.filter(e => {
             const matchUnit = selectedUnitName === 'ALL' || (e.unitName && e.unitName.trim() === selectedUnitName);
             const matchSearch = e.name.toLowerCase().includes(search) || 
+                                (e.otherName && e.otherName.toLowerCase().includes(search)) ||
+                                (e.address && e.address.toLowerCase().includes(search)) ||
                                 e.phone.includes(search) || 
                                 e.cccd.includes(search) || 
                                 e.title.toLowerCase().includes(search) ||
@@ -879,7 +895,7 @@
                         <div>
                             <div class="d-flex justify-content-between align-items-start border-bottom pb-2 mb-2">
                                 <div>
-                                    <h6 class="fw-bold text-primary mb-0 fs-6">${e.name}</h6>
+                                    <h6 class="fw-bold text-primary mb-0 fs-6">${e.name} ${e.otherName ? `<span class="text-muted small fw-normal">(${e.otherName})</span>` : ''}</h6>
                                     <small class="text-muted"><i class="fa-solid fa-briefcase me-1"></i>${e.title || 'Chưa cập nhật vị trí'}</small>
                                 </div>
                                 <span class="badge bg-info text-dark fw-bold text-truncate" style="max-width: 140px;" title="${e.unitName}">${e.unitName}</span>
@@ -891,8 +907,12 @@
                                     <div class="info-value font-monospace">${e.phone || '-'}</div>
                                 </div>
                                 <div class="col-6">
-                                    <div class="info-label">Trình độ chuyên môn</div>
-                                    <div class="info-value text-truncate">${e.degree || '-'}</div>
+                                    <div class="info-label">Tôn giáo</div>
+                                    <div class="info-value">${e.religion || 'Không'}</div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="info-label">Địa chỉ thường trú</div>
+                                    <div class="info-value text-truncate" title="${e.address || '-'}">${e.address || '-'}</div>
                                 </div>
                                 <div class="col-6">
                                     <div class="info-label">Số CCCD</div>
@@ -903,16 +923,8 @@
                                     <div class="info-value font-monospace">${maskSensitive(e.bhxh)}</div>
                                 </div>
                                 <div class="col-6">
-                                    <div class="info-label">HS Lương Cơ Bản</div>
-                                    <div class="info-value text-secondary">${e.salaryCoeff} (Bậc ${e.salaryStep})</div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="info-label">HS Lương Công Việc</div>
-                                    <div class="info-value text-primary fw-bold">${e.jobSalaryCoeff} (Bậc ${e.jobSalaryStep})</div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="info-label">Loại HĐLĐ</div>
-                                    <div class="info-value">${e.contractType || '-'}</div>
+                                    <div class="info-label">Trình độ chuyên môn</div>
+                                    <div class="info-value text-truncate">${e.degree || '-'}</div>
                                 </div>
                                 <div class="col-6">
                                     <div class="info-label">Dự kiến nghỉ hưu</div>
@@ -956,6 +968,9 @@
 
         document.getElementById('mStt').value = emp.stt || '';
         document.getElementById('mName').value = emp.name || '';
+        document.getElementById('mOtherName').value = emp.otherName || '';
+        document.getElementById('mReligion').value = emp.religion || '';
+        document.getElementById('mAddress').value = emp.address || '';
         document.getElementById('mPhone').value = emp.phone || '';
         document.getElementById('mGender').value = emp.gender || 'Nam';
         document.getElementById('mBhxh').value = emp.bhxh || '';
@@ -995,7 +1010,6 @@
         document.getElementById('directEditModal').style.display = 'none';
     }
 
-    // LƯU HỒ SƠ CHI TIẾT & TỰ ĐỘNG HỢP NHẤT THẺ ĐƠN VỊ MỚI
     function saveEmployeeDetail() {
         const globalIdx = parseInt(document.getElementById('editEmpGlobalIndex').value);
         if (isNaN(globalIdx) || globalIdx < 0 || globalIdx >= globalEmployees.length) return;
@@ -1006,6 +1020,9 @@
             ...globalEmployees[globalIdx],
             stt: document.getElementById('mStt').value,
             name: document.getElementById('mName').value,
+            otherName: document.getElementById('mOtherName').value,
+            religion: document.getElementById('mReligion').value,
+            address: document.getElementById('mAddress').value,
             phone: document.getElementById('mPhone').value,
             gender: document.getElementById('mGender').value,
             bhxh: document.getElementById('mBhxh').value,
