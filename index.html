@@ -137,7 +137,7 @@
     <div class="app-header mb-4 d-md-flex justify-content-between align-items-center">
         <div>
             <h4 class="fw-bold mb-1"><i class="fa-solid fa-users-gear text-primary me-2"></i>HỆ THỐNG QUẢN TRỊ & DỰ BÁO NHÂN SỰ TOÀN DIỆN</h4>
-            <p class="mb-0 text-slate-300 opacity-75 small">Phân Loại Theo Tên Đơn Vị | Ngày Tháng DD/MM/YYYY | Đồng Bộ Google Drive Thực Sự</p>
+            <p class="mb-0 text-slate-300 opacity-75 small">Tính Tuổi Nghỉ Hưu Theo Luật Mới (NĐ 135/2020) | Phân Loại Tên Đơn Vị | Đồng Bộ Drive API</p>
         </div>
         <div class="mt-3 mt-md-0 no-print d-flex gap-2 flex-wrap">
             <button class="btn btn-warning fw-bold text-dark" id="btnAuthDrive" onclick="handleAuthClick()">
@@ -167,7 +167,7 @@
         </li>
         <li class="nav-item">
             <button class="nav-link" id="btn-tab-forecast" onclick="switchTab('forecast')">
-                <i class="fa-solid fa-chart-pie me-2"></i>Dự Báo, Cơ Cấu & Khuyến Nghị
+                <i class="fa-solid fa-chart-pie me-2"></i>Dự Báo Nghỉ Hưu Luật Mới & Khuyến Nghị
             </button>
         </li>
     </ul>
@@ -183,7 +183,7 @@
             <div class="upload-area" onclick="document.getElementById('excelFileInput').click()">
                 <i class="fa-solid fa-cloud-arrow-up fs-2 text-primary mb-1"></i>
                 <h6 class="fw-bold text-dark mb-1">Nhấp vào đây để chọn file Excel (.xlsx, .xls, .csv)</h6>
-                <p class="text-muted small mb-0">Hệ thống phân tích gom nhóm nhân sự tự động theo Tên Đơn Vị mới nhập</p>
+                <p class="text-muted small mb-0">Hệ thống tự động tính ngày về hưu chuẩn theo Bộ luật Lao động mới cho từng nhân sự</p>
                 <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelUpload(event)">
             </div>
         </div>
@@ -272,7 +272,7 @@
         <div class="row g-3 mb-4">
             <div class="col-lg-6">
                 <div class="card main-card p-3 h-100">
-                    <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-clock-rotate-left text-danger me-2"></i>DỰ BÁO NHÂN SỰ NGHỈ HƯU (2026 - 2032)</h6>
+                    <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-clock-rotate-left text-danger me-2"></i>DỰ BÁO NGHỈ HƯU THEO LUẬT MỚI (2026 - 2035)</h6>
                     <div class="chart-container mb-3">
                         <canvas id="retirementForecastChart"></canvas>
                     </div>
@@ -341,7 +341,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-bold">Giới tính</label>
-                        <select class="form-select" id="mGender">
+                        <select class="form-select" id="mGender" onchange="autoCalcRetirementModal()">
                             <option value="Nam">Nam</option>
                             <option value="Nữ">Nữ</option>
                         </select>
@@ -356,11 +356,11 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-bold">Ngày sinh (DD/MM/YYYY)</label>
-                        <input type="text" class="form-control" id="mDob" placeholder="DD/MM/YYYY">
+                        <input type="text" class="form-control" id="mDob" placeholder="DD/MM/YYYY" onchange="autoCalcRetirementModal()">
                     </div>
                     <div class="col-md-3">
-                        <label class="form-label fw-bold">Dự kiến về hưu (DD/MM/YYYY)</label>
-                        <input type="text" class="form-control" id="mRetirement" placeholder="DD/MM/YYYY">
+                        <label class="form-label fw-bold">Dự kiến về hưu (NĐ 135)</label>
+                        <input type="text" class="form-control font-monospace text-danger fw-bold" id="mRetirement" placeholder="DD/MM/YYYY">
                     </div>
                 </div>
 
@@ -401,8 +401,8 @@
                     </div>
                     <div class="col-md-3 pt-4">
                         <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="checkbox" id="mNndh">
-                            <label class="form-check-label fw-bold text-danger">NNĐH</label>
+                            <input class="form-check-input" type="checkbox" id="mNndh" onchange="autoCalcRetirementModal()">
+                            <label class="form-check-label fw-bold text-danger">NNĐH (Nghỉ sớm 5t)</label>
                         </div>
                         <div class="form-check form-check-inline">
                             <input class="form-check-input" type="checkbox" id="mAtv">
@@ -460,8 +460,6 @@
 </div>
 
 <script>
-    // GOOGLE DRIVE API CONFIGURATION
-    // THAY CLIENT_ID CỦA BẠN VÀO ĐÂY ĐỂ ĐỒNG BỘ TRỰC TIẾP LÊN DRIVE CÁ NHÂN
     const CLIENT_ID = '92355159264-svgpprgd4aalfcvploqih8efjnut30tq.apps.googleusercontent.com';
     const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest';
     const SCOPES = 'https://www.googleapis.com/auth/drive.file';
@@ -488,7 +486,73 @@
         searchTimer = setTimeout(filterData, 150);
     }
 
-    // 1. KHỞI TẠO GOOGLE DRIVE API
+    // HÀM TÍNH TUỔI NGHỈ HƯU THEO BỘ LUẬT LAO ĐỘNG MỚI (NGHỊ ĐỊNH 135/2020/NĐ-CP)
+    function calculateRetirementDateNewLaw(dobStr, gender, isNndh) {
+        if (!dobStr || dobStr === '-') return '-';
+        const formattedDob = formatDateVN(dobStr);
+        if (formattedDob.length < 10) return '-';
+
+        const day = parseInt(formattedDob.substring(0, 2));
+        const month = parseInt(formattedDob.substring(3, 5)) - 1; // 0-11
+        const year = parseInt(formattedDob.substring(6, 10));
+
+        if (isNaN(day) || isNaN(month) || isNaN(year)) return '-';
+
+        let addYears = 62;
+        let addMonths = 0;
+
+        if (gender === 'Nam') {
+            if (year <= 1960) { addYears = 60; addMonths = 0; }
+            else if (year === 1961) { addYears = 60; addMonths = 3; }
+            else if (year === 1962) { addYears = 60; addMonths = 6; }
+            else if (year === 1963) { addYears = 60; addMonths = 9; }
+            else if (year === 1964) { addYears = 61; addMonths = 0; }
+            else if (year === 1965) { addYears = 61; addMonths = 3; }
+            else if (year === 1966) { addYears = 61; addMonths = 6; }
+            else if (year === 1967) { addYears = 61; addMonths = 9; }
+            else { addYears = 62; addMonths = 0; }
+        } else { // Nữ
+            if (year <= 1965) { addYears = 55; addMonths = 0; }
+            else if (year === 1966) { addYears = 55; addMonths = 4; }
+            else if (year === 1967) { addYears = 55; addMonths = 8; }
+            else if (year === 1968) { addYears = 56; addMonths = 0; }
+            else if (year === 1969) { addYears = 56; addMonths = 4; }
+            else if (year === 1970) { addYears = 56; addMonths = 8; }
+            else if (year === 1971) { addYears = 57; addMonths = 0; }
+            else if (year === 1972) { addYears = 57; addMonths = 4; }
+            else if (year === 1973) { addYears = 57; addMonths = 8; }
+            else if (year === 1974) { addYears = 58; addMonths = 0; }
+            else if (year === 1975) { addYears = 58; addMonths = 4; }
+            else if (year === 1976) { addYears = 58; addMonths = 8; }
+            else if (year === 1977) { addYears = 59; addMonths = 0; }
+            else if (year === 1978) { addYears = 59; addMonths = 4; }
+            else if (year === 1979) { addYears = 59; addMonths = 8; }
+            else { addYears = 60; addMonths = 0; }
+        }
+
+        // Nếu là lao động Nặng nhọc độc hại -> Nghỉ hưu sớm 5 năm
+        if (isNndh === 'Có' || isNndh === true) {
+            addYears -= 5;
+        }
+
+        const retireDateObj = new Date(year + addYears, month + addMonths, day);
+        const rDay = String(retireDateObj.getDate()).padStart(2, '0');
+        const rMonth = String(retireDateObj.getMonth() + 1).padStart(2, '0');
+        const rYear = retireDateObj.getFullYear();
+
+        return `${rDay}/${rMonth}/${rYear}`;
+    }
+
+    function autoCalcRetirementModal() {
+        const dob = document.getElementById('mDob').value;
+        const gender = document.getElementById('mGender').value;
+        const isNndh = document.getElementById('mNndh').checked;
+        const calcRetire = calculateRetirementDateNewLaw(dob, gender, isNndh);
+        if (calcRetire !== '-') {
+            document.getElementById('mRetirement').value = calcRetire;
+        }
+    }
+
     function gapiLoaded() {
         gapi.load('client', async () => {
             await gapi.client.init({
@@ -524,13 +588,9 @@
             alert('Thư viện Google API đang tải, vui lòng thử lại sau vài giây!');
             return;
         }
-        if (CLIENT_ID.includes('YOUR_GOOGLE_CLIENT_ID')) {
-            alert('Vui lòng thay CLIENT_ID của Google Cloud Console trong mã nguồn HTML để sử dụng tính năng đồng bộ thực thụ!');
-        }
         tokenClient.requestAccessToken({prompt: 'consent'});
     }
 
-    // 2. LƯU DỮ LIỆU LÊN GOOGLE DRIVE
     async function saveToDrive() {
         if (!accessToken) {
             alert('Vui lòng kết nối Google Drive trước!');
@@ -539,8 +599,6 @@
 
         try {
             const content = JSON.stringify(globalEmployees, null, 2);
-            
-            // Tìm file đã tồn tại trên Drive
             const searchRes = await gapi.client.drive.files.list({
                 q: `name='${DRIVE_FILE_NAME}' and trashed=false`,
                 fields: 'files(id, name)',
@@ -550,7 +608,6 @@
             let fileId = files && files.length > 0 ? files[0].id : null;
 
             if (fileId) {
-                // Cập nhật file cũ
                 await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
                     method: 'PATCH',
                     headers: {
@@ -560,7 +617,6 @@
                     body: content
                 });
             } else {
-                // Tạo file mới
                 const metadata = { name: DRIVE_FILE_NAME, mimeType: 'application/json' };
                 const form = new FormData();
                 form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
@@ -580,7 +636,6 @@
         }
     }
 
-    // 3. TẢI DỮ LIỆU TỪ GOOGLE DRIVE VỀ ĐIỆN THOẠI/MÁY TÍNH
     async function loadFromDrive() {
         if (!accessToken) {
             alert('Vui lòng kết nối Google Drive trước!');
@@ -617,7 +672,6 @@
         }
     }
 
-    // Định dạng Ngày Tháng chuẩn Việt Nam (DD/MM/YYYY)
     function formatDateVN(dateStr) {
         if (!dateStr || dateStr === '-' || dateStr === 'null' || dateStr === 'undefined') return '-';
         let str = String(dateStr).replace(' 00:00:00', '').trim();
@@ -748,14 +802,24 @@
             if (!uName && uCode) uName = 'Đơn vị ' + uCode;
             if (!uName && !uCode) { uName = 'Đơn vị Khác'; uCode = 'KHAC'; }
 
+            const dobFormatted = colIdx.dob >= 0 && row[colIdx.dob] ? formatDateVN(row[colIdx.dob]) : '';
+            const genderVal = (colIdx.gender >= 0 && ['X','NỮ','FEMALE','1'].includes(String(row[colIdx.gender]).trim().toUpperCase())) ? 'Nữ' : 'Nam';
+            const nndhVal = (colIdx.nndh >= 0 && ['1','X','CÓ'].includes(String(row[colIdx.nndh]).trim().toUpperCase())) ? 'Có' : 'Không';
+            
+            // TỰ ĐỘNG TÍNH NGÀY HƯU THEO NGHỊ ĐỊNH 135/2020 NẾU TRONG EXCEL TRỐNG
+            let retirementVal = colIdx.retirement >= 0 && row[colIdx.retirement] ? formatDateVN(row[colIdx.retirement]) : '';
+            if (!retirementVal || retirementVal === '-') {
+                retirementVal = calculateRetirementDateNewLaw(dobFormatted, genderVal, nndhVal);
+            }
+
             parsedList.push({
                 stt: colIdx.stt >= 0 && row[colIdx.stt] ? String(row[colIdx.stt]).trim() : (parsedList.length + 1),
                 name: name,
                 phone: colIdx.phone >= 0 && row[colIdx.phone] ? String(row[colIdx.phone]).trim() : '',
                 bhxh: colIdx.bhxh >= 0 && row[colIdx.bhxh] ? String(row[colIdx.bhxh]).trim().replace('.0', '') : '',
                 cccd: colIdx.cccd >= 0 && row[colIdx.cccd] ? String(row[colIdx.cccd]).trim().replace('.0', '') : '',
-                dob: colIdx.dob >= 0 && row[colIdx.dob] ? formatDateVN(row[colIdx.dob]) : '',
-                gender: (colIdx.gender >= 0 && ['X','NỮ','FEMALE','1'].includes(String(row[colIdx.gender]).trim().toUpperCase())) ? 'Nữ' : 'Nam',
+                dob: dobFormatted,
+                gender: genderVal,
                 unitName: uName,
                 unit: uCode || 'ĐV',
                 title: colIdx.title >= 0 && row[colIdx.title] ? String(row[colIdx.title]).trim() : '',
@@ -772,9 +836,9 @@
                 jobAllowance: colIdx.jobAllowance >= 0 && row[colIdx.jobAllowance] ? parseFloat(row[colIdx.jobAllowance]) || 0 : 0,
                 contractType: colIdx.contractType >= 0 && row[colIdx.contractType] ? String(row[colIdx.contractType]).trim() : 'HĐKXDTH',
                 positionHistory: colIdx.positionHistory >= 0 && row[colIdx.positionHistory] ? String(row[colIdx.positionHistory]).trim() : '',
-                nndh: (colIdx.nndh >= 0 && ['1','X','CÓ'].includes(String(row[colIdx.nndh]).trim().toUpperCase())) ? 'Có' : 'Không',
+                nndh: nndhVal,
                 atv: (colIdx.atv >= 0 && ['1','X','CÓ'].includes(String(row[colIdx.atv]).trim().toUpperCase())) ? 'Có' : 'Không',
-                retirement: colIdx.retirement >= 0 && row[colIdx.retirement] ? formatDateVN(row[colIdx.retirement]) : ''
+                retirement: retirementVal
             });
         }
 
@@ -783,7 +847,7 @@
             saveLocalCache();
             renderUnitCards();
             renderForecastsAndCharts();
-            alert(`Nhập thành công ${parsedList.length} hồ sơ nhân sự!`);
+            alert(`Nhập thành công ${parsedList.length} hồ sơ nhân sự (Đã tính tự động tuổi nghỉ hưu theo NĐ 135/2020)!`);
         }
     }
 
@@ -933,7 +997,7 @@
                                 </div>
                                 <div class="col-6">
                                     <div class="info-label">Dự kiến nghỉ hưu</div>
-                                    <div class="info-value text-danger font-monospace">${e.retirement || '-'}</div>
+                                    <div class="info-value text-danger font-monospace fw-bold">${e.retirement || '-'}</div>
                                 </div>
                             </div>
 
@@ -1105,11 +1169,12 @@
             options: { responsive: true, maintainAspectRatio: false }
         });
 
+        // DỰ BÁO NGHỈ HƯU LUẬT MỚI (2026 - 2035)
         const retireYearCounts = {};
         globalEmployees.forEach(e => {
             if (e.retirement) {
                 const year = extractYear(e.retirement);
-                if (year >= '2026' && year <= '2032') {
+                if (year >= '2026' && year <= '2035') {
                     retireYearCounts[year] = (retireYearCounts[year] || 0) + 1;
                 }
             }
@@ -1126,7 +1191,7 @@
             const pct = ((cnt / total) * 100).toFixed(1);
             retireRowsHtml += `<tr><td>Năm ${y}</td><td>${cnt}</td><td class="text-danger fw-bold">${pct}%</td></tr>`;
         });
-        retireRowsHtml += `<tr class="table-secondary"><td><strong>Tổng hưu (2026-2032)</strong></td><td><strong>${totalRetire}</strong></td><td class="text-danger fw-bold"><strong>${((totalRetire/total)*100).toFixed(1)}%</strong></td></tr>`;
+        retireRowsHtml += `<tr class="table-secondary"><td><strong>Tổng hưu (2026-2035)</strong></td><td><strong>${totalRetire}</strong></td><td class="text-danger fw-bold"><strong>${((totalRetire/total)*100).toFixed(1)}%</strong></td></tr>`;
         document.getElementById('retireTableBody').innerHTML = retireRowsHtml || '<tr><td colspan="3">Không có dữ liệu nghỉ hưu giai đoạn này.</td></tr>';
 
         if (chartRetireInstance) chartRetireInstance.destroy();
@@ -1184,15 +1249,15 @@
             </div>
             <div class="col-md-4">
                 <div class="card p-3 recommendation-card h-100" style="border-left-color: #dc3545;">
-                    <h6 class="fw-bold text-danger mb-2"><i class="fa-solid fa-user-clock me-2"></i>Thay thế Nhân sự Nghỉ hưu</h6>
-                    <p class="small text-muted mb-1">Giai đoạn 2026-2032 có <strong>${totalRetire} nhân sự (${((totalRetire/total)*100).toFixed(1)}%)</strong> về hưu.</p>
-                    <div class="small fw-bold text-danger">💡 Khuyến nghị: Xây dựng quy hoạch cán bộ nguồn và tuyển dụng bù đắp trước 6 tháng.</div>
+                    <h6 class="fw-bold text-danger mb-2"><i class="fa-solid fa-user-clock me-2"></i>Lộ Trình Tăng Tuổi Hưu (NĐ 135/2020)</h6>
+                    <p class="small text-muted mb-1">Dự báo 2026-2035 có <strong>${totalRetire} nhân sự (${((totalRetire/total)*100).toFixed(1)}%)</strong> về hưu.</p>
+                    <div class="small fw-bold text-danger">💡 Khuyến nghị: Rà soát danh sách nghỉ hưu theo tháng sinh để chuẩn bị phương án bàn giao công việc.</div>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="card p-3 recommendation-card h-100" style="border-left-color: #198754;">
                     <h6 class="fw-bold text-success mb-2"><i class="fa-solid fa-shield-cat me-2"></i>Chế độ Lao động Đặc thù</h6>
-                    <p class="small text-muted mb-1">Ghi nhận <strong>${nndhCount} người (${nndhPct}%)</strong> làm công việc NNĐH.</p>
+                    <p class="small text-muted mb-1">Ghi nhận <strong>${nndhCount} người (${nndhPct}%)</strong> làm công việc NNĐH (Nghỉ hưu sớm 5 năm).</p>
                     <div class="small fw-bold text-success">💡 Khuyến nghị: Đảm bảo bồi dưỡng hiện vật, trang bị BHO & khám sức khỏe định kỳ 2 lần/năm.</div>
                 </div>
             </div>
