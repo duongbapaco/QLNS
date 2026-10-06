@@ -133,11 +133,14 @@
     <div class="app-header mb-4 d-md-flex justify-content-between align-items-center">
         <div>
             <h4 class="fw-bold mb-1"><i class="fa-solid fa-users-gear text-primary me-2"></i>HỆ THỐNG QUẢN TRỊ & DỰ BÁO NHÂN SỰ TOÀN DIỆN</h4>
-            <p class="mb-0 text-slate-300 opacity-75 small">Lưu Tự Động & Đồng Bộ Google Drive Trực Tuyến | Chuẩn NĐ 135/2020</p>
+            <p class="mb-0 text-slate-300 opacity-75 small">Tự Động Lưu Ngầm Cloud | Xuất Báo Cáo Excel Chuẩn Văn Bản Hành Chính | NĐ 135/2020</p>
         </div>
         <div class="mt-3 mt-md-0 no-print d-flex gap-2 flex-wrap">
-            <button class="btn btn-warning fw-bold text-dark" id="btnSyncUpload" onclick="saveToDriveShared()">
-                <i class="fa-solid fa-cloud-arrow-up me-1"></i> Lưu Lên Drive TCT
+            <button class="btn btn-success fw-bold" onclick="exportAdminStandardExcel()">
+                <i class="fa-solid fa-file-excel me-1"></i> Xuất Excel Văn Bản Hành Chính
+            </button>
+            <button class="btn btn-warning fw-bold text-dark" id="btnSyncUpload" onclick="saveToDriveShared(true)">
+                <i class="fa-solid fa-cloud-arrow-up me-1"></i> Lưu Lên Drive Ngay
             </button>
             <button class="btn btn-info fw-bold text-white" id="btnSyncDownload" onclick="loadFromDriveShared()">
                 <i class="fa-solid fa-cloud-arrow-down me-1"></i> Tải Dữ Liệu TCT
@@ -146,10 +149,7 @@
                 <i class="fa-solid fa-rotate-left me-1"></i> Khôi Phục Cục Bộ
             </button>
             <button class="btn btn-dark fw-bold" onclick="downloadBackupJSON()">
-                <i class="fa-solid fa-download me-1"></i> Tải File JSON
-            </button>
-            <button class="btn btn-success fw-bold" onclick="exportDataToExcel()">
-                <i class="fa-solid fa-file-excel me-1"></i> Xuất Excel
+                <i class="fa-solid fa-download me-1"></i> Tải Backup JSON
             </button>
             <button class="btn btn-secondary fw-bold" id="btnToggleMask" onclick="togglePrivacyMask()">
                 <i class="fa-solid fa-eye-slash me-1"></i> Ẩn CCCD/BHXH
@@ -177,7 +177,7 @@
         <div class="card main-card p-3 mb-4 no-print">
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <h6 class="fw-bold text-primary mb-0"><i class="fa-solid fa-file-import me-2"></i>NẠP DỮ LIỆU TỪ EXCEL HOẶC FILE BACKUP JSON</h6>
-                <span class="badge bg-success" id="driveSyncStatus"><i class="fa-solid fa-cloud-check me-1"></i> Kết nối Google Drive TCT sẵn sàng</span>
+                <span class="badge bg-success" id="driveSyncStatus"><i class="fa-solid fa-cloud-check me-1"></i> Đã kết nối Google Drive TCT (Tự động lưu ngầm)</span>
             </div>
             <div class="row g-2">
                 <div class="col-md-8">
@@ -483,7 +483,6 @@
 </div>
 
 <script>
-    // URL GOOGLE APPS SCRIPT WEB APP API CỦA ANH
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxH2uwwCbljQWc7grNKe-Mb_Yh_zVYO40WkOYeq9fd7oeFGrwDf0D2sqUEDj-XGQVWP/exec';
 
     let globalEmployees = [];
@@ -496,13 +495,32 @@
     let chartRetireInstance = null;
     let chartDegreeInstance = null;
 
+    let autoSyncTimer = null;
     let searchTimer;
+
     function debouncedSearch() {
         clearTimeout(searchTimer);
         searchTimer = setTimeout(filterData, 150);
     }
 
-    // LƯU TỰ ĐỘNG CỤC BỘ (LOCALSTORAGE)
+    // CƠ CHẾ LƯU TỰ ĐỘNG CỤC BỘ & ĐỒNG BỘ NGẦM GOOGLE DRIVE
+    function triggerAutoSave() {
+        // 1. Lưu ngay vào LocalStorage cục bộ
+        saveLocalCache();
+
+        // 2. Tự động đồng bộ ngầm lên Google Drive sau 2 giây
+        clearTimeout(autoSyncTimer);
+        const syncBadge = document.getElementById('driveSyncStatus');
+        if (syncBadge) {
+            syncBadge.className = 'badge bg-warning text-dark';
+            syncBadge.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Đang tự động lưu ngầm lên Drive...';
+        }
+
+        autoSyncTimer = setTimeout(() => {
+            saveToDriveShared(false); // Silent auto sync
+        }, 2000);
+    }
+
     function saveLocalCache() {
         if (globalEmployees && globalEmployees.length > 0) {
             const currentDataStr = JSON.stringify(globalEmployees);
@@ -511,26 +529,14 @@
                 localStorage.setItem('hr_gdrive_backup_snapshot', oldData);
             }
             localStorage.setItem('hr_gdrive_real_data', currentDataStr);
-            
-            const syncBadge = document.getElementById('driveSyncStatus');
-            if (syncBadge && !syncBadge.innerHTML.includes('Drive')) {
-                syncBadge.className = 'badge bg-warning text-dark';
-                syncBadge.innerHTML = '<i class="fa-solid fa-floppy-disk me-1"></i> Đã tự động lưu cục bộ (Chờ đồng bộ Drive)';
-            }
         }
     }
 
-    // ĐỒNG BỘ LƯU LÊN GOOGLE DRIVE TRỰC TUYẾN
-    async function saveToDriveShared() {
-        if (!globalEmployees || globalEmployees.length === 0) {
-            alert('Chưa có dữ liệu nhân sự để lưu lên Drive!');
-            return;
-        }
+    // ĐỒNG BỘ TRỰC TUYẾN GOOGLE DRIVE
+    async function saveToDriveShared(showAlert = false) {
+        if (!globalEmployees || globalEmployees.length === 0) return;
 
         try {
-            document.getElementById('driveSyncStatus').className = 'badge bg-warning text-dark';
-            document.getElementById('driveSyncStatus').innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Đang đồng bộ lên Drive TCT...';
-            
             await fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors',
@@ -539,19 +545,33 @@
             });
 
             saveLocalCache();
-            document.getElementById('driveSyncStatus').className = 'badge bg-success';
-            document.getElementById('driveSyncStatus').innerHTML = '<i class="fa-solid fa-cloud-check me-1"></i> Đã đồng bộ thành công lên Drive TCT (' + new Date().toLocaleTimeString() + ')';
-            alert('ĐÃ LƯU & ĐỒNG BỘ DỮ LIỆU THÀNH CÔNG CHO TOÀN BỘ NGƯỜI DÙNG TỔNG CÔNG TY!');
+            const syncBadge = document.getElementById('driveSyncStatus');
+            if (syncBadge) {
+                syncBadge.className = 'badge bg-success';
+                syncBadge.innerHTML = '<i class="fa-solid fa-cloud-check me-1"></i> Đã tự động lưu ngầm lên Drive TCT (' + new Date().toLocaleTimeString() + ')';
+            }
+
+            if (showAlert) {
+                alert('ĐÃ LƯU & ĐỒNG BỘ DỮ LIỆU THÀNH CÔNG CHO TOÀN BỘ NGƯỜI DÙNG TỔNG CÔNG TY!');
+            }
         } catch (err) {
-            alert('Lỗi đồng bộ Google Drive: ' + err.message);
+            console.error('Lỗi đồng bộ ngầm:', err);
+            const syncBadge = document.getElementById('driveSyncStatus');
+            if (syncBadge) {
+                syncBadge.className = 'badge bg-danger';
+                syncBadge.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-1"></i> Lỗi đồng bộ ngầm Cloud';
+            }
         }
     }
 
-    // TẢI DỮ LIỆU TỪ GOOGLE DRIVE TRỰC TUYẾN
+    // TẢI TỰ ĐỘNG DỮ LIỆU TỪ GOOGLE DRIVE
     async function loadFromDriveShared() {
         try {
-            document.getElementById('driveSyncStatus').className = 'badge bg-info text-white';
-            document.getElementById('driveSyncStatus').innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Đang tải dữ liệu từ Drive TCT...';
+            const syncBadge = document.getElementById('driveSyncStatus');
+            if (syncBadge) {
+                syncBadge.className = 'badge bg-info text-white';
+                syncBadge.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Đang tải dữ liệu từ Drive TCT...';
+            }
             
             const res = await fetch(APPS_SCRIPT_URL);
             const data = await res.json();
@@ -561,18 +581,140 @@
                 saveLocalCache();
                 renderUnitCards();
                 renderForecastsAndCharts();
-                document.getElementById('driveSyncStatus').className = 'badge bg-success';
-                document.getElementById('driveSyncStatus').innerHTML = '<i class="fa-solid fa-cloud-check me-1"></i> Đã cập nhật dữ liệu mới nhất từ Drive TCT';
-                alert(`Đã tải thành công ${globalEmployees.length} hồ sơ nhân sự dùng chung từ Google Drive!`);
+                if (syncBadge) {
+                    syncBadge.className = 'badge bg-success';
+                    syncBadge.innerHTML = '<i class="fa-solid fa-cloud-check me-1"></i> Đã đồng bộ dữ liệu mới nhất từ Drive TCT';
+                }
             } else {
-                document.getElementById('driveSyncStatus').className = 'badge bg-secondary';
-                document.getElementById('driveSyncStatus').innerHTML = '<i class="fa-solid fa-cloud me-1"></i> Drive chưa có dữ liệu';
+                if (syncBadge) {
+                    syncBadge.className = 'badge bg-secondary';
+                    syncBadge.innerHTML = '<i class="fa-solid fa-cloud me-1"></i> Drive TCT chưa có dữ liệu';
+                }
             }
         } catch (err) {
             console.error('Lỗi tải dữ liệu:', err);
-            document.getElementById('driveSyncStatus').className = 'badge bg-danger';
-            document.getElementById('driveSyncStatus').innerHTML = '<i class="fa-solid fa-triangle-exclamation me-1"></i> Lỗi kết nối Google Drive';
+            const syncBadge = document.getElementById('driveSyncStatus');
+            if (syncBadge) {
+                syncBadge.className = 'badge bg-danger';
+                syncBadge.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-1"></i> Lỗi kết nối Google Drive';
+            }
         }
+    }
+
+    // XUẤT EXCEL CHUẨN ĐẸP THEO THỂ THỨC VĂN BẢN HÀNH CHÍNH
+    function exportAdminStandardExcel() {
+        if (!globalEmployees || globalEmployees.length === 0) {
+            alert('Chưa có dữ liệu để xuất Excel!');
+            return;
+        }
+
+        const dataToExport = selectedUnitName === 'ALL' ? globalEmployees : globalEmployees.filter(e => e.unitName === selectedUnitName);
+
+        // Tạo ma trận dữ liệu trình bày theo thể thức Văn bản Hành chính
+        const excelMatrix = [
+            ["TỔNG CÔNG TY GIẤY VIỆT NAM", "", "", "", "", "", "", "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM"],
+            ["ĐƠN VỊ: " + (selectedUnitName === 'ALL' ? 'TOÀN TỔNG CÔNG TY' : selectedUnitName.toUpperCase()), "", "", "", "", "", "", "Độc lập - Tự do - Hạnh phúc"],
+            ["", "", "", "", "", "", "", "---***---"],
+            [""],
+            ["DANH SÁCH QUẢN LÝ VÀ DỰ BÁO NHÂN SỰ CHI TIẾT"],
+            ["(Ban hành kèm theo Báo cáo Quản trị Nhân sự & Lộ trình Tăng tuổi nghỉ hưu NĐ 135/2020)"],
+            ["Thời điểm xuất báo cáo: " + new Date().toLocaleDateString('vi-VN') + " " + new Date().toLocaleTimeString('vi-VN')],
+            [""],
+            [
+                "STT", 
+                "MÃ ĐƠN VỊ", 
+                "TÊN ĐƠN VỊ / BỘ PHẬN", 
+                "HỌ VÀ TÊN", 
+                "TÊN GỌI KHÁC (BÍ DANH)", 
+                "GIỚI TÍNH", 
+                "NGÀY SINH", 
+                "TÔN GIÁO", 
+                "ĐỊA CHỈ THƯỜNG TRÚ", 
+                "SỐ CCCD", 
+                "SỐ SỔ BHXH", 
+                "SỐ ĐIỆN THOẠI", 
+                "CHỨC DANH / VỊ TRÍ CÔNG TÁC", 
+                "TRÌNH ĐỘ CHUYÊN MÔN", 
+                "LOẠI HỢP ĐỒNG LAO ĐỘNG", 
+                "NGÀY VÀO TCT", 
+                "HỆ SỐ LƯƠNG CB", 
+                "NGÀY DỰ KIẾN VỀ HƯU (NĐ 135)", 
+                "NẶNG NHỌC ĐỘC HẠI", 
+                "AN TOÀN VIÊN", 
+                "TÌNH TRẠNG CÔNG TÁC"
+            ]
+        ];
+
+        dataToExport.forEach((e, idx) => {
+            excelMatrix.push([
+                idx + 1,
+                e.unit || '',
+                e.unitName || '',
+                e.name || '',
+                e.otherName || '',
+                e.gender || '',
+                e.dob || '',
+                e.religion || 'Không',
+                e.address || '',
+                e.cccd || '',
+                e.bhxh || '',
+                e.phone || '',
+                e.title || '',
+                e.degree || '',
+                e.contractType || '',
+                e.joinDate || '',
+                e.salaryCoeff || 0,
+                e.retirement || '',
+                e.nndh || 'Không',
+                e.atv || 'Không',
+                e.status || 'Đang làm việc'
+            ]);
+        });
+
+        // Thêm phần chữ ký xác nhận chuẩn hành chính
+        excelMatrix.push([""]);
+        excelMatrix.push([""]);
+        excelMatrix.push([
+            "NGƯỜI LẬP BẢNG", "", "", "", "", 
+            "TRƯỞNG PHÒNG TC-NS", "", "", "", "", 
+            "", "", "", "TỔNG GIÁM ĐỐC / GIÁM ĐỐC", "", "", ""
+        ]);
+        excelMatrix.push([
+            "(Ký, ghi rõ họ tên)", "", "", "", "", 
+            "(Ký, ghi rõ họ tên)", "", "", "", "", 
+            "", "", "", "(Ký tên và đóng dấu)", "", "", ""
+        ]);
+
+        const ws = XLSX.utils.aoa_to_sheet(excelMatrix);
+
+        // Cấu hình độ rộng các cột (Auto fit width)
+        ws['!cols'] = [
+            { wch: 6 },  // STT
+            { wch: 12 }, // Mã ĐV
+            { wch: 28 }, // Tên ĐV
+            { wch: 25 }, // Họ tên
+            { wch: 20 }, // Tên gọi khác
+            { wch: 10 }, // Giới tính
+            { wch: 14 }, // Ngày sinh
+            { wch: 14 }, // Tôn giáo
+            { wch: 35 }, // Địa chỉ
+            { wch: 16 }, // CCCD
+            { wch: 16 }, // BHXH
+            { wch: 14 }, // SĐT
+            { wch: 28 }, // Chức danh
+            { wch: 20 }, // Trình độ
+            { wch: 20 }, // HĐLĐ
+            { wch: 14 }, // Ngày vào
+            { wch: 12 }, // Lương CB
+            { wch: 22 }, // Ngày về hưu
+            { wch: 16 }, // NNĐH
+            { wch: 14 }, // ATV
+            { wch: 18 }  // Tình trạng
+        ];
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "BaoCao_NhanSu_VINAPACO");
+        XLSX.writeFile(wb, `BaoCao_NhanSu_VINAPACO_HanhChinh_${new Date().toISOString().slice(0,10)}.xlsx`);
     }
 
     function restoreLatestBackup() {
@@ -584,10 +726,10 @@
 
         if (confirm('Bạn có chắc chắn muốn khôi phục lại dữ liệu nhân sự ở thời điểm gần nhất không?')) {
             globalEmployees = JSON.parse(snapshot);
-            saveLocalCache();
+            triggerAutoSave();
             renderUnitCards();
             renderForecastsAndCharts();
-            alert('ĐÃ KHÔI PHỤC THÀNH CÔNG DỮ LIỆU GẦN NHẤT!');
+            alert('ĐẮ KHÔI PHỤC THÀNH CÔNG DỮ LIỆU GẦN NHẤT!');
         }
     }
 
@@ -616,10 +758,10 @@
                 const parsed = JSON.parse(e.target.result);
                 if (Array.isArray(parsed)) {
                     globalEmployees = parsed;
-                    saveLocalCache();
+                    triggerAutoSave();
                     renderUnitCards();
                     renderForecastsAndCharts();
-                    alert(`Đã khôi phục thành công ${globalEmployees.length} hồ sơ nhân sự từ file JSON!`);
+                    alert(`Đã khôi phục thành công ${globalEmployees.length} hồ sơ nhân sự từ file JSON! Hệ thống đang tự động lưu ngầm.`);
                 } else {
                     alert('File JSON không đúng định dạng nhân sự!');
                 }
@@ -872,10 +1014,10 @@
 
         if (parsedList.length > 0) {
             globalEmployees = parsedList;
-            saveLocalCache();
+            triggerAutoSave();
             renderUnitCards();
             renderForecastsAndCharts();
-            alert(`Nạp thành công ${parsedList.length} hồ sơ nhân sự! Đừng quên nhấn "Lưu Lên Drive TCT" để chia sẻ dữ liệu này cho mọi người.`);
+            alert(`Nạp thành công ${parsedList.length} hồ sơ nhân sự! Hệ thống đang tự động lưu ngầm lên Google Drive.`);
         }
     }
 
@@ -1144,11 +1286,11 @@
             positionHistory: document.getElementById('mPositionHistory').value
         };
 
-        saveLocalCache();
+        triggerAutoSave();
         renderUnitCards();
         renderForecastsAndCharts();
         closeEditModal();
-        alert(`Đã cập nhật hồ sơ & tự động lưu lại vào hệ thống! Hãy bấm "Lưu Lên Drive TCT" để chia sẻ dữ liệu.`);
+        alert(`Đã cập nhật hồ sơ thành công! Hệ thống đang tự động lưu ngầm lên Google Drive.`);
     }
 
     function renderForecastsAndCharts() {
@@ -1320,19 +1462,8 @@
         filterData();
     }
 
-    function exportDataToExcel() {
-        if (globalEmployees.length === 0) {
-            alert('Không có dữ liệu để xuất!');
-            return;
-        }
-        const ws = XLSX.utils.json_to_sheet(globalEmployees);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "NhanSu");
-        XLSX.writeFile(wb, "Danh_Sach_Nhan_Su_VINAPACO.xlsx");
-    }
-
     window.onload = function() {
-        // Ưu tiên tải dữ liệu trực tuyến từ Google Drive TCT khi khởi động
+        // Tự động tải ngầm dữ liệu từ Google Drive TCT khi khởi động ứng dụng
         loadFromDriveShared();
     };
 </script>
