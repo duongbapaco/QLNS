@@ -182,7 +182,7 @@
         <div class="card main-card p-3 mb-3 no-print">
             <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                 <h6 class="fw-bold text-primary mb-0 small text-uppercase"><i class="fa-solid fa-file-import me-2"></i>Nạp File Excel Hồ Sơ Hoặc Bảng Lương Các Đơn Vị</h6>
-                <span class="badge bg-warning text-dark p-2 fs-7" id="driveSyncStatus"><i class="fa-solid fa-spinner fa-spin me-1"></i> Đang tải kết nối dữ liệu máy chủ...</span>
+                <span class="badge bg-warning text-dark p-2 fs-7" id="driveSyncStatus"><i class="fa-solid fa-spinner fa-spin me-1"></i> Đang kết nối dữ liệu máy chủ...</span>
             </div>
             <div class="row g-2">
                 <div class="col-8 col-md-8">
@@ -311,7 +311,7 @@
                         </tr>
                     </thead>
                     <tbody id="payrollTableBody">
-                        <tr><td colspan="11" class="text-center text-muted py-3">Chưa có dữ liệu lương. Vui lòng nạp file Excel hoặc chọn đơn vị.</td></tr>
+                        <tr><td colspan="11" class="text-center text-muted py-3">Chưa có dữ liệu bảng lương. Vui lòng nạp file Excel hoặc chọn đơn vị.</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -623,7 +623,9 @@
             saveLocalCache();
             renderUnitCards();
             renderPayrollTable();
-            renderForecastsAndCharts();
+            if (document.getElementById('pane-forecast').style.display !== 'none') {
+                renderForecastsAndCharts();
+            }
             if (syncBadge) {
                 syncBadge.className = 'badge bg-success p-2 fs-7';
                 syncBadge.innerHTML = '<i class="fa-solid fa-cloud-check me-1"></i> Đã kết nối dữ liệu Google Drive';
@@ -651,7 +653,6 @@
                     globalEmployees = parsed;
                     renderUnitCards();
                     renderPayrollTable();
-                    renderForecastsAndCharts();
                 }
             } catch(e) {}
         }
@@ -823,7 +824,6 @@
             autoSyncOnInput();
             renderUnitCards();
             renderPayrollTable();
-            renderForecastsAndCharts();
             alert(`Nạp & Phân tích thành công ${parsedList.length} hồ sơ và bảng lương nhân sự!`);
         }
     }
@@ -1188,7 +1188,6 @@
         autoSyncOnInput();
         renderUnitCards();
         renderPayrollTable();
-        renderForecastsAndCharts();
         closeEditModal();
     }
 
@@ -1442,6 +1441,7 @@
         return String(dateStr).substring(0, 4);
     }
 
+    // ĐÃ SỬA LỖI TREO TAB KHI CHUYỂN TAB
     function switchTab(tabName) {
         document.getElementById('btn-tab-units').classList.remove('active');
         document.getElementById('btn-tab-payroll').classList.remove('active');
@@ -1462,7 +1462,10 @@
         } else if (tabName === 'forecast') {
             document.getElementById('btn-tab-forecast').classList.add('active');
             document.getElementById('pane-forecast').style.display = 'block';
-            renderForecastsAndCharts();
+            // CHỈ VẼ BIỂU ĐỒ KHI TAB DỰ BÁO ĐƯỢC HIỂN THỊ RÕ RÀNG
+            setTimeout(() => {
+                renderForecastsAndCharts();
+            }, 100);
         }
     }
 
@@ -1479,7 +1482,6 @@
                     autoSyncOnInput();
                     renderUnitCards();
                     renderPayrollTable();
-                    renderForecastsAndCharts();
                     alert(`Đã khôi phục thành công ${globalEmployees.length} hồ sơ nhân sự!`);
                 }
             } catch (err) {
