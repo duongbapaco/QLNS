@@ -128,7 +128,7 @@
     <div class="app-header mb-3 mb-md-4 d-md-flex justify-content-between align-items-center">
         <div>
             <h4 class="fw-bold mb-1 fs-5 fs-md-4"><i class="fa-solid fa-users-gear text-primary me-2"></i>HỆ THỐNG QUẢN TRỊ & DỰ BÁO NHÂN SỰ TOÀN DIỆN</h4>
-            <p class="mb-0 text-slate-300 opacity-75 small">Tối Ưu Hiển Thị Trên Zalo & Thiết Bị Di Động | Đồng Bộ Tự Động Google Drive TCT</p>
+            <p class="mb-0 text-slate-300 opacity-75 small">Tối Ưu Tải Dữ Liệu Trên Điện Thoại & Zalo | Tự Động Lưu Ngầm Google Drive TCT</p>
         </div>
         <div class="mt-3 mt-md-0 no-print d-flex gap-1 gap-md-2 flex-wrap">
             <button class="btn btn-sm btn-success fw-bold" onclick="exportAdminStandardExcel()">
@@ -166,7 +166,7 @@
         <div class="card main-card p-3 mb-3 no-print">
             <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                 <h6 class="fw-bold text-primary mb-0 small text-uppercase"><i class="fa-solid fa-file-import me-2"></i>Nạp Dữ Liệu Excel / JSON</h6>
-                <span class="badge bg-success p-2 fs-7" id="driveSyncStatus"><i class="fa-solid fa-spinner fa-spin me-1"></i> Đang tải dữ liệu từ Google Drive...</span>
+                <span class="badge bg-warning text-dark p-2 fs-7" id="driveSyncStatus"><i class="fa-solid fa-spinner fa-spin me-1"></i> Đang tải kết nối dữ liệu máy chủ...</span>
             </div>
             <div class="row g-2">
                 <div class="col-8 col-md-8">
@@ -426,7 +426,6 @@
 </div>
 
 <script>
-    // URL Web App API Google Apps Script của anh
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxH2uwwCbljQWc7grNKe-Mb_Yh_zVYO40WkOYeq9fd7oeFGrwDf0D2sqUEDj-XGQVWP/exec';
 
     let globalEmployees = [];
@@ -447,7 +446,6 @@
         searchTimer = setTimeout(filterData, 150);
     }
 
-    // TỰ ĐỘNG LƯU CỤC BỘ & ĐỒNG BỘ CLOUD
     function triggerAutoSave() {
         saveLocalCache();
         clearTimeout(autoSyncTimer);
@@ -469,15 +467,43 @@
         }
     }
 
-    // TẢI DỮ LIỆU ĐA TẦNG (TƯƠNG THÍCH MỌI TRÌNH DUYỆT DI ĐỘNG & ZALO)
+    // CALLBACK CHO CƠ CHẾ TẢI DỰ PHÒNG JSONP TRÊN DI ĐỘNG & ZALO
+    window.onDriveDataLoaded = function(data) {
+        if (Array.isArray(data) && data.length > 0) {
+            globalEmployees = data;
+            saveLocalCache();
+            renderUnitCards();
+            renderForecastsAndCharts();
+            const syncBadge = document.getElementById('driveSyncStatus');
+            if (syncBadge) {
+                syncBadge.className = 'badge bg-success p-2 fs-7';
+                syncBadge.innerHTML = '<i class="fa-solid fa-cloud-check me-1"></i> Đã đồng bộ thành công trên di động';
+            }
+        }
+    };
+
+    // TẢI DỮ LIỆU ĐA TẦNG VƯỢT RÀO CẢN DI ĐỘNG & ZALO
     async function loadFromDriveShared() {
         const syncBadge = document.getElementById('driveSyncStatus');
         if (syncBadge) {
             syncBadge.className = 'badge bg-info text-white p-2 fs-7';
-            syncBadge.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Đang tự động kết nối dữ liệu máy chủ...';
+            syncBadge.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Đang kết nối dữ liệu Google Drive...';
         }
 
-        // Tần số 1: Tải trực tiếp qua API
+        // Tần số 1: Đọc từ cache thiết bị cục bộ trước để giao diện hiển thị ngay không phải chờ
+        const savedData = localStorage.getItem('hr_gdrive_real_data');
+        if (savedData) {
+            try {
+                const parsed = JSON.parse(savedData);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    globalEmployees = parsed;
+                    renderUnitCards();
+                    renderForecastsAndCharts();
+                }
+            } catch(e) {}
+        }
+
+        // Tần số 2: Tải trực tiếp bằng Fetch API
         try {
             const res = await fetch(APPS_SCRIPT_URL + '?t=' + new Date().getTime(), {
                 method: 'GET',
@@ -497,27 +523,20 @@
                 return;
             }
         } catch (e) {
-            console.warn('Lỗi kết nối trực tiếp, thử giải pháp đọc dự phòng di động...');
+            console.warn('Lỗi Fetch, kích hoạt cơ chế chèn Script Injection để vượt rào Zalo...');
         }
 
-        // Tần số 2: Tự động khôi phục từ bộ nhớ đệm máy chủ cục bộ nếu Zalo chặn CORS
-        const savedData = localStorage.getItem('hr_gdrive_real_data');
-        if (savedData) {
-            try {
-                globalEmployees = JSON.parse(savedData);
-                renderUnitCards();
-                renderForecastsAndCharts();
-                if (syncBadge) {
-                    syncBadge.className = 'badge bg-success p-2 fs-7';
-                    syncBadge.innerHTML = '<i class="fa-solid fa-cloud-check me-1"></i> Đã tải dữ liệu từ bộ nhớ thiết bị';
-                }
-                return;
-            } catch(err) {}
-        }
+        // Tần số 3: Dùng Script Injection (JSONP) để vượt qua chặn CORS của Zalo In-App Browser
+        try {
+            const oldScript = document.getElementById('jsonpDriveScript');
+            if (oldScript) oldScript.remove();
 
-        if (syncBadge) {
-            syncBadge.className = 'badge bg-secondary p-2 fs-7';
-            syncBadge.innerHTML = '<i class="fa-solid fa-cloud me-1"></i> Chưa có dữ liệu. Vui lòng nạp file Excel.';
+            const script = document.createElement('script');
+            script.id = 'jsonpDriveScript';
+            script.src = APPS_SCRIPT_URL + '?callback=onDriveDataLoaded&t=' + new Date().getTime();
+            document.body.appendChild(script);
+        } catch(err) {
+            console.error('Lỗi chèn script:', err);
         }
     }
 
@@ -539,7 +558,7 @@
                 syncBadge.innerHTML = '<i class="fa-solid fa-cloud-check me-1"></i> Đã đồng bộ Google Drive (' + new Date().toLocaleTimeString() + ')';
             }
 
-            if (showAlert) alert('ĐÃ LƯU & ĐỒNG BỘ DỮ LIỆU THÀNH CÔNG CHO TOÀN BỘ NGƯỜI DÙNG TỔNG CÔNG TY!');
+            if (showAlert) alert('ĐẮ LƯU & ĐỒNG BỘ DỮ LIỆU THÀNH CÔNG CHO TOÀN BỘ NGƯỜI DÙNG TỔNG CÔNG TY!');
         } catch (err) {
             console.error('Lỗi đồng bộ ngầm:', err);
         }
@@ -883,7 +902,12 @@
         grid.innerHTML = '';
 
         if (globalEmployees.length === 0) {
-            grid.innerHTML = '<div class="col-12 text-center text-muted py-4 small">Chưa có dữ liệu đơn vị. Vui lòng bấm "Tải Lại Dữ Liệu" hoặc nạp file Excel.</div>';
+            grid.innerHTML = `
+                <div class="col-12 text-center text-muted py-4 small">
+                    <p class="mb-2"><i class="fa-solid fa-triangle-exclamation text-warning fs-4"></i><br>Chưa nhận được dữ liệu tự động do Zalo chặn truy cập ngầm.</p>
+                    <button class="btn btn-sm btn-primary fw-bold" onclick="loadFromDriveShared()"><i class="fa-solid fa-rotate me-1"></i> Bấm để tải lại dữ liệu</button>
+                </div>
+            `;
             return;
         }
 
@@ -1299,7 +1323,7 @@
     }
 
     window.onload = function() {
-        // Khởi động đa tầng tải dữ liệu ngay khi vừa mở trang trên Zalo / Điện thoại
+        // Tự động tải ngầm dữ liệu ngay khi khởi động trang trên điện thoại / Zalo
         loadFromDriveShared();
     };
 </script>
