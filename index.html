@@ -312,11 +312,11 @@
     </div>
 </div>
 
-<!-- GIAO DIỆN HỒ SƠ CHI TIẾT MODAL -->
+<!-- GIAO DIỆN HỒ SƠ CHI TIẾT MODAL ĐẦY ĐỦ CÁC TRƯỜNG LƯƠNG & CÔNG TÁC -->
 <div class="custom-modal-backdrop" id="directEditModal">
     <div class="custom-modal-content">
         <div class="d-flex justify-content-between align-items-center bg-primary text-white p-3 rounded-top">
-            <h6 class="fw-bold mb-0"><i class="fa-solid fa-id-card me-2"></i>HỒ SƠ CHI TIẾT NHÂN SỰ</h6>
+            <h6 class="fw-bold mb-0"><i class="fa-solid fa-id-card me-2"></i>HỒ SƠ CHI TIẾT & BỔ SUNG THÔNG TIN NHÂN SỰ</h6>
             <button type="button" class="btn-close btn-close-white" onclick="closeEditModal()"></button>
         </div>
         <div class="p-3 p-md-4">
@@ -397,7 +397,11 @@
                             <option value="Đã nghỉ việc">Đã nghỉ việc</option>
                         </select>
                     </div>
-                    <div class="col-12 col-md-6">
+                    <div class="col-6 col-md-3">
+                        <label class="form-label fw-bold small">Thời gian vào TCT</label>
+                        <input type="text" class="form-control form-control-sm" id="mJoinDate" placeholder="DD/MM/YYYY">
+                    </div>
+                    <div class="col-6 col-md-6">
                         <label class="form-label fw-bold small">Chức danh công việc / Vị trí</label>
                         <input type="text" class="form-control form-control-sm" id="mTitle">
                     </div>
@@ -414,6 +418,46 @@
                             <input class="form-check-input" type="checkbox" id="mAtv">
                             <label class="form-check-label fw-bold text-success small">ATV</label>
                         </div>
+                    </div>
+                </div>
+
+                <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 small"><i class="fa-solid fa-sack-dollar me-2"></i>3. Chế Độ Lương, Bậc & Phụ Cấp</h6>
+                <div class="row g-2 g-md-3 mb-3">
+                    <div class="col-4 col-md-2">
+                        <label class="form-label fw-bold small">Nhóm lương CB</label>
+                        <input type="text" class="form-control form-control-sm" id="mSalaryGroup">
+                    </div>
+                    <div class="col-4 col-md-2">
+                        <label class="form-label fw-bold small">Bậc lương CB</label>
+                        <input type="text" class="form-control form-control-sm" id="mSalaryStep">
+                    </div>
+                    <div class="col-4 col-md-2">
+                        <label class="form-label fw-bold small">Hệ số lương CB</label>
+                        <input type="number" step="0.01" class="form-control form-control-sm" id="mSalaryCoeff">
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label fw-bold small">Phụ cấp lương CB</label>
+                        <input type="number" step="0.01" class="form-control form-control-sm" id="mAllowance">
+                    </div>
+                    <div class="col-6 col-md-2">
+                        <label class="form-label fw-bold small">Nhóm lương CV</label>
+                        <input type="text" class="form-control form-control-sm" id="mJobSalaryGroup">
+                    </div>
+                    <div class="col-4 col-md-2">
+                        <label class="form-label fw-bold small">Bậc lương CV</label>
+                        <input type="text" class="form-control form-control-sm" id="mJobSalaryStep">
+                    </div>
+                    <div class="col-4 col-md-3">
+                        <label class="form-label fw-bold small">Hệ số lương CV</label>
+                        <input type="number" step="0.01" class="form-control form-control-sm" id="mJobSalaryCoeff">
+                    </div>
+                    <div class="col-4 col-md-3">
+                        <label class="form-label fw-bold small">Phụ cấp lương CV</label>
+                        <input type="number" step="0.01" class="form-control form-control-sm" id="mJobAllowance">
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-bold small">Lịch sử vị trí công tác</label>
+                        <textarea class="form-control form-control-sm" id="mPositionHistory" rows="2"></textarea>
                     </div>
                 </div>
             </form>
@@ -467,7 +511,6 @@
         }
     }
 
-    // CALLBACK CHO CƠ CHẾ TẢI DỰ PHÒNG JSONP TRÊN DI ĐỘNG & ZALO
     window.onDriveDataLoaded = function(data) {
         if (Array.isArray(data) && data.length > 0) {
             globalEmployees = data;
@@ -477,20 +520,18 @@
             const syncBadge = document.getElementById('driveSyncStatus');
             if (syncBadge) {
                 syncBadge.className = 'badge bg-success p-2 fs-7';
-                syncBadge.innerHTML = '<i class="fa-solid fa-cloud-check me-1"></i> Đã đồng bộ thành công trên di động';
+                syncBadge.innerHTML = '<i class="fa-solid fa-cloud-check me-1"></i> Đã kết nối dữ liệu Google Drive';
             }
         }
     };
 
-    // TẢI DỮ LIỆU ĐA TẦNG VƯỢT RÀO CẢN DI ĐỘNG & ZALO
     async function loadFromDriveShared() {
         const syncBadge = document.getElementById('driveSyncStatus');
         if (syncBadge) {
             syncBadge.className = 'badge bg-info text-white p-2 fs-7';
-            syncBadge.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Đang kết nối dữ liệu Google Drive...';
+            syncBadge.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Đang kết nối dữ liệu máy chủ...';
         }
 
-        // Tần số 1: Đọc từ cache thiết bị cục bộ trước để giao diện hiển thị ngay không phải chờ
         const savedData = localStorage.getItem('hr_gdrive_real_data');
         if (savedData) {
             try {
@@ -503,7 +544,6 @@
             } catch(e) {}
         }
 
-        // Tần số 2: Tải trực tiếp bằng Fetch API
         try {
             const res = await fetch(APPS_SCRIPT_URL + '?t=' + new Date().getTime(), {
                 method: 'GET',
@@ -523,10 +563,9 @@
                 return;
             }
         } catch (e) {
-            console.warn('Lỗi Fetch, kích hoạt cơ chế chèn Script Injection để vượt rào Zalo...');
+            console.warn('Sử dụng JSONP Injection để vượt rào di động...');
         }
 
-        // Tần số 3: Dùng Script Injection (JSONP) để vượt qua chặn CORS của Zalo In-App Browser
         try {
             const oldScript = document.getElementById('jsonpDriveScript');
             if (oldScript) oldScript.remove();
@@ -558,7 +597,7 @@
                 syncBadge.innerHTML = '<i class="fa-solid fa-cloud-check me-1"></i> Đã đồng bộ Google Drive (' + new Date().toLocaleTimeString() + ')';
             }
 
-            if (showAlert) alert('ĐẮ LƯU & ĐỒNG BỘ DỮ LIỆU THÀNH CÔNG CHO TOÀN BỘ NGƯỜI DÙNG TỔNG CÔNG TY!');
+            if (showAlert) alert('ĐÃ LƯU & ĐỒNG BỘ DỮ LIỆU THÀNH CÔNG CHO TOÀN BỘ NGƯỜI DÙNG TỔNG CÔNG TY!');
         } catch (err) {
             console.error('Lỗi đồng bộ ngầm:', err);
         }
@@ -604,7 +643,7 @@
         excelMatrix.push([""]);
         excelMatrix.push([
             "NGƯỜI LẬP BẢNG", "", "", "", "", 
-            "TRƯỞNG PHÒNG TC-NS", "", "", "", "", 
+            "TRƯỜNG PHÒNG TC-NS", "", "", "", "", 
             "", "", "", "TỔNG GIÁM ĐỐC / GIÁM ĐỐC", "", "", ""
         ]);
         excelMatrix.push([
@@ -902,12 +941,7 @@
         grid.innerHTML = '';
 
         if (globalEmployees.length === 0) {
-            grid.innerHTML = `
-                <div class="col-12 text-center text-muted py-4 small">
-                    <p class="mb-2"><i class="fa-solid fa-triangle-exclamation text-warning fs-4"></i><br>Chưa nhận được dữ liệu tự động do Zalo chặn truy cập ngầm.</p>
-                    <button class="btn btn-sm btn-primary fw-bold" onclick="loadFromDriveShared()"><i class="fa-solid fa-rotate me-1"></i> Bấm để tải lại dữ liệu</button>
-                </div>
-            `;
+            grid.innerHTML = '<div class="col-12 text-center text-muted py-4 small">Chưa có dữ liệu đơn vị. Vui lòng bấm "Tải Lại Dữ Liệu" hoặc nạp file Excel.</div>';
             return;
         }
 
@@ -1099,10 +1133,21 @@
         document.getElementById('mUnit').value = emp.unit || '';
         document.getElementById('mDegree').value = emp.degree || '';
         document.getElementById('mStatus').value = emp.status || 'Đang làm việc';
+        document.getElementById('mJoinDate').value = emp.joinDate || '';
         document.getElementById('mTitle').value = emp.title || '';
         document.getElementById('mContractType').value = emp.contractType || '';
         document.getElementById('mNndh').checked = (emp.nndh === 'Có');
         document.getElementById('mAtv').checked = (emp.atv === 'Có');
+
+        document.getElementById('mSalaryGroup').value = emp.salaryGroup || '';
+        document.getElementById('mSalaryStep').value = emp.salaryStep || '';
+        document.getElementById('mSalaryCoeff').value = emp.salaryCoeff || 0;
+        document.getElementById('mAllowance').value = emp.allowance || 0;
+        document.getElementById('mJobSalaryGroup').value = emp.jobSalaryGroup || '';
+        document.getElementById('mJobSalaryStep').value = emp.jobSalaryStep || '';
+        document.getElementById('mJobSalaryCoeff').value = emp.jobSalaryCoeff || 0;
+        document.getElementById('mJobAllowance').value = emp.jobAllowance || 0;
+        document.getElementById('mPositionHistory').value = emp.positionHistory || '';
 
         let retirementVal = emp.retirement;
         if (!retirementVal || retirementVal === '-' || retirementVal === 'null') {
@@ -1140,10 +1185,20 @@
             unit: document.getElementById('mUnit').value,
             degree: document.getElementById('mDegree').value,
             status: document.getElementById('mStatus').value,
+            joinDate: formatDateVN(document.getElementById('mJoinDate').value),
             title: document.getElementById('mTitle').value,
             contractType: document.getElementById('mContractType').value,
             nndh: document.getElementById('mNndh').checked ? 'Có' : 'Không',
-            atv: document.getElementById('mAtv').checked ? 'Có' : 'Không'
+            atv: document.getElementById('mAtv').checked ? 'Có' : 'Không',
+            salaryGroup: document.getElementById('mSalaryGroup').value,
+            salaryStep: document.getElementById('mSalaryStep').value,
+            salaryCoeff: parseFloat(document.getElementById('mSalaryCoeff').value) || 0,
+            allowance: parseFloat(document.getElementById('mAllowance').value) || 0,
+            jobSalaryGroup: document.getElementById('mJobSalaryGroup').value,
+            jobSalaryStep: document.getElementById('mJobSalaryStep').value,
+            jobSalaryCoeff: parseFloat(document.getElementById('mJobSalaryCoeff').value) || 0,
+            jobAllowance: parseFloat(document.getElementById('mJobAllowance').value) || 0,
+            positionHistory: document.getElementById('mPositionHistory').value
         };
 
         triggerAutoSave();
@@ -1323,7 +1378,6 @@
     }
 
     window.onload = function() {
-        // Tự động tải ngầm dữ liệu ngay khi khởi động trang trên điện thoại / Zalo
         loadFromDriveShared();
     };
 </script>
