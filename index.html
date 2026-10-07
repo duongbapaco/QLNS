@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hệ Thống Quản Trị & Dự Báo Nhân Sự - VINAPACO</title>
+    <title>Hệ Thống Quản Trị Nhân Sự & Đơn Vị - VINAPACO</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- FontAwesome Icons -->
@@ -12,12 +12,12 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- SheetJS Đọc/Xuất File Excel -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    
+
     <style>
         :root {
-            --primary-color: #0f172a;
-            --accent-color: #0d6efd;
-            --card-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            --primary-bg: #0f172a;
+            --accent-blue: #0d6efd;
+            --card-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
         }
         body {
             background-color: #f8fafc;
@@ -27,78 +27,84 @@
         .app-header {
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             color: white;
-            border-radius: 12px;
-            padding: 16px 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            border-radius: 16px;
+            padding: 20px 24px;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.15);
         }
         .main-card {
             border: none;
-            border-radius: 12px;
+            border-radius: 16px;
             box-shadow: var(--card-shadow);
-            background: white;
+            background: #ffffff;
         }
         .upload-area {
             border: 2px dashed #0d6efd;
             background-color: #f0f7ff;
             border-radius: 12px;
-            padding: 18px;
+            padding: 16px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s ease;
         }
-        .upload-area:hover { background-color: #e2f0ff; }
-        
-        .unit-card {
-            border: 2px solid #e2e8f0;
-            border-radius: 12px;
-            background: white;
-            transition: all 0.25s ease;
-            cursor: pointer;
-        }
-        .unit-card:hover, .unit-card.active-unit {
-            border-color: #0d6efd;
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(13, 110, 253, 0.2);
-            background-color: #f0f7ff;
+        .upload-area:hover {
+            background-color: #e2f0ff;
+            border-color: #0b5ed7;
         }
 
-        .emp-full-card {
-            border: 1px solid #cbd5e1;
-            border-radius: 12px;
+        /* Thẻ Đơn Vị */
+        .unit-card {
+            border: 2px solid #e2e8f0;
+            border-radius: 16px;
             background: #ffffff;
-            transition: all 0.2s;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.03);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
         }
-        .emp-full-card:hover {
-            box-shadow: 0 8px 22px rgba(0,0,0,0.08);
+        .unit-card:hover {
             border-color: #0d6efd;
+            transform: translateY(-4px);
+            box-shadow: 0 12px 25px rgba(13, 110, 253, 0.15);
+        }
+        .unit-card.active-unit {
+            border-color: #0d6efd;
+            background-color: #f0f7ff;
+            box-shadow: 0 8px 20px rgba(13, 110, 253, 0.2);
+        }
+
+        /* Thẻ Nhân Sự Chi Tiết */
+        .emp-card {
+            border: 1px solid #cbd5e1;
+            border-radius: 14px;
+            background: #ffffff;
+            transition: all 0.2s ease;
+        }
+        .emp-card:hover {
+            border-color: #0d6efd;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.06);
         }
         .info-label {
-            font-size: 0.78rem;
+            font-size: 0.75rem;
             color: #64748b;
-            text-uppercase: uppercase;
             font-weight: 600;
+            text-transform: uppercase;
         }
         .info-value {
             font-size: 0.88rem;
-            color: #1e293b;
+            color: #0f172a;
             font-weight: 600;
         }
 
-        .chart-container { position: relative; height: 260px; width: 100%; }
-        .recommendation-card { border-left: 4px solid #0d6efd; background-color: #f8fafc; }
-        
-        .nav-tabs .nav-link {
-            cursor: pointer;
-            font-weight: 600;
-            color: #64748b;
+        .sync-pulse {
+            animation: pulse 1.5s infinite;
         }
-        .nav-tabs .nav-link.active {
-            font-weight: bold;
-            color: #0d6efd !important;
-            border-bottom: 3px solid #0d6efd !important;
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
         }
 
+        /* Modal Chỉnh sửa */
         .custom-modal-backdrop {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
@@ -119,26 +125,35 @@
             overflow-y: auto;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
         }
+        .chart-container {
+            position: relative;
+            min-height: 250px;
+            width: 100%;
+        }
     </style>
 </head>
 <body>
 
 <div class="container-fluid px-2 px-md-4 py-3 py-md-4">
     <!-- Header App -->
-    <div class="app-header mb-3 mb-md-4 d-md-flex justify-content-between align-items-center">
+    <div class="app-header mb-4 d-md-flex justify-content-between align-items-center">
         <div>
-            <h4 class="fw-bold mb-1 fs-5 fs-md-4"><i class="fa-solid fa-users-gear text-primary me-2"></i>HỆ THỐNG QUẢN TRỊ & DỰ BÁO NHÂN SỰ TOÀN DIỆN</h4>
-            <p class="mb-0 text-slate-300 opacity-75 small">Tối Ưu Tải Dữ Liệu Trên Điện Thoại & Zalo | Tự Động Lưu Ngầm Google Drive TCT</p>
+            <h4 class="fw-bold mb-1 fs-5 fs-md-4">
+                <i class="fa-solid fa-users-gear text-primary me-2"></i>HỆ THỐNG QUẢN TRỊ NHÂN SỰ & ĐƠN VỊ - VINAPACO
+            </h4>
+            <p class="mb-0 text-slate-300 opacity-75 small">
+                Tự Động Đồng Bộ Ngầm Cloud Google Drive | Quản Lý Thẻ Đơn Vị & Phân Tích Dữ Liệu Realtime
+            </p>
         </div>
-        <div class="mt-3 mt-md-0 no-print d-flex gap-1 gap-md-2 flex-wrap">
+        <div class="mt-3 mt-md-0 no-print d-flex gap-2 flex-wrap align-items-center">
+            <span class="badge bg-success p-2 fs-7" id="driveSyncStatus">
+                <i class="fa-solid fa-cloud-check me-1"></i> Đã kết nối Google Drive
+            </span>
+            <button class="btn btn-sm btn-light fw-bold text-dark" onclick="loadFromDriveShared()">
+                <i class="fa-solid fa-rotate me-1"></i> Tải lại
+            </button>
             <button class="btn btn-sm btn-success fw-bold" onclick="exportAdminStandardExcel()">
-                <i class="fa-solid fa-file-excel me-1"></i> Xuất Excel Admin
-            </button>
-            <button class="btn btn-sm btn-warning fw-bold text-dark" id="btnSyncUpload" onclick="saveToDriveShared(true)">
-                <i class="fa-solid fa-cloud-arrow-up me-1"></i> Lưu Lên Drive
-            </button>
-            <button class="btn btn-sm btn-info fw-bold text-white" id="btnSyncDownload" onclick="loadFromDriveShared()">
-                <i class="fa-solid fa-rotate me-1"></i> Tải Lại Dữ Liệu
+                <i class="fa-solid fa-file-excel me-1"></i> Xuất Excel
             </button>
             <button class="btn btn-sm btn-secondary fw-bold" id="btnToggleMask" onclick="togglePrivacyMask()">
                 <i class="fa-solid fa-eye-slash me-1"></i> Ẩn CCCD/BHXH
@@ -146,177 +161,153 @@
         </div>
     </div>
 
-    <!-- Navigation Tabs -->
-    <ul class="nav nav-tabs mb-3 no-print" id="customAppTabs">
-        <li class="nav-item">
-            <button class="nav-link active small py-2 px-3" id="btn-tab-units" onclick="switchTab('units')">
-                <i class="fa-solid fa-sitemap me-1 me-md-2"></i>Thẻ Phân Loại Tên Đơn Vị
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link small py-2 px-3" id="btn-tab-forecast" onclick="switchTab('forecast')">
-                <i class="fa-solid fa-chart-pie me-1 me-md-2"></i>Dự Báo Nghỉ Hưu NĐ 135
-            </button>
-        </li>
-    </ul>
-
-    <!-- Nội dung Tab 1: Đơn vị & Nhân sự -->
-    <div id="pane-units">
-        <!-- Khối Upload Excel & Status -->
-        <div class="card main-card p-3 mb-3 no-print">
-            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                <h6 class="fw-bold text-primary mb-0 small text-uppercase"><i class="fa-solid fa-file-import me-2"></i>Nạp Dữ Liệu Excel / JSON</h6>
-                <span class="badge bg-warning text-dark p-2 fs-7" id="driveSyncStatus"><i class="fa-solid fa-spinner fa-spin me-1"></i> Đang tải kết nối dữ liệu máy chủ...</span>
+    <!-- Khối Nạp Dữ Liệu Excel / JSON Backup -->
+    <div class="card main-card p-3 mb-4 no-print">
+        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+            <h6 class="fw-bold text-primary mb-0 small text-uppercase">
+                <i class="fa-solid fa-file-import me-2"></i>Nạp Dữ Liệu Nhân Sự Excel
+            </h6>
+            <small class="text-muted fs-8">Dữ liệu sau khi nạp sẽ lập tức được đọc, hiển thị và tự động lưu đồng bộ lên Cloud Drive</small>
+        </div>
+        <div class="row g-2">
+            <div class="col-8 col-md-8">
+                <div class="upload-area py-2" onclick="document.getElementById('excelFileInput').click()">
+                    <i class="fa-solid fa-file-excel fs-4 text-primary mb-1"></i>
+                    <h6 class="fw-bold text-dark mb-0 small">Nạp File Excel Nhân Sự / Bảng Lương</h6>
+                    <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelUpload(event)">
+                </div>
             </div>
-            <div class="row g-2">
-                <div class="col-8 col-md-8">
-                    <div class="upload-area py-2" onclick="document.getElementById('excelFileInput').click()">
-                        <i class="fa-solid fa-file-excel fs-4 text-primary mb-1"></i>
-                        <h6 class="fw-bold text-dark mb-0 small">Chọn File Excel Nhân Sự</h6>
-                        <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelUpload(event)">
+            <div class="col-4 col-md-4">
+                <div class="upload-area bg-light border-secondary py-2" onclick="document.getElementById('jsonFileInput').click()">
+                    <i class="fa-solid fa-file-code fs-4 text-secondary mb-1"></i>
+                    <h6 class="fw-bold text-dark mb-0 small">Nạp Backup (.JSON)</h6>
+                    <input type="file" id="jsonFileInput" accept=".json" style="display: none;" onchange="handleJSONUpload(event)">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KHỐI 1: BẢNG TỔNG QUAN VÀ BIỂU ĐỒ THÔNG MINH DỰ BÁO CỦA TỔNG CÔNG TY -->
+    <div class="card main-card p-3 p-md-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+            <h5 class="fw-bold text-dark mb-0 fs-6 fs-md-5">
+                <i class="fa-solid fa-chart-pie text-primary me-2"></i>BÁO CÁO PHÂN TÍCH & DỰ BÁO NHÂN SỰ TỔNG CÔNG TY
+            </h5>
+            <span class="badge bg-primary fs-6" id="totalEmpBadge">Tổng số: 0 người</span>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-md-4">
+                <div class="card border-0 bg-light p-3">
+                    <h6 class="fw-bold text-muted small mb-2"><i class="fa-solid fa-venus-mars me-1"></i>Cơ Cấu Giới Tính</h6>
+                    <div class="chart-container">
+                        <canvas id="chartGender"></canvas>
                     </div>
                 </div>
-                <div class="col-4 col-md-4">
-                    <div class="upload-area bg-light border-secondary py-2" onclick="document.getElementById('jsonFileInput').click()">
-                        <i class="fa-solid fa-file-code fs-4 text-secondary mb-1"></i>
-                        <h6 class="fw-bold text-dark mb-0 small">Nạp Backup (.JSON)</h6>
-                        <input type="file" id="jsonFileInput" accept=".json" style="display: none;" onchange="handleJSONUpload(event)">
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="card border-0 bg-light p-3">
+                    <h6 class="fw-bold text-muted small mb-2"><i class="fa-solid fa-user-clock me-1"></i>Dự Báo Nghỉ Hưu Lộ Trình</h6>
+                    <div class="chart-container">
+                        <canvas id="chartRetirement"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="card border-0 bg-light p-3">
+                    <h6 class="fw-bold text-muted small mb-2"><i class="fa-solid fa-user-shield me-1"></i>Lao Động Đặc Thù & An Toàn</h6>
+                    <div class="chart-container">
+                        <canvas id="chartSpecialType"></canvas>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Thanh Tìm kiếm & Bộ lọc -->
-        <div class="card main-card p-2 p-md-3 mb-3 no-print">
+        <!-- Khuyến Nghị Quản Trị Tự Động -->
+        <div class="alert alert-info border-0 shadow-sm mb-0">
+            <h6 class="fw-bold mb-1 text-primary"><i class="fa-solid fa-lightbulb me-2"></i>Khuyến Nghị & Dự Báo Quản Trị Nhân Sự:</h6>
+            <div id="aiRecommendationsText" class="small text-dark">
+                Đang phân tích dữ liệu thực tế của Tổng công ty...
+            </div>
+        </div>
+    </div>
+
+    <!-- KHỐI 2: TỔNG QUAN TỔNG CÔNG TY & DANH SÁCH THẺ ĐƠN VỊ -->
+    <div class="card main-card p-3 p-md-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2 flex-wrap gap-2">
+            <h5 class="fw-bold text-dark mb-0 fs-6 fs-md-5">
+                <i class="fa-solid fa-sitemap text-primary me-2"></i>DANH SÁCH THẺ ĐƠN VỊ THÀNH VIÊN
+            </h5>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-sm btn-outline-primary fw-bold" onclick="selectUnitCard('ALL')">
+                    <i class="fa-solid fa-list me-1"></i> Xem tất cả nhân sự
+                </button>
+            </div>
+        </div>
+
+        <div class="row g-3" id="unitCardsGrid">
+            <div class="col-12 text-center text-muted py-4">
+                <i class="fa-solid fa-spinner fa-spin me-2"></i>Đang tải dữ liệu đơn vị...
+            </div>
+        </div>
+    </div>
+
+    <!-- KHỐI 3: CHẾ ĐỘ XEM CHI TIẾT KÈM TÌM KIẾM THÔNG MINH (BAN ĐẦU ẨN, MỞ KHI BẤM CHỌN THẺ) -->
+    <div class="card main-card p-3 p-md-4 mb-4" id="detailSection" style="display: none;">
+        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2 flex-wrap gap-2">
+            <h5 class="fw-bold text-primary mb-0 fs-6 fs-md-5" id="selectedUnitTitle">
+                <i class="fa-solid fa-users me-2"></i>XEM CHI TIẾT NHÂN SỰ
+            </h5>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-sm btn-secondary fw-bold" onclick="closeDetailSection()">
+                    <i class="fa-solid fa-house me-1"></i> Quay về Trang Chủ
+                </button>
+                <span class="badge bg-info text-dark fs-6" id="showingCountBadge">0 người</span>
+            </div>
+        </div>
+
+        <!-- BỘ LỌC & TÌM KIẾM THÔNG MINH ĐA DẠNG -->
+        <div class="bg-light p-3 rounded-3 mb-3 border no-print">
             <div class="row g-2 align-items-center">
-                <div class="col-12 col-md-5">
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text bg-white border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
-                        <input type="text" id="searchInput" class="form-control border-start-0" placeholder="Tra cứu NV, Đơn vị, SĐT, Địa chỉ..." onkeyup="debouncedSearch()">
-                    </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label fw-bold small text-muted mb-1"><i class="fa-solid fa-magnifying-glass me-1"></i>Từ khóa tìm kiếm thông minh:</label>
+                    <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Nhập tên, SĐT, CCCD, BHXH, Địa chỉ, Chức danh..." onkeyup="debouncedSearch()">
                 </div>
-                <div class="col-6 col-md-3">
+                <div class="col-6 col-md-2">
+                    <label class="form-label fw-bold small text-muted mb-1"><i class="fa-solid fa-venus-mars me-1"></i>Giới tính:</label>
                     <select class="form-select form-select-sm" id="genderFilter" onchange="filterData()">
-                        <option value="">-- Giới tính --</option>
+                        <option value="">-- Tất cả --</option>
                         <option value="Nam">Nam</option>
                         <option value="Nữ">Nữ</option>
                     </select>
                 </div>
-                <div class="col-6 col-md-4">
+                <div class="col-6 col-md-3">
+                    <label class="form-label fw-bold small text-muted mb-1"><i class="fa-solid fa-user-shield me-1"></i>Lao động đặc thù:</label>
                     <select class="form-select form-select-sm" id="typeFilter" onchange="filterData()">
-                        <option value="">-- Lao động đặc thù --</option>
-                        <option value="NNĐH">NNĐH (Nặng nhọc)</option>
-                        <option value="ATV">ATV (An toàn viên)</option>
+                        <option value="">-- Tất cả --</option>
+                        <option value="NNĐH">Nặng nhọc độc hại (NNĐH)</option>
+                        <option value="ATV">An toàn vệ sinh viên (ATV)</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-3">
+                    <label class="form-label fw-bold small text-muted mb-1"><i class="fa-solid fa-graduation-cap me-1"></i>Trình độ chuyên môn:</label>
+                    <select class="form-select form-select-sm" id="degreeFilter" onchange="filterData()">
+                        <option value="">-- Tất cả trình độ --</option>
                     </select>
                 </div>
             </div>
         </div>
 
-        <!-- Thẻ Đơn Vị -->
-        <h6 class="fw-bold text-dark mb-2 small text-uppercase"><i class="fa-solid fa-layer-group text-primary me-2"></i>DANH SÁCH THẺ ĐƠN VỊ ĐÃ HỢP NHẤT</h6>
-        <div class="row g-2 g-md-3 mb-3" id="unitCardsGrid">
-            <div class="col-12 text-center text-muted py-4"><i class="fa-solid fa-spinner fa-spin me-2"></i>Đang tải kết nối dữ liệu máy chủ Google Drive...</div>
-        </div>
-
-        <!-- Thẻ Nhân Sự Chi Tiết -->
-        <div class="card main-card p-2 p-md-3" id="employeeSection">
-            <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
-                <h6 class="fw-bold mb-0 text-uppercase text-primary small" id="selectedUnitTitle"><i class="fa-solid fa-users me-2"></i>DANH SÁCH NHÂN SỰ CHI TIẾT</h6>
-                <span class="badge bg-primary fs-7" id="showingCount">0 người</span>
-            </div>
-
-            <div class="row g-2 g-md-3" id="employeeCardsGrid"></div>
-        </div>
-    </div>
-
-    <!-- Nội dung Tab 2: Dự báo & Biểu đồ -->
-    <div id="pane-forecast" style="display: none;">
-        <div class="row g-3 mb-3">
-            <div class="col-lg-6">
-                <div class="card main-card p-3 h-100">
-                    <h6 class="fw-bold text-dark mb-2 small"><i class="fa-solid fa-venus-mars text-primary me-2"></i>CƠ CẤU LAO ĐỘNG NAM / NỮ</h6>
-                    <div class="chart-container mb-3">
-                        <canvas id="genderChart"></canvas>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-sm table-bordered text-center align-middle small mb-0">
-                            <thead class="table-light">
-                                <tr><th>Giới tính</th><th>Số lượng (Người)</th><th>Tỷ lệ (%)</th></tr>
-                            </thead>
-                            <tbody id="genderTableBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-6">
-                <div class="card main-card p-3 h-100">
-                    <h6 class="fw-bold text-dark mb-2 small"><i class="fa-solid fa-triangle-exclamation text-warning me-2"></i>LAO ĐỘNG ĐẶC THÙ (NNĐH / ATV)</h6>
-                    <div class="chart-container mb-3">
-                        <canvas id="specialRatioChart"></canvas>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-sm table-bordered text-center align-middle small mb-0">
-                            <thead class="table-light">
-                                <tr><th>Phân loại Lao động</th><th>Số lượng (Người)</th><th>Tỷ lệ (%)</th></tr>
-                            </thead>
-                            <tbody id="specialTableBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row g-3 mb-3">
-            <div class="col-lg-6">
-                <div class="card main-card p-3 h-100">
-                    <h6 class="fw-bold text-dark mb-2 small"><i class="fa-solid fa-clock-rotate-left text-danger me-2"></i>DỰ BÁO NGHỈ HƯU (2026 - 2035)</h6>
-                    <div class="chart-container mb-3">
-                        <canvas id="retirementForecastChart"></canvas>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-sm table-bordered text-center align-middle small mb-0">
-                            <thead class="table-light">
-                                <tr><th>Năm về hưu</th><th>Số lượng</th><th>Tỷ lệ (%)</th></tr>
-                            </thead>
-                            <tbody id="retireTableBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-6">
-                <div class="card main-card p-3 h-100">
-                    <h6 class="fw-bold text-dark mb-2 small"><i class="fa-solid fa-graduation-cap text-success me-2"></i>TRÌNH ĐỘ CHUYÊN MÔN</h6>
-                    <div class="chart-container mb-3">
-                        <canvas id="degreeChart"></canvas>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-sm table-bordered text-center align-middle small mb-0">
-                            <thead class="table-light">
-                                <tr><th>Trình độ chuyên môn</th><th>Số lượng</th><th>Tỷ lệ (%)</th></tr>
-                            </thead>
-                            <tbody id="degreeTableBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card main-card p-3 p-md-4">
-            <h6 class="fw-bold text-primary mb-3"><i class="fa-solid fa-lightbulb text-warning me-2"></i>DỰ BÁO & KHUYẾN NGHỊ QUẢN TRỊ NGUỒN NHÂN LỰC</h6>
-            <div class="row g-3" id="recommendationContainer">
-                <div class="col-md-12 text-muted small">Đang tải dữ liệu báo cáo khuyến nghị...</div>
-            </div>
-        </div>
+        <!-- Lưới hiển thị Thẻ Nhân sự chi tiết -->
+        <div class="row g-3" id="employeeCardsGrid"></div>
     </div>
 </div>
 
-<!-- GIAO DIỆN HỒ SƠ CHI TIẾT MODAL ĐẦY ĐỦ CÁC TRƯỜNG LƯƠNG & CÔNG TÁC -->
+<!-- MODAL HỒ SƠ CHI TIẾT & CHỈNH SỬA -->
 <div class="custom-modal-backdrop" id="directEditModal">
     <div class="custom-modal-content">
         <div class="d-flex justify-content-between align-items-center bg-primary text-white p-3 rounded-top">
-            <h6 class="fw-bold mb-0"><i class="fa-solid fa-id-card me-2"></i>HỒ SƠ CHI TIẾT & BỔ SUNG THÔNG TIN NHÂN SỰ</h6>
+            <h6 class="fw-bold mb-0"><i class="fa-solid fa-id-card me-2"></i>HỒ SƠ CHI TIẾT NHÂN SỰ</h6>
             <button type="button" class="btn-close btn-close-white" onclick="closeEditModal()"></button>
         </div>
         <div class="p-3 p-md-4">
@@ -326,51 +317,51 @@
                 <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 small"><i class="fa-solid fa-user me-2"></i>1. Thông Tin Cá Nhân & Định Danh</h6>
                 <div class="row g-2 g-md-3 mb-3">
                     <div class="col-4 col-md-2">
-                        <label class="form-label fw-bold small">Mã / STT</label>
-                        <input type="text" class="form-control form-control-sm" id="mStt">
+                        <label class="form-label fw-bold small">STT / Mã</label>
+                        <input type="text" class="form-control form-control-sm" id="mStt" onchange="autoSyncOnInput()">
                     </div>
                     <div class="col-8 col-md-4">
                         <label class="form-label fw-bold small">Họ và tên <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control form-control-sm" id="mName" required>
-                    </div>
-                    <div class="col-12 col-md-3">
-                        <label class="form-label fw-bold small">Tên gọi khác (Bí danh)</label>
-                        <input type="text" class="form-control form-control-sm" id="mOtherName">
+                        <input type="text" class="form-control form-control-sm" id="mName" onchange="autoSyncOnInput()" required>
                     </div>
                     <div class="col-6 col-md-3">
-                        <label class="form-label fw-bold small">Số điện thoại</label>
-                        <input type="text" class="form-control form-control-sm" id="mPhone">
+                        <label class="form-label fw-bold small">Bí danh</label>
+                        <input type="text" class="form-control form-control-sm" id="mOtherName" onchange="autoSyncOnInput()">
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label fw-bold small">SĐT</label>
+                        <input type="text" class="form-control form-control-sm" id="mPhone" onchange="autoSyncOnInput()">
                     </div>
                     <div class="col-6 col-md-2">
                         <label class="form-label fw-bold small">Giới tính</label>
-                        <select class="form-select form-select-sm" id="mGender" onchange="autoCalcRetirementModal()">
+                        <select class="form-select form-select-sm" id="mGender" onchange="autoCalcRetirementModal(); autoSyncOnInput();">
                             <option value="Nam">Nam</option>
                             <option value="Nữ">Nữ</option>
                         </select>
                     </div>
                     <div class="col-6 col-md-2">
                         <label class="form-label fw-bold small">Tôn giáo</label>
-                        <input type="text" class="form-control form-control-sm" id="mReligion">
+                        <input type="text" class="form-control form-control-sm" id="mReligion" onchange="autoSyncOnInput()">
                     </div>
                     <div class="col-12 col-md-4">
                         <label class="form-label fw-bold small">Địa chỉ thường trú</label>
-                        <input type="text" class="form-control form-control-sm" id="mAddress">
+                        <input type="text" class="form-control form-control-sm" id="mAddress" onchange="autoSyncOnInput()">
                     </div>
                     <div class="col-6 col-md-4">
                         <label class="form-label fw-bold small">Số CCCD</label>
-                        <input type="text" class="form-control form-control-sm" id="mCccd">
+                        <input type="text" class="form-control form-control-sm" id="mCccd" onchange="autoSyncOnInput()">
                     </div>
                     <div class="col-6 col-md-3">
                         <label class="form-label fw-bold small">Số sổ BHXH</label>
-                        <input type="text" class="form-control form-control-sm" id="mBhxh">
+                        <input type="text" class="form-control form-control-sm" id="mBhxh" onchange="autoSyncOnInput()">
                     </div>
                     <div class="col-6 col-md-3">
-                        <label class="form-label fw-bold small">Ngày sinh (DD/MM/YYYY)</label>
-                        <input type="text" class="form-control form-control-sm" id="mDob" onkeyup="autoCalcRetirementModal()">
+                        <label class="form-label fw-bold small">Ngày sinh</label>
+                        <input type="text" class="form-control form-control-sm" id="mDob" onkeyup="autoCalcRetirementModal()" onchange="autoSyncOnInput()">
                     </div>
                     <div class="col-6 col-md-3">
-                        <label class="form-label fw-bold small">Dự kiến về hưu (NĐ 135)</label>
-                        <input type="text" class="form-control form-control-sm text-danger fw-bold" id="mRetirement">
+                        <label class="form-label fw-bold small">Dự kiến nghỉ hưu</label>
+                        <input type="text" class="form-control form-control-sm text-danger fw-bold" id="mRetirement" onchange="autoSyncOnInput()">
                     </div>
                 </div>
 
@@ -378,149 +369,157 @@
                 <div class="row g-2 g-md-3 mb-3">
                     <div class="col-8 col-md-4">
                         <label class="form-label fw-bold small">Tên Đơn Vị <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control form-control-sm" id="mUnitName" required>
+                        <input type="text" class="form-control form-control-sm" id="mUnitName" onchange="autoSyncOnInput()" required>
                     </div>
                     <div class="col-4 col-md-2">
-                        <label class="form-label fw-bold small">Mã Đơn Vị</label>
-                        <input type="text" class="form-control form-control-sm" id="mUnit">
+                        <label class="form-label fw-bold small">Mã ĐV</label>
+                        <input type="text" class="form-control form-control-sm" id="mUnit" onchange="autoSyncOnInput()">
                     </div>
                     <div class="col-6 col-md-3">
                         <label class="form-label fw-bold small">Trình độ chuyên môn</label>
-                        <input type="text" class="form-control form-control-sm" id="mDegree">
+                        <input type="text" class="form-control form-control-sm" id="mDegree" onchange="autoSyncOnInput()">
                     </div>
                     <div class="col-6 col-md-3">
                         <label class="form-label fw-bold small">Tình trạng công tác</label>
-                        <select class="form-select form-select-sm" id="mStatus">
+                        <select class="form-select form-select-sm" id="mStatus" onchange="autoSyncOnInput()">
                             <option value="Đang làm việc">Đang làm việc</option>
                             <option value="Tạm hoãn HĐLĐ">Tạm hoãn HĐLĐ</option>
                             <option value="Đã nghỉ hưu">Đã nghỉ hưu</option>
                             <option value="Đã nghỉ việc">Đã nghỉ việc</option>
                         </select>
                     </div>
-                    <div class="col-6 col-md-3">
-                        <label class="form-label fw-bold small">Thời gian vào TCT</label>
-                        <input type="text" class="form-control form-control-sm" id="mJoinDate" placeholder="DD/MM/YYYY">
-                    </div>
                     <div class="col-6 col-md-6">
-                        <label class="form-label fw-bold small">Chức danh công việc / Vị trí</label>
-                        <input type="text" class="form-control form-control-sm" id="mTitle">
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <label class="form-label fw-bold small">Loại HĐLĐ</label>
-                        <input type="text" class="form-control form-control-sm" id="mContractType">
+                        <label class="form-label fw-bold small">Chức danh / Vị trí</label>
+                        <input type="text" class="form-control form-control-sm" id="mTitle" onchange="autoSyncOnInput()">
                     </div>
                     <div class="col-6 col-md-3 pt-3">
                         <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="checkbox" id="mNndh" onchange="autoCalcRetirementModal()">
+                            <input class="form-check-input" type="checkbox" id="mNndh" onchange="autoCalcRetirementModal(); autoSyncOnInput();">
                             <label class="form-check-label fw-bold text-danger small">NNĐH</label>
                         </div>
                         <div class="form-check form-check-inline">
-                            <input class="form-check-input" type="checkbox" id="mAtv">
+                            <input class="form-check-input" type="checkbox" id="mAtv" onchange="autoSyncOnInput()">
                             <label class="form-check-label fw-bold text-success small">ATV</label>
                         </div>
                     </div>
                 </div>
 
-                <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 small"><i class="fa-solid fa-sack-dollar me-2"></i>3. Chế Độ Lương, Bậc & Phụ Cấp</h6>
+                <h6 class="fw-bold text-primary border-bottom pb-2 mb-3 small"><i class="fa-solid fa-sack-dollar me-2"></i>3. Cấu Hình Lương & Phụ Cấp</h6>
                 <div class="row g-2 g-md-3 mb-3">
-                    <div class="col-4 col-md-2">
-                        <label class="form-label fw-bold small">Nhóm lương CB</label>
-                        <input type="text" class="form-control form-control-sm" id="mSalaryGroup">
-                    </div>
-                    <div class="col-4 col-md-2">
-                        <label class="form-label fw-bold small">Bậc lương CB</label>
-                        <input type="text" class="form-control form-control-sm" id="mSalaryStep">
-                    </div>
-                    <div class="col-4 col-md-2">
-                        <label class="form-label fw-bold small">Hệ số lương CB</label>
-                        <input type="number" step="0.01" class="form-control form-control-sm" id="mSalaryCoeff">
-                    </div>
-                    <div class="col-6 col-md-2">
-                        <label class="form-label fw-bold small">Phụ cấp lương CB</label>
-                        <input type="number" step="0.01" class="form-control form-control-sm" id="mAllowance">
-                    </div>
-                    <div class="col-6 col-md-2">
-                        <label class="form-label fw-bold small">Nhóm lương CV</label>
-                        <input type="text" class="form-control form-control-sm" id="mJobSalaryGroup">
-                    </div>
-                    <div class="col-4 col-md-2">
-                        <label class="form-label fw-bold small">Bậc lương CV</label>
-                        <input type="text" class="form-control form-control-sm" id="mJobSalaryStep">
+                    <div class="col-4 col-md-3">
+                        <label class="form-label fw-bold small">Hệ số Lương CB</label>
+                        <input type="number" step="0.01" class="form-control form-control-sm" id="mSalaryCoeff" onchange="autoSyncOnInput()">
                     </div>
                     <div class="col-4 col-md-3">
-                        <label class="form-label fw-bold small">Hệ số lương CV</label>
-                        <input type="number" step="0.01" class="form-control form-control-sm" id="mJobSalaryCoeff">
+                        <label class="form-label fw-bold small">Hệ số Lương CV</label>
+                        <input type="number" step="0.01" class="form-control form-control-sm" id="mJobSalaryCoeff" onchange="autoSyncOnInput()">
                     </div>
                     <div class="col-4 col-md-3">
-                        <label class="form-label fw-bold small">Phụ cấp lương CV</label>
-                        <input type="number" step="0.01" class="form-control form-control-sm" id="mJobAllowance">
+                        <label class="form-label fw-bold small">Phụ cấp (Đồng)</label>
+                        <input type="number" class="form-control form-control-sm" id="mAllowance" onchange="autoSyncOnInput()">
                     </div>
-                    <div class="col-12 col-md-6">
-                        <label class="form-label fw-bold small">Lịch sử vị trí công tác</label>
-                        <textarea class="form-control form-control-sm" id="mPositionHistory" rows="2"></textarea>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label fw-bold small">Lương SP / Khoán (Đồng)</label>
+                        <input type="number" class="form-control form-control-sm fw-bold text-primary" id="mProductSalary" onchange="autoSyncOnInput()">
                     </div>
                 </div>
             </form>
         </div>
         <div class="d-flex justify-content-end gap-2 p-3 bg-light rounded-bottom border-top">
             <button type="button" class="btn btn-sm btn-secondary" onclick="closeEditModal()">Đóng</button>
-            <button type="button" class="btn btn-sm btn-primary fw-bold" onclick="saveEmployeeDetail()">Lưu Hồ Sơ</button>
+            <button type="button" class="btn btn-sm btn-primary fw-bold" onclick="saveEmployeeDetail()">Lưu & Đồng Bộ Ngầm Cloud</button>
         </div>
     </div>
 </div>
 
 <script>
-    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxH2uwwCbljQWc7grNKe-Mb_Yh_zVYO40WkOYeq9fd7oeFGrwDf0D2sqUEDj-XGQVWP/exec';
+    // DÁN URL APPS SCRIPT ĐÃ TRIỂN KHAI MỚI CỦA ANH VÀO ĐÂY:
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxfrt-HkdvcGK3xZ2A6zDEQTvGZDGTPgcB1EvIlrbOV3mAYVPULmna6GEoaJIW-t_IU/exec';
 
     let globalEmployees = [];
     let currentFilteredEmployees = [];
-    let selectedUnitName = 'ALL';
+    let selectedUnitName = null;
     let isMasked = true;
+    let autoSaveTimer = null;
+    let searchTimer = null;
 
-    let chartGenderInstance = null;
-    let chartSpecialRatioInstance = null;
-    let chartRetireInstance = null;
-    let chartDegreeInstance = null;
-
-    let autoSyncTimer = null;
-    let searchTimer;
+    let chartGenderInst = null;
+    let chartRetireInst = null;
+    let chartSpecialInst = null;
 
     function debouncedSearch() {
         clearTimeout(searchTimer);
         searchTimer = setTimeout(filterData, 150);
     }
 
-    function triggerAutoSave() {
+    // HÀM LƯU CACHE TẠM CÓ XỬ LÝ CHỐNG TRÀN BỘ NHỚ (QUOTA EXCEEDED)
+    function saveLocalCache() {
+        if (globalEmployees && globalEmployees.length > 0) {
+            try {
+                localStorage.setItem('hr_gdrive_real_data', JSON.stringify(globalEmployees));
+            } catch (e) {
+                console.warn('LocalStorage đã đầy (vượt 5MB), tự động xóa cache đệm để tránh ngắt quãng hệ thống:', e);
+                try {
+                    localStorage.removeItem('hr_gdrive_real_data');
+                } catch (err) {}
+            }
+        }
+    }
+
+    // TỰ ĐỘNG ĐỒNG BỘ NGẦM LÊN GOOGLE DRIVE
+    function autoSyncOnInput() {
         saveLocalCache();
-        clearTimeout(autoSyncTimer);
         const syncBadge = document.getElementById('driveSyncStatus');
         if (syncBadge) {
-            syncBadge.className = 'badge bg-warning text-dark p-2 fs-7';
+            syncBadge.className = 'badge bg-warning text-dark p-2 fs-7 sync-pulse';
             syncBadge.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Đang tự động lưu ngầm lên Cloud...';
         }
 
-        autoSyncTimer = setTimeout(() => {
-            saveToDriveShared(false);
-        }, 1500);
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(() => {
+            saveToDriveSilent();
+        }, 1200);
     }
 
-    function saveLocalCache() {
-        if (globalEmployees && globalEmployees.length > 0) {
-            const currentDataStr = JSON.stringify(globalEmployees);
-            localStorage.setItem('hr_gdrive_real_data', currentDataStr);
-        }
-    }
-
-    window.onDriveDataLoaded = function(data) {
-        if (Array.isArray(data) && data.length > 0) {
-            globalEmployees = data;
-            saveLocalCache();
-            renderUnitCards();
-            renderForecastsAndCharts();
+    async function saveToDriveSilent() {
+        if (!globalEmployees || globalEmployees.length === 0) return;
+        try {
+            await fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(globalEmployees)
+            });
             const syncBadge = document.getElementById('driveSyncStatus');
             if (syncBadge) {
                 syncBadge.className = 'badge bg-success p-2 fs-7';
-                syncBadge.innerHTML = '<i class="fa-solid fa-cloud-check me-1"></i> Đã kết nối dữ liệu Google Drive';
+                syncBadge.innerHTML = '<i class="fa-solid fa-cloud-check me-1"></i> Đã đồng bộ Google Drive (' + new Date().toLocaleTimeString() + ')';
+            }
+        } catch (err) {
+            console.error('Lỗi lưu ngầm:', err);
+        }
+    }
+
+    // TẢI DỮ LIỆU ĐA TẦNG VƯỢT RÀO CẢN DI ĐỘNG/ZALO (JSONP)
+    window.onDriveDataLoaded = function(data) {
+        const syncBadge = document.getElementById('driveSyncStatus');
+        if (Array.isArray(data) && data.length > 0) {
+            globalEmployees = data;
+            saveLocalCache();
+            updateDegreeFilterOptions();
+            renderUnitCards();
+            renderChartsAndInsights();
+            if (selectedUnitName) {
+                filterData();
+            }
+            if (syncBadge) {
+                syncBadge.className = 'badge bg-success p-2 fs-7';
+                syncBadge.innerHTML = '<i class="fa-solid fa-cloud-check me-1"></i> Đã đọc & Đồng bộ Cloud thành công';
+            }
+        } else {
+            if (syncBadge) {
+                syncBadge.className = 'badge bg-warning text-dark p-2 fs-7';
+                syncBadge.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-1"></i> Dữ liệu trống - Vui lòng nạp File Excel';
             }
         }
     };
@@ -529,7 +528,7 @@
         const syncBadge = document.getElementById('driveSyncStatus');
         if (syncBadge) {
             syncBadge.className = 'badge bg-info text-white p-2 fs-7';
-            syncBadge.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Đang kết nối dữ liệu máy chủ...';
+            syncBadge.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Đang đọc dữ liệu Cloud...';
         }
 
         const savedData = localStorage.getItem('hr_gdrive_real_data');
@@ -538,32 +537,11 @@
                 const parsed = JSON.parse(savedData);
                 if (Array.isArray(parsed) && parsed.length > 0) {
                     globalEmployees = parsed;
+                    updateDegreeFilterOptions();
                     renderUnitCards();
-                    renderForecastsAndCharts();
+                    renderChartsAndInsights();
                 }
             } catch(e) {}
-        }
-
-        try {
-            const res = await fetch(APPS_SCRIPT_URL + '?t=' + new Date().getTime(), {
-                method: 'GET',
-                redirect: 'follow'
-            });
-            const data = await res.json();
-
-            if (Array.isArray(data) && data.length > 0) {
-                globalEmployees = data;
-                saveLocalCache();
-                renderUnitCards();
-                renderForecastsAndCharts();
-                if (syncBadge) {
-                    syncBadge.className = 'badge bg-success p-2 fs-7';
-                    syncBadge.innerHTML = '<i class="fa-solid fa-cloud-check me-1"></i> Đã kết nối dữ liệu Google Drive TCT';
-                }
-                return;
-            }
-        } catch (e) {
-            console.warn('Sử dụng JSONP Injection để vượt rào di động...');
         }
 
         try {
@@ -579,231 +557,16 @@
         }
     }
 
-    async function saveToDriveShared(showAlert = false) {
-        if (!globalEmployees || globalEmployees.length === 0) return;
-
-        try {
-            await fetch(APPS_SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(globalEmployees)
-            });
-
-            saveLocalCache();
-            const syncBadge = document.getElementById('driveSyncStatus');
-            if (syncBadge) {
-                syncBadge.className = 'badge bg-success p-2 fs-7';
-                syncBadge.innerHTML = '<i class="fa-solid fa-cloud-check me-1"></i> Đã đồng bộ Google Drive (' + new Date().toLocaleTimeString() + ')';
-            }
-
-            if (showAlert) alert('ĐÃ LƯU & ĐỒNG BỘ DỮ LIỆU THÀNH CÔNG CHO TOÀN BỘ NGƯỜI DÙNG TỔNG CÔNG TY!');
-        } catch (err) {
-            console.error('Lỗi đồng bộ ngầm:', err);
-        }
-    }
-
-    function exportAdminStandardExcel() {
-        if (!globalEmployees || globalEmployees.length === 0) {
-            alert('Chưa có dữ liệu để xuất Excel!');
-            return;
-        }
-
-        const dataToExport = selectedUnitName === 'ALL' ? globalEmployees : globalEmployees.filter(e => e.unitName === selectedUnitName);
-
-        const excelMatrix = [
-            ["TỔNG CÔNG TY GIẤY VIỆT NAM", "", "", "", "", "", "", "CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM"],
-            ["ĐƠN VỊ: " + (selectedUnitName === 'ALL' ? 'TOÀN TỔNG CÔNG TY' : selectedUnitName.toUpperCase()), "", "", "", "", "", "", "Độc lập - Tự do - Hạnh phúc"],
-            ["", "", "", "", "", "", "", "---***---"],
-            [""],
-            ["DANH SÁCH QUẢN LÝ VÀ DỰ BÁO NHÂN SỰ CHI TIẾT"],
-            ["(Ban hành kèm theo Báo cáo Quản trị Nhân sự & Lộ trình Tăng tuổi nghỉ hưu NĐ 135/2020)"],
-            ["Thời điểm xuất báo cáo: " + new Date().toLocaleDateString('vi-VN') + " " + new Date().toLocaleTimeString('vi-VN')],
-            [""],
-            [
-                "STT", "MÃ ĐƠN VỊ", "TÊN ĐƠN VỊ / BỘ PHẬN", "HỌ VÀ TÊN", "TÊN GỌI KHÁC (BÍ DANH)", 
-                "GIỚI TÍNH", "NGÀY SINH", "TÔN GIÁO", "ĐỊA CHỈ THƯỜNG TRÚ", "SỐ CCCD", 
-                "SỐ SỔ BHXH", "SỐ ĐIỆN THOẠI", "CHỨC DANH / VỊ TRÍ CÔNG TÁC", "TRÌNH ĐỘ CHUYÊN MÔN", 
-                "LOẠI HỢP ĐỒNG LAO ĐỘNG", "NGÀY VÀO TCT", "HỆ SỐ LƯƠNG CB", "NGÀY DỰ KIẾN VỀ HƯU (NĐ 135)", 
-                "NẶNG NHỌC ĐỘC HẠI", "AN TOÀN VIÊN", "TÌNH TRẠNG CÔNG TÁC"
-            ]
-        ];
-
-        dataToExport.forEach((e, idx) => {
-            excelMatrix.push([
-                idx + 1, e.unit || '', e.unitName || '', e.name || '', e.otherName || '',
-                e.gender || '', e.dob || '', e.religion || 'Không', e.address || '', e.cccd || '',
-                e.bhxh || '', e.phone || '', e.title || '', e.degree || '', e.contractType || '',
-                e.joinDate || '', e.salaryCoeff || 0, e.retirement || '', e.nndh || 'Không',
-                e.atv || 'Không', e.status || 'Đang làm việc'
-            ]);
-        });
-
-        excelMatrix.push([""]);
-        excelMatrix.push([""]);
-        excelMatrix.push([
-            "NGƯỜI LẬP BẢNG", "", "", "", "", 
-            "TRƯỜNG PHÒNG TC-NS", "", "", "", "", 
-            "", "", "", "TỔNG GIÁM ĐỐC / GIÁM ĐỐC", "", "", ""
-        ]);
-        excelMatrix.push([
-            "(Ký, ghi rõ họ tên)", "", "", "", "", 
-            "(Ký, ghi rõ họ tên)", "", "", "", "", 
-            "", "", "", "(Ký tên và đóng dấu)", "", "", ""
-        ]);
-
-        const ws = XLSX.utils.aoa_to_sheet(excelMatrix);
-        ws['!cols'] = [
-            { wch: 6 }, { wch: 12 }, { wch: 28 }, { wch: 25 }, { wch: 20 },
-            { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 35 }, { wch: 16 },
-            { wch: 16 }, { wch: 14 }, { wch: 28 }, { wch: 20 }, { wch: 20 },
-            { wch: 14 }, { wch: 12 }, { wch: 22 }, { wch: 16 }, { wch: 14 }, { wch: 18 }
-        ];
-
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "BaoCao_NhanSu_VINAPACO");
-        XLSX.writeFile(wb, `BaoCao_NhanSu_VINAPACO_HanhChinh_${new Date().toISOString().slice(0,10)}.xlsx`);
-    }
-
-    function handleJSONUpload(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const parsed = JSON.parse(e.target.result);
-                if (Array.isArray(parsed)) {
-                    globalEmployees = parsed;
-                    triggerAutoSave();
-                    renderUnitCards();
-                    renderForecastsAndCharts();
-                    alert(`Đã khôi phục thành công ${globalEmployees.length} hồ sơ nhân sự!`);
-                }
-            } catch (err) {
-                alert('Có lỗi khi đọc file JSON: ' + err.message);
-            }
-        };
-        reader.readAsText(file);
-    }
-
-    function calculateRetirementDateNewLaw(dobStr, gender, isNndh) {
-        if (!dobStr || dobStr === '-' || dobStr === 'null' || dobStr === 'undefined') return '-';
-        const formattedDob = formatDateVN(dobStr);
-        if (formattedDob.length < 10) return '-';
-
-        const day = parseInt(formattedDob.substring(0, 2));
-        const month = parseInt(formattedDob.substring(3, 5)) - 1;
-        const year = parseInt(formattedDob.substring(6, 10));
-
-        if (isNaN(day) || isNaN(month) || isNaN(year)) return '-';
-
-        let addYears = 62;
-        let addMonths = 0;
-
-        if (gender === 'Nam') {
-            if (year <= 1960) { addYears = 60; addMonths = 0; }
-            else if (year === 1961) { addYears = 60; addMonths = 3; }
-            else if (year === 1962) { addYears = 60; addMonths = 6; }
-            else if (year === 1963) { addYears = 60; addMonths = 9; }
-            else if (year === 1964) { addYears = 61; addMonths = 0; }
-            else if (year === 1965) { addYears = 61; addMonths = 3; }
-            else if (year === 1966) { addYears = 61; addMonths = 6; }
-            else if (year === 1967) { addYears = 61; addMonths = 9; }
-            else { addYears = 62; addMonths = 0; }
-        } else {
-            if (year <= 1965) { addYears = 55; addMonths = 0; }
-            else if (year === 1966) { addYears = 55; addMonths = 4; }
-            else if (year === 1967) { addYears = 55; addMonths = 8; }
-            else if (year === 1968) { addYears = 56; addMonths = 0; }
-            else if (year === 1969) { addYears = 56; addMonths = 4; }
-            else if (year === 1970) { addYears = 56; addMonths = 8; }
-            else if (year === 1971) { addYears = 57; addMonths = 0; }
-            else if (year === 1972) { addYears = 57; addMonths = 4; }
-            else if (year === 1973) { addYears = 57; addMonths = 8; }
-            else if (year === 1974) { addYears = 58; addMonths = 0; }
-            else if (year === 1975) { addYears = 58; addMonths = 4; }
-            else if (year === 1976) { addYears = 58; addMonths = 8; }
-            else if (year === 1977) { addYears = 59; addMonths = 0; }
-            else if (year === 1978) { addYears = 59; addMonths = 4; }
-            else if (year === 1979) { addYears = 59; addMonths = 8; }
-            else { addYears = 60; addMonths = 0; }
-        }
-
-        if (isNndh === 'Có' || isNndh === true) {
-            addYears -= 5;
-        }
-
-        const retireDateObj = new Date(year + addYears, month + addMonths, day);
-        const rDay = String(retireDateObj.getDate()).padStart(2, '0');
-        const rMonth = String(retireDateObj.getMonth() + 1).padStart(2, '0');
-        const rYear = retireDateObj.getFullYear();
-
-        return `${rDay}/${rMonth}/${rYear}`;
-    }
-
-    function autoCalcRetirementModal() {
-        const dob = document.getElementById('mDob').value;
-        const gender = document.getElementById('mGender').value;
-        const isNndh = document.getElementById('mNndh').checked;
-        const calcRetire = calculateRetirementDateNewLaw(dob, gender, isNndh);
-        if (calcRetire !== '-') {
-            document.getElementById('mRetirement').value = calcRetire;
-        }
-    }
-
-    function formatDateVN(dateStr) {
-        if (!dateStr || dateStr === '-' || dateStr === 'null' || dateStr === 'undefined') return '-';
-        let str = String(dateStr).replace(' 00:00:00', '').trim();
-        
-        if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) {
-            const parts = str.split('/');
-            return `${parts[0].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[2]}`;
-        }
-        
-        if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(str)) {
-            const parts = str.split('-');
-            return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
-        }
-
-        const dObj = new Date(str);
-        if (!isNaN(dObj.getTime())) {
-            const day = String(dObj.getDate()).padStart(2, '0');
-            const month = String(dObj.getMonth() + 1).padStart(2, '0');
-            return `${day}/${month}/${dObj.getFullYear()}`;
-        }
-
-        return str;
-    }
-
-    function extractYear(dateStr) {
-        if (!dateStr) return '';
-        const formatted = formatDateVN(dateStr);
-        if (formatted.length >= 10) return formatted.substring(6, 10);
-        return String(dateStr).substring(0, 4);
-    }
-
-    function switchTab(tabName) {
-        document.getElementById('btn-tab-units').classList.remove('active');
-        document.getElementById('btn-tab-forecast').classList.remove('active');
-        
-        document.getElementById('pane-units').style.display = 'none';
-        document.getElementById('pane-forecast').style.display = 'none';
-
-        if (tabName === 'units') {
-            document.getElementById('btn-tab-units').classList.add('active');
-            document.getElementById('pane-units').style.display = 'block';
-            renderUnitCards();
-        } else if (tabName === 'forecast') {
-            document.getElementById('btn-tab-forecast').classList.add('active');
-            document.getElementById('pane-forecast').style.display = 'block';
-            renderForecastsAndCharts();
-        }
-    }
-
+    // ĐỌC VÀ ĐỒNG BỘ TỰ ĐỘNG KHI NẠP FILE EXCEL
     function handleExcelUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
+
+        const syncBadge = document.getElementById('driveSyncStatus');
+        if (syncBadge) {
+            syncBadge.className = 'badge bg-info text-white p-2 fs-7 sync-pulse';
+            syncBadge.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Đang đọc & Phân tích file Excel...';
+        }
 
         const reader = new FileReader();
         reader.onload = function(e) {
@@ -812,7 +575,6 @@
                 const workbook = XLSX.read(data, {type: 'array', cellDates: true, dateNF: 'yyyy-mm-dd'});
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
-                
                 const rawMatrix = XLSX.utils.sheet_to_json(worksheet, {header: 1, raw: false, defval: ''});
                 parseMatrixData(rawMatrix);
             } catch (err) {
@@ -836,36 +598,28 @@
 
         if (headerRowIdx === -1) headerRowIdx = 0;
         const headers = matrix[headerRowIdx].map(h => String(h || '').toLowerCase().replace(/\s+/g, ' ').trim());
-
         const findColIdx = (keywords) => headers.findIndex(h => keywords.some(k => h.includes(k)));
 
         const colIdx = {
             stt: findColIdx(['stt', 'mã nv']),
             name: findColIdx(['họ và tên', 'họ tên', 'tên']),
-            otherName: findColIdx(['tên gọi khác', 'bí danh', 'tên khác']),
-            religion: findColIdx(['tôn giáo', 'đạo']),
-            address: findColIdx(['địa chỉ', 'thường trú', 'hộ khẩu']),
+            otherName: findColIdx(['tên gọi khác', 'bí danh']),
+            religion: findColIdx(['tôn giáo']),
+            address: findColIdx(['địa chỉ', 'thường trú']),
             phone: findColIdx(['điện thoại', 'sđt', 'phone']),
-            bhxh: findColIdx(['bhxh', 'bảo hiểm', 'sổ']),
-            cccd: findColIdx(['cccd', 'cmnd', 'căn cước']),
-            dob: findColIdx(['năm sinh', 'ngày sinh', 'sinh']),
+            bhxh: findColIdx(['bhxh', 'bảo hiểm']),
+            cccd: findColIdx(['cccd', 'cmnd']),
+            dob: findColIdx(['năm sinh', 'ngày sinh']),
             gender: findColIdx(['nữ', 'giới tính']),
-            unitName: findColIdx(['tên đơn vị', 'tên phòng', 'bộ phận', 'đơn vị']),
+            unitName: findColIdx(['tên đơn vị', 'bộ phận', 'đơn vị', 'phòng']),
             unit: findColIdx(['mã đơn vị', 'mã đv']),
-            title: findColIdx(['chức danh', 'công việc', 'vị trí']),
+            title: findColIdx(['chức danh', 'vị trí']),
             degree: findColIdx(['trình độ', 'chuyên môn']),
             status: findColIdx(['tình trạng', 'công tác']),
-            joinDate: findColIdx(['vào tct', 'ngày vào']),
-            salaryGroup: findColIdx(['nhóm lương']),
-            salaryStep: findColIdx(['bậc lương']),
-            salaryCoeff: findColIdx(['hệ số lương']),
+            salaryCoeff: findColIdx(['hệ số lương', 'hs lương', 'lương cb']),
+            jobSalaryCoeff: findColIdx(['hệ số lương cv', 'hs cv']),
             allowance: findColIdx(['phụ cấp']),
-            jobSalaryGroup: findColIdx(['nhóm lương cv', 'nhóm lương công việc']),
-            jobSalaryStep: findColIdx(['bậc lương cv', 'bậc lương công việc']),
-            jobSalaryCoeff: findColIdx(['hệ số lương cv', 'hệ số lương công việc']),
-            jobAllowance: findColIdx(['phụ cấp lương cv', 'phụ cấp công việc']),
-            contractType: findColIdx(['hợp đồng', 'loại hđ']),
-            positionHistory: findColIdx(['lịch sử', 'quá trình']),
+            productSalary: findColIdx(['sản phẩm', 'khoán']),
             nndh: findColIdx(['nnđh', 'độc hại']),
             atv: findColIdx(['an toàn', 'atv']),
             retirement: findColIdx(['về hưu', 'hưu'])
@@ -877,11 +631,10 @@
             if (!row || row.length === 0) continue;
 
             const name = colIdx.name >= 0 && row[colIdx.name] ? String(row[colIdx.name]).trim() : '';
-            if (!name || name.toLowerCase().includes('họ và tên') || name.toLowerCase() === 'tên') continue;
+            if (!name || name.toLowerCase().includes('họ và tên')) continue;
 
             let uName = colIdx.unitName >= 0 && row[colIdx.unitName] ? String(row[colIdx.unitName]).trim() : '';
             let uCode = colIdx.unit >= 0 && row[colIdx.unit] ? String(row[colIdx.unit]).trim() : '';
-            
             if (!uName && uCode) uName = 'Đơn vị ' + uCode;
             if (!uName && !uCode) { uName = 'Đơn vị Khác'; uCode = 'KHAC'; }
 
@@ -907,20 +660,13 @@
                 gender: genderVal,
                 unitName: uName,
                 unit: uCode || 'ĐV',
-                title: colIdx.title >= 0 && row[colIdx.title] ? String(row[colIdx.title]).trim() : '',
+                title: colIdx.title >= 0 && row[colIdx.title] ? String(row[colIdx.title]).trim() : 'Nhân viên',
                 degree: colIdx.degree >= 0 && row[colIdx.degree] ? String(row[colIdx.degree]).trim() : 'Đại học / CĐ',
                 status: colIdx.status >= 0 && row[colIdx.status] ? String(row[colIdx.status]).trim() : 'Đang làm việc',
-                joinDate: colIdx.joinDate >= 0 && row[colIdx.joinDate] ? formatDateVN(row[colIdx.joinDate]) : '',
-                salaryGroup: colIdx.salaryGroup >= 0 && row[colIdx.salaryGroup] ? String(row[colIdx.salaryGroup]).trim() : 'A1',
-                salaryStep: colIdx.salaryStep >= 0 && row[colIdx.salaryStep] ? String(row[colIdx.salaryStep]).trim() : '3/6',
-                salaryCoeff: colIdx.salaryCoeff >= 0 && row[colIdx.salaryCoeff] ? parseFloat(row[colIdx.salaryCoeff]) || 3.0 : 3.0,
-                allowance: colIdx.allowance >= 0 && row[colIdx.allowance] ? parseFloat(row[colIdx.allowance]) || 0 : 0,
-                jobSalaryGroup: colIdx.jobSalaryGroup >= 0 && row[colIdx.jobSalaryGroup] ? String(row[colIdx.jobSalaryGroup]).trim() : 'CV2',
-                jobSalaryStep: colIdx.jobSalaryStep >= 0 && row[colIdx.jobSalaryStep] ? String(row[colIdx.jobSalaryStep]).trim() : '2/4',
-                jobSalaryCoeff: colIdx.jobSalaryCoeff >= 0 && row[colIdx.jobSalaryCoeff] ? parseFloat(row[colIdx.jobSalaryCoeff]) || 3.5 : 3.5,
-                jobAllowance: colIdx.jobAllowance >= 0 && row[colIdx.jobAllowance] ? parseFloat(row[colIdx.jobAllowance]) || 0 : 0,
-                contractType: colIdx.contractType >= 0 && row[colIdx.contractType] ? String(row[colIdx.contractType]).trim() : 'HĐKXDTH',
-                positionHistory: colIdx.positionHistory >= 0 && row[colIdx.positionHistory] ? String(row[colIdx.positionHistory]).trim() : '',
+                salaryCoeff: colIdx.salaryCoeff >= 0 && row[colIdx.salaryCoeff] ? (parseFloat(row[colIdx.salaryCoeff]) || 2.34) : 2.34,
+                jobSalaryCoeff: colIdx.jobSalaryCoeff >= 0 && row[colIdx.jobSalaryCoeff] ? (parseFloat(row[colIdx.jobSalaryCoeff]) || 0) : 0,
+                allowance: colIdx.allowance >= 0 && row[colIdx.allowance] ? (parseFloat(row[colIdx.allowance]) || 0) : 0,
+                productSalary: colIdx.productSalary >= 0 && row[colIdx.productSalary] ? (parseFloat(row[colIdx.productSalary]) || 0) : 0,
                 nndh: nndhVal,
                 atv: (colIdx.atv >= 0 && ['1','X','CÓ'].includes(String(row[colIdx.atv]).trim().toUpperCase())) ? 'Có' : 'Không',
                 retirement: retirementVal
@@ -929,19 +675,87 @@
 
         if (parsedList.length > 0) {
             globalEmployees = parsedList;
-            triggerAutoSave();
+            autoSyncOnInput();
+            updateDegreeFilterOptions();
             renderUnitCards();
-            renderForecastsAndCharts();
-            alert(`Nạp thành công ${parsedList.length} hồ sơ nhân sự!`);
+            renderChartsAndInsights();
+            alert(`Đã đọc và đồng bộ thành công ${parsedList.length} nhân sự lên Cloud!`);
         }
+    }
+
+    function renderChartsAndInsights() {
+        if (globalEmployees.length === 0) return;
+
+        let male = 0, female = 0;
+        let nndh = 0, atv = 0;
+        let retire1 = 0, retire3 = 0, retire5 = 0;
+
+        const currentYear = new Date().getFullYear();
+
+        globalEmployees.forEach(e => {
+            if (e.gender === 'Nam') male++; else female++;
+            if (e.nndh === 'Có') nndh++;
+            if (e.atv === 'Có') atv++;
+
+            if (e.retirement && e.retirement.length >= 10) {
+                const rYear = parseInt(e.retirement.substring(6, 10));
+                if (!isNaN(rYear)) {
+                    if (rYear <= currentYear + 1) retire1++;
+                    else if (rYear <= currentYear + 3) retire3++;
+                    else if (rYear <= currentYear + 5) retire5++;
+                }
+            }
+        });
+
+        if (chartGenderInst) chartGenderInst.destroy();
+        chartGenderInst = new Chart(document.getElementById('chartGender'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Nam', 'Nữ'],
+                datasets: [{ data: [male, female], backgroundColor: ['#0d6efd', '#dc3545'] }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        if (chartRetireInst) chartRetireInst.destroy();
+        chartRetireInst = new Chart(document.getElementById('chartRetirement'), {
+            type: 'bar',
+            data: {
+                labels: ['1 năm tới', '3 năm tới', '5 năm tới'],
+                datasets: [{ label: 'Số người', data: [retire1, retire3, retire5], backgroundColor: '#ffc107' }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        if (chartSpecialInst) chartSpecialInst.destroy();
+        chartSpecialInst = new Chart(document.getElementById('chartSpecialType'), {
+            type: 'pie',
+            data: {
+                labels: ['NNĐH', 'An toàn viên', 'Khác'],
+                datasets: [{
+                    data: [nndh, atv, globalEmployees.length - (nndh + atv)],
+                    backgroundColor: ['#dc3545', '#198754', '#cbd5e1']
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+
+        const aiText = `
+            • <b>Phân bổ lao động:</b> Tỷ lệ Nam/Nữ hiện tại là <b>${male}/${female}</b>. Tỷ lệ lao động trực tiếp NNĐH chiếm <b>${((nndh/globalEmployees.length)*100).toFixed(1)}%</b>.<br>
+            • <b>Dự báo biến động lực lượng:</b> Trong 1-3 năm tới có <b>${retire1 + retire3} cán bộ/công nhân nghỉ hưu</b> theo tuổi quy định. Khuyến nghị Ban Tổ chức Nhân sự lập kế hoạch tuyển dụng bù đắp và đào tạo kế thừa cho các vị trí chủ chốt.<br>
+            • <b>An toàn lao động:</b> Đã kiện toàn <b>${atv} An toàn vệ sinh viên</b> tại các đơn vị thành viên.
+        `;
+        document.getElementById('aiRecommendationsText').innerHTML = aiText;
     }
 
     function renderUnitCards() {
         const grid = document.getElementById('unitCardsGrid');
         grid.innerHTML = '';
 
+        document.getElementById('totalEmpBadge').textContent = `Tổng số: ${globalEmployees.length} người`;
+
         if (globalEmployees.length === 0) {
-            grid.innerHTML = '<div class="col-12 text-center text-muted py-4 small">Chưa có dữ liệu đơn vị. Vui lòng bấm "Tải Lại Dữ Liệu" hoặc nạp file Excel.</div>';
+            grid.innerHTML = '<div class="col-12 text-center text-muted py-4 small">Chưa có dữ liệu. Vui lòng nạp file Excel hoặc bấm "Tải lại".</div>';
             return;
         }
 
@@ -949,43 +763,37 @@
         globalEmployees.forEach(e => {
             const uName = e.unitName ? e.unitName.trim() : 'Đơn vị Khác';
             if (!unitMap[uName]) {
-                unitMap[uName] = { count: 0, code: e.unit || '' };
+                unitMap[uName] = { count: 0, male: 0, female: 0, nndh: 0, atv: 0, code: e.unit || '' };
             }
             unitMap[uName].count++;
+            if (e.gender === 'Nam') unitMap[uName].male++; else unitMap[uName].female++;
+            if (e.nndh === 'Có') unitMap[uName].nndh++;
+            if (e.atv === 'Có') unitMap[uName].atv++;
         });
 
-        if (selectedUnitName !== 'ALL' && !unitMap[selectedUnitName]) {
-            selectedUnitName = 'ALL';
-        }
-
         const sortedUnitNames = Object.keys(unitMap).sort();
-        let cardsHtml = `
-            <div class="col-6 col-md-3">
-                <div class="unit-card ${selectedUnitName === 'ALL' ? 'active-unit' : ''}" onclick="selectUnitCard('ALL')">
-                    <div class="card-body p-2 p-md-3">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="badge bg-primary text-uppercase fw-bold fs-8">Tất cả</span>
-                            <i class="fa-solid fa-layer-group fs-5 text-primary"></i>
-                        </div>
-                        <h6 class="fw-bold mb-1 text-dark small">TẤT CẢ ĐƠN VỊ</h6>
-                        <div class="fs-5 fw-bold text-primary">${globalEmployees.length} <small class="fs-7 text-muted fw-normal">người</small></div>
-                    </div>
-                </div>
-            </div>
-        `;
+        let cardsHtml = '';
 
         sortedUnitNames.forEach(uName => {
             const uData = unitMap[uName];
+            const isSelected = selectedUnitName === uName;
+
             cardsHtml += `
-                <div class="col-6 col-md-3">
-                    <div class="unit-card ${selectedUnitName === uName ? 'active-unit' : ''}" onclick="selectUnitCard('${uName.replace(/'/g, "\\'")}')">
-                        <div class="card-body p-2 p-md-3">
-                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                <span class="badge bg-info text-dark fw-bold fs-8">${uData.code ? 'Mã ' + uData.code : 'Đơn vị'}</span>
-                                <i class="fa-solid fa-building fs-5 text-secondary"></i>
-                            </div>
-                            <h6 class="fw-bold mb-1 text-dark text-truncate small" title="${uName}">${uName}</h6>
-                            <div class="fs-5 fw-bold text-success">${uData.count} <small class="fs-7 text-muted fw-normal">người</small></div>
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="unit-card p-3 ${isSelected ? 'active-unit' : ''}" onclick="selectUnitCard('${uName.replace(/'/g, "\\'")}')">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-primary text-uppercase fw-bold fs-8">${uData.code ? 'Mã ' + uData.code : 'Đơn vị'}</span>
+                            <span class="fs-5 fw-bold text-primary">${uData.count} <small class="fs-7 text-muted fw-normal">người</small></span>
+                        </div>
+                        <h6 class="fw-bold text-dark text-truncate mb-2 fs-6" title="${uName}">${uName}</h6>
+                        <div class="d-flex gap-2 flex-wrap fs-8">
+                            <span class="badge bg-light text-dark border"><i class="fa-solid fa-mars text-primary me-1"></i>${uData.male} Nam</span>
+                            <span class="badge bg-light text-dark border"><i class="fa-solid fa-venus text-danger me-1"></i>${uData.female} Nữ</span>
+                            ${uData.nndh > 0 ? `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i>${uData.nndh} NNĐH</span>` : ''}
+                            ${uData.atv > 0 ? `<span class="badge bg-success bg-opacity-10 text-success border border-success"><i class="fa-solid fa-shield-cat me-1"></i>${uData.atv} ATV</span>` : ''}
+                        </div>
+                        <div class="mt-2 text-end">
+                            <small class="text-primary fw-bold">Xem chi tiết đơn vị này <i class="fa-solid fa-arrow-right ms-1"></i></small>
                         </div>
                     </div>
                 </div>
@@ -993,35 +801,56 @@
         });
 
         grid.innerHTML = cardsHtml;
-        filterData();
     }
 
     function selectUnitCard(uName) {
         selectedUnitName = uName;
         renderUnitCards();
-        document.getElementById('employeeSection').scrollIntoView({ behavior: 'smooth' });
+        document.getElementById('detailSection').style.display = 'block';
+        filterData();
+        document.getElementById('detailSection').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function closeDetailSection() {
+        selectedUnitName = null;
+        renderUnitCards();
+        document.getElementById('detailSection').style.display = 'none';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function updateDegreeFilterOptions() {
+        const degreeSelect = document.getElementById('degreeFilter');
+        const degrees = [...new Set(globalEmployees.map(e => e.degree).filter(Boolean))].sort();
+        let html = '<option value="">-- Tất cả trình độ --</option>';
+        degrees.forEach(d => html += `<option value="${d}">${d}</option>`);
+        degreeSelect.innerHTML = html;
     }
 
     function filterData() {
-        const search = document.getElementById('searchInput').value.toLowerCase();
+        const search = document.getElementById('searchInput').value.toLowerCase().trim();
         const gender = document.getElementById('genderFilter').value;
         const type = document.getElementById('typeFilter').value;
+        const degree = document.getElementById('degreeFilter').value;
 
         currentFilteredEmployees = globalEmployees.filter(e => {
             const matchUnit = selectedUnitName === 'ALL' || (e.unitName && e.unitName.trim() === selectedUnitName);
-            const matchSearch = e.name.toLowerCase().includes(search) || 
+            const matchSearch = !search || 
+                                e.name.toLowerCase().includes(search) || 
                                 (e.otherName && e.otherName.toLowerCase().includes(search)) ||
                                 (e.address && e.address.toLowerCase().includes(search)) ||
                                 e.phone.includes(search) || 
                                 e.cccd.includes(search) || 
+                                e.bhxh.includes(search) || 
                                 e.title.toLowerCase().includes(search) ||
                                 (e.unitName && e.unitName.toLowerCase().includes(search));
-            const matchGender = gender === '' || e.gender === gender;
-            const matchType = type === '' || 
+            
+            const matchGender = !gender || e.gender === gender;
+            const matchType = !type || 
                              (type === 'NNĐH' && e.nndh === 'Có') || 
                              (type === 'ATV' && e.atv === 'Có');
+            const matchDegree = !degree || e.degree === degree;
 
-            return matchUnit && matchSearch && matchGender && matchType;
+            return matchUnit && matchSearch && matchGender && matchType && matchDegree;
         });
 
         renderFullInfoEmployeeCards(currentFilteredEmployees);
@@ -1031,11 +860,11 @@
         const grid = document.getElementById('employeeCardsGrid');
         grid.innerHTML = '';
 
-        document.getElementById('selectedUnitTitle').innerHTML = `<i class="fa-solid fa-users me-2"></i>DANH SÁCH NHÂN SỰ CHI TIẾT (${selectedUnitName === 'ALL' ? 'TẤT CẢ ĐƠN VỊ' : selectedUnitName})`;
-        document.getElementById('showingCount').textContent = `${data.length} người`;
+        document.getElementById('selectedUnitTitle').innerHTML = `<i class="fa-solid fa-users me-2"></i>DANH SÁCH NHÂN SỰ CHI TIẾT: <span class="text-uppercase text-danger">${selectedUnitName === 'ALL' ? 'TOÀN TỔNG CÔNG TY' : selectedUnitName}</span>`;
+        document.getElementById('showingCountBadge').textContent = `${data.length} người`;
 
         if (data.length === 0) {
-            grid.innerHTML = '<div class="col-12 text-center text-muted py-4 small">Không tìm thấy nhân sự phù hợp.</div>';
+            grid.innerHTML = '<div class="col-12 text-center text-muted py-4 small">Không tìm thấy nhân sự thỏa mãn điều kiện lọc.</div>';
             return;
         }
 
@@ -1043,12 +872,12 @@
         data.forEach((e, idx) => {
             cardsHtml += `
                 <div class="col-12 col-md-6 col-xl-4">
-                    <div class="emp-full-card p-2 p-md-3 h-100 d-flex flex-column justify-content-between">
+                    <div class="emp-card p-3 h-100 d-flex flex-column justify-content-between">
                         <div>
                             <div class="d-flex justify-content-between align-items-start border-bottom pb-2 mb-2">
                                 <div>
                                     <h6 class="fw-bold text-primary mb-0 fs-6">${e.name} ${e.otherName ? `<span class="text-muted small fw-normal">(${e.otherName})</span>` : ''}</h6>
-                                    <small class="text-muted"><i class="fa-solid fa-briefcase me-1"></i>${e.title || 'Chưa cập nhật vị trí'}</small>
+                                    <small class="text-muted"><i class="fa-solid fa-briefcase me-1"></i>${e.title || 'Chưa cập nhật'}</small>
                                 </div>
                                 <span class="badge bg-info text-dark fw-bold text-truncate ms-1" style="max-width: 120px;" title="${e.unitName}">${e.unitName}</span>
                             </div>
@@ -1059,8 +888,8 @@
                                     <div class="info-value font-monospace">${e.phone || '-'}</div>
                                 </div>
                                 <div class="col-6">
-                                    <div class="info-label">Tôn giáo</div>
-                                    <div class="info-value">${e.religion || 'Không'}</div>
+                                    <div class="info-label">Giới tính</div>
+                                    <div class="info-value">${e.gender}</div>
                                 </div>
                                 <div class="col-12">
                                     <div class="info-label">Địa chỉ thường trú</div>
@@ -1133,24 +962,17 @@
         document.getElementById('mUnit').value = emp.unit || '';
         document.getElementById('mDegree').value = emp.degree || '';
         document.getElementById('mStatus').value = emp.status || 'Đang làm việc';
-        document.getElementById('mJoinDate').value = emp.joinDate || '';
         document.getElementById('mTitle').value = emp.title || '';
-        document.getElementById('mContractType').value = emp.contractType || '';
         document.getElementById('mNndh').checked = (emp.nndh === 'Có');
         document.getElementById('mAtv').checked = (emp.atv === 'Có');
 
-        document.getElementById('mSalaryGroup').value = emp.salaryGroup || '';
-        document.getElementById('mSalaryStep').value = emp.salaryStep || '';
         document.getElementById('mSalaryCoeff').value = emp.salaryCoeff || 0;
         document.getElementById('mAllowance').value = emp.allowance || 0;
-        document.getElementById('mJobSalaryGroup').value = emp.jobSalaryGroup || '';
-        document.getElementById('mJobSalaryStep').value = emp.jobSalaryStep || '';
         document.getElementById('mJobSalaryCoeff').value = emp.jobSalaryCoeff || 0;
-        document.getElementById('mJobAllowance').value = emp.jobAllowance || 0;
-        document.getElementById('mPositionHistory').value = emp.positionHistory || '';
+        document.getElementById('mProductSalary').value = emp.productSalary || 0;
 
         let retirementVal = emp.retirement;
-        if (!retirementVal || retirementVal === '-' || retirementVal === 'null') {
+        if (!retirementVal || retirementVal === '-') {
             retirementVal = calculateRetirementDateNewLaw(emp.dob, emp.gender, emp.nndh);
         }
         document.getElementById('mRetirement').value = retirementVal || '-';
@@ -1166,8 +988,6 @@
         const globalIdx = parseInt(document.getElementById('editEmpGlobalIndex').value);
         if (isNaN(globalIdx) || globalIdx < 0 || globalIdx >= globalEmployees.length) return;
 
-        const newUnitName = document.getElementById('mUnitName').value.trim();
-
         globalEmployees[globalIdx] = {
             ...globalEmployees[globalIdx],
             stt: document.getElementById('mStt').value,
@@ -1181,186 +1001,93 @@
             cccd: document.getElementById('mCccd').value,
             dob: formatDateVN(document.getElementById('mDob').value),
             retirement: formatDateVN(document.getElementById('mRetirement').value),
-            unitName: newUnitName,
+            unitName: document.getElementById('mUnitName').value.trim(),
             unit: document.getElementById('mUnit').value,
             degree: document.getElementById('mDegree').value,
             status: document.getElementById('mStatus').value,
-            joinDate: formatDateVN(document.getElementById('mJoinDate').value),
             title: document.getElementById('mTitle').value,
-            contractType: document.getElementById('mContractType').value,
             nndh: document.getElementById('mNndh').checked ? 'Có' : 'Không',
             atv: document.getElementById('mAtv').checked ? 'Có' : 'Không',
-            salaryGroup: document.getElementById('mSalaryGroup').value,
-            salaryStep: document.getElementById('mSalaryStep').value,
             salaryCoeff: parseFloat(document.getElementById('mSalaryCoeff').value) || 0,
             allowance: parseFloat(document.getElementById('mAllowance').value) || 0,
-            jobSalaryGroup: document.getElementById('mJobSalaryGroup').value,
-            jobSalaryStep: document.getElementById('mJobSalaryStep').value,
             jobSalaryCoeff: parseFloat(document.getElementById('mJobSalaryCoeff').value) || 0,
-            jobAllowance: parseFloat(document.getElementById('mJobAllowance').value) || 0,
-            positionHistory: document.getElementById('mPositionHistory').value
+            productSalary: parseFloat(document.getElementById('mProductSalary').value) || 0
         };
 
-        triggerAutoSave();
+        autoSyncOnInput();
+        updateDegreeFilterOptions();
         renderUnitCards();
-        renderForecastsAndCharts();
+        renderChartsAndInsights();
         closeEditModal();
-        alert(`Đã cập nhật hồ sơ thành công! Hệ thống đang tự động đồng bộ ngầm.`);
     }
 
-    function renderForecastsAndCharts() {
-        if (globalEmployees.length === 0) return;
+    function calculateRetirementDateNewLaw(dobStr, gender, isNndh) {
+        if (!dobStr || dobStr === '-') return '-';
+        const formattedDob = formatDateVN(dobStr);
+        if (formattedDob.length < 10) return '-';
 
-        const total = globalEmployees.length;
+        const day = parseInt(formattedDob.substring(0, 2));
+        const month = parseInt(formattedDob.substring(3, 5)) - 1;
+        const year = parseInt(formattedDob.substring(6, 10));
 
-        const maleCount = globalEmployees.filter(e => e.gender === 'Nam').length;
-        const femaleCount = globalEmployees.filter(e => e.gender === 'Nữ').length;
-        const malePct = ((maleCount / total) * 100).toFixed(1);
-        const femalePct = ((femaleCount / total) * 100).toFixed(1);
+        if (isNaN(day) || isNaN(month) || isNaN(year)) return '-';
 
-        document.getElementById('genderTableBody').innerHTML = `
-            <tr><td><strong>Nam</strong></td><td>${maleCount}</td><td class="text-primary fw-bold">${malePct}%</td></tr>
-            <tr><td><strong>Nữ</strong></td><td>${femaleCount}</td><td class="text-danger fw-bold">${femalePct}%</td></tr>
-            <tr class="table-secondary"><td><strong>Tổng cộng</strong></td><td><strong>${total}</strong></td><td><strong>100%</strong></td></tr>
-        `;
+        let addYears = (gender === 'Nam') ? 62 : 60;
+        if (isNndh === 'Có' || isNndh === true) addYears -= 5;
 
-        if (chartGenderInstance) chartGenderInstance.destroy();
-        chartGenderInstance = new Chart(document.getElementById('genderChart'), {
-            type: 'pie',
-            data: {
-                labels: [`Nam (${maleCount} người - ${malePct}%)`, `Nữ (${femaleCount} người - ${femalePct}%)`],
-                datasets: [{
-                    data: [maleCount, femaleCount],
-                    backgroundColor: ['#0d6efd', '#dc3545']
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
+        const retireDateObj = new Date(year + addYears, month, day);
+        const rDay = String(retireDateObj.getDate()).padStart(2, '0');
+        const rMonth = String(retireDateObj.getMonth() + 1).padStart(2, '0');
+        return `${rDay}/${rMonth}/${retireDateObj.getFullYear()}`;
+    }
 
-        const nndhCount = globalEmployees.filter(e => e.nndh === 'Có').length;
-        const atvCount = globalEmployees.filter(e => e.atv === 'Có').length;
-        const otherCount = Math.max(0, total - nndhCount - atvCount);
+    function autoCalcRetirementModal() {
+        const dob = document.getElementById('mDob').value;
+        const gender = document.getElementById('mGender').value;
+        const isNndh = document.getElementById('mNndh').checked;
+        const calcRetire = calculateRetirementDateNewLaw(dob, gender, isNndh);
+        if (calcRetire !== '-') document.getElementById('mRetirement').value = calcRetire;
+    }
 
-        const nndhPct = ((nndhCount / total) * 100).toFixed(1);
-        const atvPct = ((atvCount / total) * 100).toFixed(1);
-        const otherPct = ((otherCount / total) * 100).toFixed(1);
+    function formatDateVN(dateStr) {
+        if (!dateStr || dateStr === '-') return '-';
+        let str = String(dateStr).replace(' 00:00:00', '').trim();
+        if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(str)) {
+            const parts = str.split('/');
+            return `${parts[0].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[2]}`;
+        }
+        if (/^\d{4}-\d{1,2}-\d{1,2}$/.test(str)) {
+            const parts = str.split('-');
+            return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+        }
+        return str;
+    }
 
-        document.getElementById('specialTableBody').innerHTML = `
-            <tr><td><strong class="text-danger">Nặng nhọc độc hại (NNĐH)</strong></td><td>${nndhCount}</td><td class="text-danger fw-bold">${nndhPct}%</td></tr>
-            <tr><td><strong class="text-success">An toàn vệ sinh viên (ATV)</strong></td><td>${atvCount}</td><td class="text-success fw-bold">${atvPct}%</td></tr>
-            <tr><td><strong>Lao động thông thường</strong></td><td>${otherCount}</td><td>${otherPct}%</td></tr>
-            <tr class="table-secondary"><td><strong>Tổng cộng</strong></td><td><strong>${total}</strong></td><td><strong>100%</strong></td></tr>
-        `;
-
-        if (chartSpecialRatioInstance) chartSpecialRatioInstance.destroy();
-        chartSpecialRatioInstance = new Chart(document.getElementById('specialRatioChart'), {
-            type: 'doughnut',
-            data: {
-                labels: [`NNĐH (${nndhCount} ng - ${nndhPct}%)`, `ATV (${atvCount} ng - ${atvPct}%)`, `Khác (${otherCount} ng - ${otherPct}%)`],
-                datasets: [{
-                    data: [nndhCount, atvCount, otherCount],
-                    backgroundColor: ['#dc3545', '#198754', '#cbd5e1']
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
-
-        const retireYearCounts = {};
-        globalEmployees.forEach(e => {
-            let rVal = e.retirement;
-            if (!rVal || rVal === '-') {
-                rVal = calculateRetirementDateNewLaw(e.dob, e.gender, e.nndh);
-            }
-            if (rVal && rVal !== '-') {
-                const year = extractYear(rVal);
-                if (year >= '2026' && year <= '2035') {
-                    retireYearCounts[year] = (retireYearCounts[year] || 0) + 1;
+    function handleJSONUpload(event) {
+        const file = event.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const parsed = JSON.parse(e.target.result);
+                if (Array.isArray(parsed)) {
+                    globalEmployees = parsed;
+                    autoSyncOnInput();
+                    updateDegreeFilterOptions();
+                    renderUnitCards();
+                    renderChartsAndInsights();
+                    alert(`Đã khôi phục thành công ${globalEmployees.length} nhân sự!`);
                 }
-            }
-        });
+            } catch (err) { alert('Lỗi đọc file JSON: ' + err.message); }
+        };
+        reader.readAsText(file);
+    }
 
-        const years = Object.keys(retireYearCounts).sort();
-        const retireData = years.map(y => retireYearCounts[y]);
-        let retireRowsHtml = '';
-        let totalRetire = 0;
-
-        years.forEach(y => {
-            const cnt = retireYearCounts[y];
-            totalRetire += cnt;
-            const pct = ((cnt / total) * 100).toFixed(1);
-            retireRowsHtml += `<tr><td>Năm ${y}</td><td>${cnt}</td><td class="text-danger fw-bold">${pct}%</td></tr>`;
-        });
-        retireRowsHtml += `<tr class="table-secondary"><td><strong>Tổng hưu (2026-2035)</strong></td><td><strong>${totalRetire}</strong></td><td class="text-danger fw-bold"><strong>${((totalRetire/total)*100).toFixed(1)}%</strong></td></tr>`;
-        document.getElementById('retireTableBody').innerHTML = retireRowsHtml || '<tr><td colspan="3">Không có dữ liệu nghỉ hưu giai đoạn này.</td></tr>';
-
-        if (chartRetireInstance) chartRetireInstance.destroy();
-        chartRetireInstance = new Chart(document.getElementById('retirementForecastChart'), {
-            type: 'line',
-            data: {
-                labels: years.map(y => `Năm ${y}`),
-                datasets: [{
-                    label: 'Số lượng về hưu (Người)',
-                    data: retireData,
-                    borderColor: '#dc3545',
-                    backgroundColor: 'rgba(220, 53, 69, 0.15)',
-                    fill: true,
-                    tension: 0.3
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
-
-        const degreeCounts = {};
-        globalEmployees.forEach(e => {
-            const deg = e.degree || 'Khác';
-            degreeCounts[deg] = (degreeCounts[deg] || 0) + 1;
-        });
-
-        let degreeRowsHtml = '';
-        Object.keys(degreeCounts).forEach(deg => {
-            const cnt = degreeCounts[deg];
-            const pct = ((cnt / total) * 100).toFixed(1);
-            degreeRowsHtml += `<tr><td><strong>${deg}</strong></td><td>${cnt}</td><td class="text-primary fw-bold">${pct}%</td></tr>`;
-        });
-        document.getElementById('degreeTableBody').innerHTML = degreeRowsHtml;
-
-        if (chartDegreeInstance) chartDegreeInstance.destroy();
-        chartDegreeInstance = new Chart(document.getElementById('degreeChart'), {
-            type: 'bar',
-            data: {
-                labels: Object.keys(degreeCounts),
-                datasets: [{
-                    label: 'Số lượng (Người)',
-                    data: Object.values(degreeCounts),
-                    backgroundColor: '#0d6efd'
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
-
-        document.getElementById('recommendationContainer').innerHTML = `
-            <div class="col-md-4">
-                <div class="card p-3 recommendation-card h-100">
-                    <h6 class="fw-bold text-primary mb-2 small"><i class="fa-solid fa-venus-mars me-2"></i>Cân bằng Giới tính</h6>
-                    <p class="small text-muted mb-1">Tỷ lệ Nam/Nữ hiện tại: <strong>${malePct}% Nam / ${femalePct}% Nữ</strong>.</p>
-                    <div class="small fw-bold text-primary">💡 Khuyến nghị: Cân đối tiêu chí tuyển dụng đối với các vị trí vận hành máy và văn phòng.</div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card p-3 recommendation-card h-100" style="border-left-color: #dc3545;">
-                    <h6 class="fw-bold text-danger mb-2 small"><i class="fa-solid fa-user-clock me-2"></i>Lộ Trình Tăng Tuổi Hưu (NĐ 135/2020)</h6>
-                    <p class="small text-muted mb-1">Dự báo 2026-2035 có <strong>${totalRetire} nhân sự (${((totalRetire/total)*100).toFixed(1)}%)</strong> về hưu.</p>
-                    <div class="small fw-bold text-danger">💡 Khuyến nghị: Rà soát danh sách nghỉ hưu theo tháng sinh để chuẩn bị phương án bàn giao công việc.</div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card p-3 recommendation-card h-100" style="border-left-color: #198754;">
-                    <h6 class="fw-bold text-success mb-2 small"><i class="fa-solid fa-shield-cat me-2"></i>Chế độ Lao động Đặc thù</h6>
-                    <p class="small text-muted mb-1">Ghi nhận <strong>${nndhCount} người (${nndhPct}%)</strong> làm công việc NNĐH (Nghỉ hưu sớm 5 năm).</p>
-                    <div class="small fw-bold text-success">💡 Khuyến nghị: Đảm bảo bồi dưỡng hiện vật, trang bị BHO & khám sức khỏe định kỳ 2 lần/năm.</div>
-                </div>
-            </div>
-        `;
+    function exportAdminStandardExcel() {
+        if (!globalEmployees || globalEmployees.length === 0) return alert('Chưa có dữ liệu để xuất Excel!');
+        const ws = XLSX.utils.json_to_sheet(globalEmployees);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "NhanSu_Full");
+        XLSX.writeFile(wb, `Danh_Sach_Nhan_Su_VINAPACO_${new Date().toISOString().slice(0,10)}.xlsx`);
     }
 
     function maskSensitive(text) {
@@ -1374,7 +1101,7 @@
         const btn = document.getElementById('btnToggleMask');
         btn.className = isMasked ? 'btn btn-sm btn-secondary fw-bold' : 'btn btn-sm btn-danger fw-bold text-white';
         btn.innerHTML = isMasked ? '<i class="fa-solid fa-eye-slash me-1"></i> Ẩn CCCD/BHXH' : '<i class="fa-solid fa-eye me-1"></i> Hiện thông tin';
-        filterData();
+        if (selectedUnitName) filterData();
     }
 
     window.onload = function() {
