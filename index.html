@@ -455,22 +455,35 @@
                     <!-- TAB 3: CẤU HÌNH LƯƠNG & PHÉP NĂM -->
                     <div class="tab-pane fade" id="tab-salary" role="tabpanel">
                         <div class="row g-2 g-md-3 mb-2">
-                            <div class="col-6 col-md-3">
+                            <!-- Nhóm Lương Cơ Bản -->
+                            <div class="col-4 col-md-2">
+                                <label class="form-label fw-bold small">Bậc Lương CB</label>
+                                <input type="text" class="form-control form-control-sm" id="mSalaryStep" placeholder="VD: 1, 2..." onchange="autoSyncOnInput()">
+                            </div>
+                            <div class="col-4 col-md-2">
                                 <label class="form-label fw-bold small">Hệ số Lương CB</label>
                                 <input type="number" step="0.01" class="form-control form-control-sm" id="mSalaryCoeff" onchange="autoSyncOnInput()">
                             </div>
-                            <div class="col-6 col-md-3">
-                                <label class="form-label fw-bold small">Nhóm lương</label>
+                            <div class="col-4 col-md-2">
+                                <label class="form-label fw-bold small">Nhóm lương CB</label>
                                 <input type="text" class="form-control form-control-sm" id="mSalaryGroup" onchange="autoSyncOnInput()">
                             </div>
-                            <div class="col-6 col-md-3">
+
+                            <!-- Nhóm Lương Công Việc -->
+                            <div class="col-4 col-md-2">
+                                <label class="form-label fw-bold small">Bậc Lương CV</label>
+                                <input type="text" class="form-control form-control-sm" id="mJobSalaryStep" placeholder="VD: 1, 2..." onchange="autoSyncOnInput()">
+                            </div>
+                            <div class="col-4 col-md-2">
                                 <label class="form-label fw-bold small">Hệ số Lương CV</label>
                                 <input type="number" step="0.01" class="form-control form-control-sm" id="mJobSalaryCoeff" onchange="autoSyncOnInput()">
                             </div>
-                            <div class="col-6 col-md-3">
-                                <label class="form-label fw-bold small">Nhóm lương Công việc</label>
+                            <div class="col-4 col-md-2">
+                                <label class="form-label fw-bold small">Nhóm lương CV</label>
                                 <input type="text" class="form-control form-control-sm" id="mJobSalaryGroup" onchange="autoSyncOnInput()">
                             </div>
+
+                            <!-- Các Khoản Phụ Cấp & Thu Nhập -->
                             <div class="col-6 col-md-3">
                                 <label class="form-label fw-bold small">Phụ cấp Lương CV (Đồng)</label>
                                 <input type="number" class="form-control form-control-sm" id="mJobAllowance" onchange="autoSyncOnInput()">
@@ -488,7 +501,7 @@
                                     <i class="fa-solid fa-calendar-check me-1"></i>Số công phép trong năm
                                 </label>
                                 <input type="number" step="0.5" class="form-control form-control-sm fw-bold text-success border-success" id="mLeaveDays" onchange="autoSyncOnInput()">
-                                <small class="text-muted fs-8 d-block mt-1">Tự động tính theo thâm niên BLLĐ mới, cho phép sửa tự do</small>
+                                <small class="text-muted fs-8 d-block mt-1">Tự động tính theo BLLĐ mới, cho phép sửa tự do</small>
                             </div>
                         </div>
                     </div>
@@ -708,8 +721,10 @@
             title: findColIdx(['chức danh', 'vị trí']),
             degree: findColIdx(['trình độ', 'chuyên môn']),
             status: findColIdx(['tình trạng', 'công tác']),
+            salaryStep: findColIdx(['bậc lương cb', 'bậc lương cơ bản', 'bậc cb']),
             salaryCoeff: findColIdx(['hệ số lương', 'hs lương', 'lương cb']),
-            salaryGroup: findColIdx(['nhóm lương']),
+            salaryGroup: findColIdx(['nhóm lương', 'nhóm lương cb']),
+            jobSalaryStep: findColIdx(['bậc lương cv', 'bậc lương công việc', 'bậc cv']),
             jobSalaryCoeff: findColIdx(['hệ số lương cv', 'hs cv']),
             jobSalaryGroup: findColIdx(['nhóm lương cv', 'nhóm lương công việc']),
             jobAllowance: findColIdx(['phụ cấp cv', 'phụ cấp lương công việc']),
@@ -767,8 +782,10 @@
                 title: colIdx.title >= 0 && row[colIdx.title] ? String(row[colIdx.title]).trim() : 'Nhân viên',
                 degree: colIdx.degree >= 0 && row[colIdx.degree] ? String(row[colIdx.degree]).trim() : 'Đại học / CĐ',
                 status: colIdx.status >= 0 && row[colIdx.status] ? String(row[colIdx.status]).trim() : 'Đang làm việc',
+                salaryStep: colIdx.salaryStep >= 0 && row[colIdx.salaryStep] ? String(row[colIdx.salaryStep]).trim() : '',
                 salaryCoeff: colIdx.salaryCoeff >= 0 && row[colIdx.salaryCoeff] ? (parseFloat(row[colIdx.salaryCoeff]) || 2.34) : 2.34,
                 salaryGroup: colIdx.salaryGroup >= 0 && row[colIdx.salaryGroup] ? String(row[colIdx.salaryGroup]).trim() : '',
+                jobSalaryStep: colIdx.jobSalaryStep >= 0 && row[colIdx.jobSalaryStep] ? String(row[colIdx.jobSalaryStep]).trim() : '',
                 jobSalaryCoeff: colIdx.jobSalaryCoeff >= 0 && row[colIdx.jobSalaryCoeff] ? (parseFloat(row[colIdx.jobSalaryCoeff]) || 0) : 0,
                 jobSalaryGroup: colIdx.jobSalaryGroup >= 0 && row[colIdx.jobSalaryGroup] ? String(row[colIdx.jobSalaryGroup]).trim() : '',
                 jobAllowance: colIdx.jobAllowance >= 0 && row[colIdx.jobAllowance] ? (parseFloat(row[colIdx.jobAllowance]) || 0) : 0,
@@ -1063,8 +1080,10 @@
         document.getElementById('mAtv').checked = (emp.atv === 'Có');
 
         // Tab 3
+        document.getElementById('mSalaryStep').value = emp.salaryStep || '';
         document.getElementById('mSalaryCoeff').value = emp.salaryCoeff || 0;
         document.getElementById('mSalaryGroup').value = emp.salaryGroup || '';
+        document.getElementById('mJobSalaryStep').value = emp.jobSalaryStep || '';
         document.getElementById('mJobSalaryCoeff').value = emp.jobSalaryCoeff || 0;
         document.getElementById('mJobSalaryGroup').value = emp.jobSalaryGroup || '';
         document.getElementById('mJobAllowance').value = emp.jobAllowance || 0;
@@ -1117,8 +1136,10 @@
             title: document.getElementById('mTitle').value,
             nndh: document.getElementById('mNndh').checked ? 'Có' : 'Không',
             atv: document.getElementById('mAtv').checked ? 'Có' : 'Không',
+            salaryStep: document.getElementById('mSalaryStep').value,
             salaryCoeff: parseFloat(document.getElementById('mSalaryCoeff').value) || 0,
             salaryGroup: document.getElementById('mSalaryGroup').value,
+            jobSalaryStep: document.getElementById('mJobSalaryStep').value,
             jobSalaryCoeff: parseFloat(document.getElementById('mJobSalaryCoeff').value) || 0,
             jobSalaryGroup: document.getElementById('mJobSalaryGroup').value,
             jobAllowance: parseFloat(document.getElementById('mJobAllowance').value) || 0,
