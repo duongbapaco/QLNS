@@ -79,13 +79,13 @@
             box-shadow: 0 8px 20px rgba(0,0,0,0.06);
         }
         .info-label {
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             color: #64748b;
             font-weight: 600;
             text-uppercase: uppercase;
         }
         .info-value {
-            font-size: 0.88rem;
+            font-size: 0.85rem;
             color: #0f172a;
             font-weight: 600;
         }
@@ -965,6 +965,7 @@
         renderFullInfoEmployeeCards(currentFilteredEmployees);
     }
 
+    // HIỂN THỊ ĐẦY ĐỦ CÁC TRƯỜNG DỮ LIỆU ĐÃ SỬA LÊN THẺ NHÂN SỰ
     function renderFullInfoEmployeeCards(data) {
         const grid = document.getElementById('employeeCardsGrid');
         grid.innerHTML = '';
@@ -979,10 +980,22 @@
 
         let cardsHtml = '';
         data.forEach((e, idx) => {
+            // Định dạng chuỗi hiển thị Lương Cơ Bản & Lương Công Việc
+            const cbStr = (e.salaryStep || e.salaryCoeff || e.salaryGroup) 
+                ? `Bậc ${e.salaryStep || '-'}/HS ${e.salaryCoeff || '0'}${e.salaryGroup ? ' ('+e.salaryGroup+')' : ''}` 
+                : '-';
+            
+            const cvStr = (e.jobSalaryStep || e.jobSalaryCoeff || e.jobSalaryGroup) 
+                ? `Bậc ${e.jobSalaryStep || '-'}/HS ${e.jobSalaryCoeff || '0'}${e.jobSalaryGroup ? ' ('+e.jobSalaryGroup+')' : ''}` 
+                : '-';
+
+            const jobAllowanceStr = e.jobAllowance ? `${e.jobAllowance.toLocaleString('vi-VN')} đ` : '-';
+
             cardsHtml += `
                 <div class="col-12 col-md-6 col-xl-4">
                     <div class="emp-card p-3 h-100 d-flex flex-column justify-content-between">
                         <div>
+                            <!-- Header Thẻ -->
                             <div class="d-flex justify-content-between align-items-start border-bottom pb-2 mb-2">
                                 <div>
                                     <h6 class="fw-bold text-primary mb-0 fs-6">${e.name} ${e.otherName ? `<span class="text-muted small fw-normal">(${e.otherName})</span>` : ''}</h6>
@@ -991,10 +1004,11 @@
                                 <span class="badge bg-info text-dark fw-bold text-truncate ms-1" style="max-width: 120px;" title="${e.unitName}">${e.unitName}</span>
                             </div>
 
+                            <!-- Lưới Thông Tin Chi Tiết -->
                             <div class="row g-2 mb-2">
                                 <div class="col-6">
-                                    <div class="info-label">SĐT</div>
-                                    <div class="info-value font-monospace">${e.phone || '-'}</div>
+                                    <div class="info-label">SĐT / Giới tính</div>
+                                    <div class="info-value">${e.phone || '-'} (${e.gender || 'Nam'})</div>
                                 </div>
                                 <div class="col-6">
                                     <div class="info-label">Vào TCT</div>
@@ -1005,19 +1019,28 @@
                                     <div class="info-value text-truncate" title="${e.contractType || '-'}">${e.contractType || '-'}</div>
                                 </div>
                                 <div class="col-6">
-                                    <div class="info-label">Phép năm</div>
+                                    <div class="info-label">Số công phép năm</div>
                                     <div class="info-value text-success font-monospace fw-bold">${e.leaveDays !== undefined ? e.leaveDays + ' ngày' : '-'}</div>
                                 </div>
                                 <div class="col-6">
-                                    <div class="info-label">Số CCCD</div>
-                                    <div class="info-value font-monospace">${maskSensitive(e.cccd)}</div>
+                                    <div class="info-label">Lương Cơ Bản</div>
+                                    <div class="info-value font-monospace text-primary fs-8">${cbStr}</div>
                                 </div>
                                 <div class="col-6">
-                                    <div class="info-label">Số sổ BHXH</div>
-                                    <div class="info-value font-monospace">${maskSensitive(e.bhxh)}</div>
+                                    <div class="info-label">Lương Công Việc</div>
+                                    <div class="info-value font-monospace text-primary fs-8">${cvStr}</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="info-label">Phụ cấp Lương CV</div>
+                                    <div class="info-value font-monospace text-dark fs-8">${jobAllowanceStr}</div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="info-label">Số CCCD / BHXH</div>
+                                    <div class="info-value font-monospace fs-8">${maskSensitive(e.cccd)} / ${maskSensitive(e.bhxh)}</div>
                                 </div>
                             </div>
 
+                            <!-- Badge Lao Động Đặc Thù & Trạng Thái -->
                             <div class="mb-2">
                                 ${e.nndh === 'Có' ? '<span class="badge bg-danger me-1">NNĐH</span>' : ''}
                                 ${e.atv === 'Có' ? '<span class="badge bg-success me-1">ATV</span>' : ''}
@@ -1025,6 +1048,7 @@
                             </div>
                         </div>
 
+                        <!-- Nút Sửa Hồ Sơ -->
                         <div class="pt-2 border-top no-print">
                             <button class="btn btn-sm btn-primary fw-bold w-100 btn-edit-trigger" data-index="${idx}">
                                 <i class="fa-solid fa-pen-to-square me-1"></i> Xem / Sửa hồ sơ chi tiết
@@ -1153,6 +1177,7 @@
         renderUnitCards();
         renderChartsAndInsights();
         closeEditModal();
+        if (selectedUnitName) filterData();
     }
 
     // TÍNH PHÉP NĂM TỰ ĐỘNG THEO BỘ LUẬT LAO ĐỘNG MỚI
