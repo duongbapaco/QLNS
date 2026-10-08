@@ -78,14 +78,30 @@
             border-color: #0d6efd;
             box-shadow: 0 8px 20px rgba(0,0,0,0.06);
         }
-        .info-label {
+        
+        .section-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 8px 10px;
+            margin-bottom: 8px;
+        }
+        .section-title {
             font-size: 0.72rem;
+            font-weight: 700;
+            color: #0d6efd;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+            border-bottom: 1px dashed #cbd5e1;
+            padding-bottom: 2px;
+        }
+        .info-label {
+            font-size: 0.7rem;
             color: #64748b;
             font-weight: 600;
-            text-uppercase: uppercase;
         }
         .info-value {
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             color: #0f172a;
             font-weight: 600;
         }
@@ -485,12 +501,12 @@
 
                             <!-- Các Khoản Phụ Cấp & Thu Nhập -->
                             <div class="col-6 col-md-3">
-                                <label class="form-label fw-bold small">Phụ cấp Lương CV (Đồng)</label>
-                                <input type="number" class="form-control form-control-sm" id="mJobAllowance" onchange="autoSyncOnInput()">
+                                <label class="form-label fw-bold small">Hệ số phụ cấp công việc</label>
+                                <input type="number" step="0.01" class="form-control form-control-sm" id="mJobAllowanceCoeff" placeholder="VD: 0.2, 0.5..." onchange="autoSyncOnInput()">
                             </div>
                             <div class="col-6 col-md-3">
-                                <label class="form-label fw-bold small">Phụ cấp chung (Đồng)</label>
-                                <input type="number" class="form-control form-control-sm" id="mAllowance" onchange="autoSyncOnInput()">
+                                <label class="form-label fw-bold small">Hệ số phụ cấp</label>
+                                <input type="number" step="0.01" class="form-control form-control-sm" id="mAllowanceCoeff" placeholder="VD: 0.1, 0.3..." onchange="autoSyncOnInput()">
                             </div>
                             <div class="col-6 col-md-3">
                                 <label class="form-label fw-bold small">Lương SP / Khoán (Đồng)</label>
@@ -727,8 +743,8 @@
             jobSalaryStep: findColIdx(['bậc lương cv', 'bậc lương công việc', 'bậc cv']),
             jobSalaryCoeff: findColIdx(['hệ số lương cv', 'hs cv']),
             jobSalaryGroup: findColIdx(['nhóm lương cv', 'nhóm lương công việc']),
-            jobAllowance: findColIdx(['phụ cấp cv', 'phụ cấp lương công việc']),
-            allowance: findColIdx(['phụ cấp']),
+            jobAllowanceCoeff: findColIdx(['hệ số phụ cấp công việc', 'phụ cấp cv', 'hs pc cv']),
+            allowanceCoeff: findColIdx(['hệ số phụ cấp', 'phụ cấp', 'hs pc']),
             productSalary: findColIdx(['sản phẩm', 'khoán']),
             leaveDays: findColIdx(['phép năm', 'công phép', 'phép']),
             nndh: findColIdx(['nnđh', 'độc hại']),
@@ -788,8 +804,8 @@
                 jobSalaryStep: colIdx.jobSalaryStep >= 0 && row[colIdx.jobSalaryStep] ? String(row[colIdx.jobSalaryStep]).trim() : '',
                 jobSalaryCoeff: colIdx.jobSalaryCoeff >= 0 && row[colIdx.jobSalaryCoeff] ? (parseFloat(row[colIdx.jobSalaryCoeff]) || 0) : 0,
                 jobSalaryGroup: colIdx.jobSalaryGroup >= 0 && row[colIdx.jobSalaryGroup] ? String(row[colIdx.jobSalaryGroup]).trim() : '',
-                jobAllowance: colIdx.jobAllowance >= 0 && row[colIdx.jobAllowance] ? (parseFloat(row[colIdx.jobAllowance]) || 0) : 0,
-                allowance: colIdx.allowance >= 0 && row[colIdx.allowance] ? (parseFloat(row[colIdx.allowance]) || 0) : 0,
+                jobAllowanceCoeff: colIdx.jobAllowanceCoeff >= 0 && row[colIdx.jobAllowanceCoeff] ? (parseFloat(row[colIdx.jobAllowanceCoeff]) || 0) : 0,
+                allowanceCoeff: colIdx.allowanceCoeff >= 0 && row[colIdx.allowanceCoeff] ? (parseFloat(row[colIdx.allowanceCoeff]) || 0) : 0,
                 productSalary: colIdx.productSalary >= 0 && row[colIdx.productSalary] ? (parseFloat(row[colIdx.productSalary]) || 0) : 0,
                 leaveDays: leaveDaysVal,
                 nndh: nndhVal,
@@ -965,7 +981,7 @@
         renderFullInfoEmployeeCards(currentFilteredEmployees);
     }
 
-    // HIỂN THỊ ĐẦY ĐỦ CÁC TRƯỜNG DỮ LIỆU ĐÃ SỬA LÊN THẺ NHÂN SỰ
+    // HIỂN THỊ ĐẦY ĐỦ VÀ CỤ THỂ THEO MỤC TRÊN THẺ NHÂN SỰ
     function renderFullInfoEmployeeCards(data) {
         const grid = document.getElementById('employeeCardsGrid');
         grid.innerHTML = '';
@@ -980,17 +996,6 @@
 
         let cardsHtml = '';
         data.forEach((e, idx) => {
-            // Định dạng chuỗi hiển thị Lương Cơ Bản & Lương Công Việc
-            const cbStr = (e.salaryStep || e.salaryCoeff || e.salaryGroup) 
-                ? `Bậc ${e.salaryStep || '-'}/HS ${e.salaryCoeff || '0'}${e.salaryGroup ? ' ('+e.salaryGroup+')' : ''}` 
-                : '-';
-            
-            const cvStr = (e.jobSalaryStep || e.jobSalaryCoeff || e.jobSalaryGroup) 
-                ? `Bậc ${e.jobSalaryStep || '-'}/HS ${e.jobSalaryCoeff || '0'}${e.jobSalaryGroup ? ' ('+e.jobSalaryGroup+')' : ''}` 
-                : '-';
-
-            const jobAllowanceStr = e.jobAllowance ? `${e.jobAllowance.toLocaleString('vi-VN')} đ` : '-';
-
             cardsHtml += `
                 <div class="col-12 col-md-6 col-xl-4">
                     <div class="emp-card p-3 h-100 d-flex flex-column justify-content-between">
@@ -1004,39 +1009,49 @@
                                 <span class="badge bg-info text-dark fw-bold text-truncate ms-1" style="max-width: 120px;" title="${e.unitName}">${e.unitName}</span>
                             </div>
 
-                            <!-- Lưới Thông Tin Chi Tiết -->
-                            <div class="row g-2 mb-2">
-                                <div class="col-6">
-                                    <div class="info-label">SĐT / Giới tính</div>
-                                    <div class="info-value">${e.phone || '-'} (${e.gender || 'Nam'})</div>
+                            <!-- Mục 1: Hợp Đồng & Công Tác -->
+                            <div class="section-box">
+                                <div class="section-title"><i class="fa-solid fa-file-contract me-1"></i>Hợp đồng & Công tác</div>
+                                <div class="row g-1">
+                                    <div class="col-6"><span class="info-label">Vào TCT:</span> <span class="info-value font-monospace">${e.joinDate || '-'}</span></div>
+                                    <div class="col-6"><span class="info-label">Phép năm:</span> <span class="info-value text-success font-monospace fw-bold">${e.leaveDays !== undefined ? e.leaveDays + ' ngày' : '-'}</span></div>
+                                    <div class="col-12"><span class="info-label">Loại HĐ:</span> <span class="info-value text-truncate d-inline-block align-bottom" style="max-width: 180px;" title="${e.contractType}">${e.contractType || '-'}</span></div>
                                 </div>
-                                <div class="col-6">
-                                    <div class="info-label">Vào TCT</div>
-                                    <div class="info-value font-monospace">${e.joinDate || '-'}</div>
+                            </div>
+
+                            <!-- Mục 2: Lương Cơ Bản & Lương Công Việc -->
+                            <div class="section-box">
+                                <div class="section-title"><i class="fa-solid fa-calculator me-1"></i>Thang Bảng Lương</div>
+                                <div class="row g-1">
+                                    <div class="col-6">
+                                        <span class="info-label">Lương CB:</span> 
+                                        <span class="info-value font-monospace text-primary">Bậc ${e.salaryStep || '-'}/HS ${e.salaryCoeff || '0'}</span>
+                                        ${e.salaryGroup ? `<small class="text-muted">(${e.salaryGroup})</small>` : ''}
+                                    </div>
+                                    <div class="col-6">
+                                        <span class="info-label">Lương CV:</span> 
+                                        <span class="info-value font-monospace text-primary">Bậc ${e.jobSalaryStep || '-'}/HS ${e.jobSalaryCoeff || '0'}</span>
+                                        ${e.jobSalaryGroup ? `<small class="text-muted">(${e.jobSalaryGroup})</small>` : ''}
+                                    </div>
                                 </div>
-                                <div class="col-6">
-                                    <div class="info-label">Loại HĐLĐ</div>
-                                    <div class="info-value text-truncate" title="${e.contractType || '-'}">${e.contractType || '-'}</div>
+                            </div>
+
+                            <!-- Mục 3: Các Hệ Số Phụ Cấp -->
+                            <div class="section-box">
+                                <div class="section-title"><i class="fa-solid fa-coins me-1"></i>Hệ Số Phụ Cấp</div>
+                                <div class="row g-1">
+                                    <div class="col-6"><span class="info-label">HS Phụ cấp CV:</span> <span class="info-value font-monospace fw-bold text-dark">${e.jobAllowanceCoeff || '0'}</span></div>
+                                    <div class="col-6"><span class="info-label">HS Phụ cấp:</span> <span class="info-value font-monospace fw-bold text-dark">${e.allowanceCoeff || '0'}</span></div>
                                 </div>
-                                <div class="col-6">
-                                    <div class="info-label">Số công phép năm</div>
-                                    <div class="info-value text-success font-monospace fw-bold">${e.leaveDays !== undefined ? e.leaveDays + ' ngày' : '-'}</div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="info-label">Lương Cơ Bản</div>
-                                    <div class="info-value font-monospace text-primary fs-8">${cbStr}</div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="info-label">Lương Công Việc</div>
-                                    <div class="info-value font-monospace text-primary fs-8">${cvStr}</div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="info-label">Phụ cấp Lương CV</div>
-                                    <div class="info-value font-monospace text-dark fs-8">${jobAllowanceStr}</div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="info-label">Số CCCD / BHXH</div>
-                                    <div class="info-value font-monospace fs-8">${maskSensitive(e.cccd)} / ${maskSensitive(e.bhxh)}</div>
+                            </div>
+
+                            <!-- Mục 4: Thông Tin Định Danh -->
+                            <div class="section-box">
+                                <div class="section-title"><i class="fa-solid fa-id-card me-1"></i>Định Danh & Liên Hệ</div>
+                                <div class="row g-1">
+                                    <div class="col-6"><span class="info-label">SĐT/Giới tính:</span> <span class="info-value">${e.phone || '-'} (${e.gender || 'Nam'})</span></div>
+                                    <div class="col-6"><span class="info-label">CCCD:</span> <span class="info-value font-monospace">${maskSensitive(e.cccd)}</span></div>
+                                    <div class="col-12"><span class="info-label">BHXH:</span> <span class="info-value font-monospace">${maskSensitive(e.bhxh)}</span></div>
                                 </div>
                             </div>
 
@@ -1110,8 +1125,8 @@
         document.getElementById('mJobSalaryStep').value = emp.jobSalaryStep || '';
         document.getElementById('mJobSalaryCoeff').value = emp.jobSalaryCoeff || 0;
         document.getElementById('mJobSalaryGroup').value = emp.jobSalaryGroup || '';
-        document.getElementById('mJobAllowance').value = emp.jobAllowance || 0;
-        document.getElementById('mAllowance').value = emp.allowance || 0;
+        document.getElementById('mJobAllowanceCoeff').value = emp.jobAllowanceCoeff || 0;
+        document.getElementById('mAllowanceCoeff').value = emp.allowanceCoeff || 0;
         document.getElementById('mProductSalary').value = emp.productSalary || 0;
 
         // Tính hưu & phép năm
@@ -1166,8 +1181,8 @@
             jobSalaryStep: document.getElementById('mJobSalaryStep').value,
             jobSalaryCoeff: parseFloat(document.getElementById('mJobSalaryCoeff').value) || 0,
             jobSalaryGroup: document.getElementById('mJobSalaryGroup').value,
-            jobAllowance: parseFloat(document.getElementById('mJobAllowance').value) || 0,
-            allowance: parseFloat(document.getElementById('mAllowance').value) || 0,
+            jobAllowanceCoeff: parseFloat(document.getElementById('mJobAllowanceCoeff').value) || 0,
+            allowanceCoeff: parseFloat(document.getElementById('mAllowanceCoeff').value) || 0,
             productSalary: parseFloat(document.getElementById('mProductSalary').value) || 0,
             leaveDays: parseFloat(document.getElementById('mLeaveDays').value) || 12
         };
