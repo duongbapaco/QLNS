@@ -12,6 +12,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- SheetJS Đọc/Xuất File Excel -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- CryptoJS MD5 mã hoá bảo mật -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
 
     <style>
         :root {
@@ -23,6 +25,7 @@
             background-color: #f8fafc;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: #334155;
+            padding-bottom: 60px;
         }
         .app-header {
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
@@ -51,57 +54,20 @@
             border-color: #0b5ed7;
         }
 
-        /* Thẻ Đơn Vị */
-        .unit-card {
-            border: 2px solid #e2e8f0;
-            border-radius: 16px;
-            background: #ffffff;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-        }
-        .unit-card:hover {
-            border-color: #0d6efd;
-            transform: translateY(-4px);
-            box-shadow: 0 12px 25px rgba(13, 110, 253, 0.15);
-        }
-
-        /* Thẻ Nhân Sự Chi Tiết */
-        .emp-card {
-            border: 1px solid #cbd5e1;
-            border-radius: 14px;
-            background: #ffffff;
+        .custom-table-row {
             transition: all 0.2s ease;
         }
-        .emp-card:hover {
-            border-color: #0d6efd;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+        .custom-table-row:hover {
+            background-color: #f0f7ff !important;
         }
-        
-        .section-box {
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 8px 10px;
-            margin-bottom: 8px;
-        }
-        .section-title {
-            font-size: 0.72rem;
-            font-weight: 700;
-            color: #0d6efd;
-            text-transform: uppercase;
-            margin-bottom: 4px;
-            border-bottom: 1px dashed #cbd5e1;
-            padding-bottom: 2px;
-        }
-        .info-label {
+
+        .info-label-sm {
             font-size: 0.7rem;
             color: #64748b;
             font-weight: 600;
         }
-        .info-value {
-            font-size: 0.82rem;
+        .info-value-sm {
+            font-size: 0.8rem;
             color: #0f172a;
             font-weight: 600;
         }
@@ -115,7 +81,6 @@
             100% { opacity: 0.6; }
         }
 
-        /* Modal Chỉnh sửa & Tab Styling */
         .custom-modal-backdrop {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
@@ -149,8 +114,31 @@
         }
         .chart-container {
             position: relative;
-            min-height: 250px;
+            min-height: 220px;
             width: 100%;
+        }
+
+        .stat-card {
+            border-radius: 12px;
+            padding: 16px;
+            color: white;
+            transition: transform 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .captcha-box {
+            background: #1e293b;
+            color: #38bdf8;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.2rem;
+            font-weight: 800;
+            letter-spacing: 4px;
+            padding: 6px 14px;
+            border-radius: 8px;
+            user-select: none;
+            display: inline-block;
         }
     </style>
 </head>
@@ -160,17 +148,20 @@
     <!-- Header App Chung -->
     <div class="app-header mb-4 d-md-flex justify-content-between align-items-center">
         <div>
-            <h4 class="fw-bold mb-1 fs-5 fs-md-4">
+            <h4 class="fw-bold mb-1 fs-5 fs-md-4 text-white">
                 <i class="fa-solid fa-users-gear text-primary me-2"></i>HỆ THỐNG QUẢN TRỊ NHÂN SỰ & ĐƠN VỊ - VINAPACO
             </h4>
             <p class="mb-0 text-slate-300 opacity-75 small">
-                Tự Động Đồng Bộ Ngầm Cloud Google Drive | Quản Lý Đơn Vị Thụ Hưởng & Phân Tích Realtime
+                Tự Động Đồng Bộ Ngầm Cloud Google Drive | Theo Dõi Biến Động Nhân Sự Realtime
             </p>
         </div>
         <div class="mt-3 mt-md-0 no-print d-flex gap-2 flex-wrap align-items-center">
             <span class="badge bg-success p-2 fs-7" id="driveSyncStatus">
                 <i class="fa-solid fa-cloud-check me-1"></i> Đã kết nối Google Drive
             </span>
+            <button class="btn btn-sm btn-light fw-bold text-dark" onclick="openChangePasswordModal()">
+                <i class="fa-solid fa-key me-1"></i> Quản lý Mật khẩu QĐ
+            </button>
             <button class="btn btn-sm btn-light fw-bold text-dark" onclick="loadFromDriveShared()">
                 <i class="fa-solid fa-rotate me-1"></i> Tải lại
             </button>
@@ -183,147 +174,240 @@
         </div>
     </div>
 
-    <!-- ==================== TRANG MÀN HÌNH CHÍNH (HOME VIEW) ==================== -->
-    <div id="homeView">
-        <!-- Khối Nạp Dữ Liệu Excel / JSON Backup -->
-        <div class="card main-card p-3 mb-4 no-print">
-            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                <h6 class="fw-bold text-primary mb-0 small text-uppercase">
-                    <i class="fa-solid fa-file-import me-2"></i>Nạp Dữ Liệu Nhân Sự Excel
-                </h6>
-                <small class="text-muted fs-8">Dữ liệu sau khi nạp sẽ lập tức được đọc, hiển thị và tự động lưu đồng bộ lên Cloud Drive</small>
-            </div>
-            <div class="row g-2">
-                <div class="col-8 col-md-8">
-                    <div class="upload-area py-2" onclick="document.getElementById('excelFileInput').click()">
-                        <i class="fa-solid fa-file-excel fs-4 text-primary mb-1"></i>
-                        <h6 class="fw-bold text-dark mb-0 small">Nạp File Excel Nhân Sự / Bảng Lương</h6>
-                        <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelUpload(event)">
+    <!-- KHỐI THỐNG KÊ TỔNG QUAN LAO ĐỘNG REALTIME -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-md-3">
+            <div class="stat-card bg-primary shadow-sm">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-white-50 text-uppercase fw-bold">Đang làm việc</div>
+                        <h2 class="fw-bold mb-0" id="statWorkingCount">0</h2>
                     </div>
+                    <i class="fa-solid fa-user-check fs-1 opacity-50"></i>
                 </div>
-                <div class="col-4 col-md-4">
-                    <div class="upload-area bg-light border-secondary py-2" onclick="document.getElementById('jsonFileInput').click()">
-                        <i class="fa-solid fa-file-code fs-4 text-secondary mb-1"></i>
-                        <h6 class="fw-bold text-dark mb-0 small">Nạp Backup (.JSON)</h6>
-                        <input type="file" id="jsonFileInput" accept=".json" style="display: none;" onchange="handleJSONUpload(event)">
-                    </div>
-                </div>
+                <small class="text-white-50 fs-8">Lao động đang công tác thực tế</small>
             </div>
         </div>
 
-        <!-- BÁO CÁO PHÂN TÍCH TỔNG CÔNG TY -->
-        <div class="card main-card p-3 p-md-4 mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
-                <h5 class="fw-bold text-dark mb-0 fs-6 fs-md-5">
-                    <i class="fa-solid fa-chart-pie text-primary me-2"></i>BÁO CÁO PHÂN TÍCH & DỰ BÁO NHÂN SỰ TỔNG CÔNG TY
-                </h5>
-                <span class="badge bg-primary fs-6" id="totalEmpBadge">Tổng số: 0 người</span>
-            </div>
-
-            <div class="row g-3 mb-4">
-                <div class="col-12 col-md-4">
-                    <div class="card border-0 bg-light p-3">
-                        <h6 class="fw-bold text-muted small mb-2"><i class="fa-solid fa-venus-mars me-1"></i>Cơ Cấu Giới Tính</h6>
-                        <div class="chart-container">
-                            <canvas id="chartGender"></canvas>
-                        </div>
+        <div class="col-12 col-sm-6 col-md-3">
+            <div class="stat-card bg-danger shadow-sm">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-white-50 text-uppercase fw-bold">Đã nghỉ hưu / Nghỉ việc</div>
+                        <h2 class="fw-bold mb-0" id="statRetiredCount">0</h2>
                     </div>
+                    <i class="fa-solid fa-user-slash fs-1 opacity-50"></i>
                 </div>
-                <div class="col-12 col-md-4">
-                    <div class="card border-0 bg-light p-3">
-                        <h6 class="fw-bold text-muted small mb-2"><i class="fa-solid fa-user-clock me-1"></i>Dự Báo Nghỉ Hưu Lộ Trình</h6>
-                        <div class="chart-container">
-                            <canvas id="chartRetirement"></canvas>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-12 col-md-4">
-                    <div class="card border-0 bg-light p-3">
-                        <h6 class="fw-bold text-muted small mb-2"><i class="fa-solid fa-user-shield me-1"></i>Lao Động Đặc Thù & An Toàn</h6>
-                        <div class="chart-container">
-                            <canvas id="chartSpecialType"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="alert alert-info border-0 shadow-sm mb-0">
-                <h6 class="fw-bold mb-1 text-primary"><i class="fa-solid fa-lightbulb me-2"></i>Khuyến Nghị & Dự Báo Quản Trị Nhân Sự:</h6>
-                <div id="aiRecommendationsText" class="small text-dark">
-                    Đang phân tích dữ liệu thực tế của Tổng công ty...
-                </div>
+                <small class="text-white-50 fs-8">Hồ sơ đã hoàn tất chế độ</small>
             </div>
         </div>
 
-        <!-- DANH SÁCH CÁC THẺ ĐƠN VỊ THÀNH VIÊN -->
-        <div class="card main-card p-3 p-md-4 mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2 flex-wrap gap-2">
-                <h5 class="fw-bold text-dark mb-0 fs-6 fs-md-5">
-                    <i class="fa-solid fa-sitemap text-primary me-2"></i>DANH SÁCH ĐƠN VỊ THÀNH VIÊN (Bấm vào thẻ để mở trang riêng)
-                </h5>
-                <button class="btn btn-sm btn-outline-primary fw-bold" onclick="openUnitPage('ALL')">
-                    <i class="fa-solid fa-list me-1"></i> Xem toàn bộ nhân sự TCT
-                </button>
+        <div class="col-12 col-sm-6 col-md-3">
+            <div class="stat-card bg-warning text-dark shadow-sm">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-dark-50 text-uppercase fw-bold">Biến động tháng này</div>
+                        <h2 class="fw-bold mb-0 text-dark" id="statMonthlyChange">0</h2>
+                    </div>
+                    <i class="fa-solid fa-arrow-trend-up fs-1 opacity-50"></i>
+                </div>
+                <small class="text-dark-50 fs-8">Tuyển mới / Tiếp nhận trong tháng</small>
             </div>
+        </div>
 
-            <div class="row g-3" id="unitCardsGrid">
-                <div class="col-12 text-center text-muted py-4">
-                    <i class="fa-solid fa-spinner fa-spin me-2"></i>Đang tải dữ liệu đơn vị...
+        <div class="col-12 col-sm-6 col-md-3">
+            <div class="stat-card bg-dark shadow-sm">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="small text-white-50 text-uppercase fw-bold">Tổng hồ sơ lưu trữ</div>
+                        <h2 class="fw-bold mb-0" id="statTotalAllCount">0</h2>
+                    </div>
+                    <i class="fa-solid fa-database fs-1 opacity-50"></i>
+                </div>
+                <small class="text-white-50 fs-8">Toàn bộ dữ liệu hệ thống</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Khối Nạp Dữ Liệu Excel / JSON Backup -->
+    <div class="card main-card p-3 mb-4 no-print">
+        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+            <h6 class="fw-bold text-primary mb-0 small text-uppercase">
+                <i class="fa-solid fa-file-import me-2"></i>Nạp Dữ Liệu Nhân Sự Excel
+            </h6>
+            <small class="text-muted fs-8">Dữ liệu sau khi nạp sẽ lập tức được đọc, hiển thị và tự động lưu đồng bộ lên Cloud Drive</small>
+        </div>
+        <div class="row g-2">
+            <div class="col-8 col-md-8">
+                <div class="upload-area py-2" onclick="document.getElementById('excelFileInput').click()">
+                    <i class="fa-solid fa-file-excel fs-4 text-primary mb-1"></i>
+                    <h6 class="fw-bold text-dark mb-0 small">Nạp File Excel Nhân Sự / Bảng Lương</h6>
+                    <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" style="display: none;" onchange="handleExcelUpload(event)">
+                </div>
+            </div>
+            <div class="col-4 col-md-4">
+                <div class="upload-area bg-light border-secondary py-2" onclick="document.getElementById('jsonFileInput').click()">
+                    <i class="fa-solid fa-file-code fs-4 text-secondary mb-1"></i>
+                    <h6 class="fw-bold text-dark mb-0 small">Nạp Backup (.JSON)</h6>
+                    <input type="file" id="jsonFileInput" accept=".json" style="display: none;" onchange="handleJSONUpload(event)">
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ==================== TRANG RIÊNG CỦA ĐƠN VỊ THÀNH VIÊN (UNIT VIEW) ==================== -->
-    <div id="unitView" style="display: none;">
-        <div class="card main-card p-3 p-md-4 mb-4">
-            <!-- Thanh Header Đơn Vị Với Nút Quay Về Trang Chủ -->
-            <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-3 flex-wrap gap-2">
-                <div class="d-flex align-items-center gap-2">
-                    <button class="btn btn-primary fw-bold" onclick="backToHomeView()">
-                        <i class="fa-solid fa-arrow-left me-1"></i> Quay về Danh sách Đơn vị
-                    </button>
-                    <h5 class="fw-bold text-primary mb-0 ms-2 fs-5" id="selectedUnitTitle">
-                        <i class="fa-solid fa-building me-2"></i>TRANG QUẢN LÝ ĐƠN VỊ
-                    </h5>
-                </div>
-                <span class="badge bg-primary fs-6" id="showingCountBadge">0 người</span>
-            </div>
+    <!-- BÁO CÁO PHÂN TÍCH & BIẾN ĐỘNG THEO THÁNG -->
+    <div class="card main-card p-3 p-md-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+            <h5 class="fw-bold text-dark mb-0 fs-6 fs-md-5">
+                <i class="fa-solid fa-chart-line text-primary me-2"></i>BÁO CÁO PHÂN TÍCH & BIẾN ĐỘNG NHÂN SỰ THEO TỪNG THÁNG
+            </h5>
+            <span class="badge bg-primary fs-6" id="workingBadgeTitle">Đang làm việc: 0 người</span>
+        </div>
 
-            <!-- Thanh Lọc & Tìm Kiếm Riêng Của Đơn Vị -->
-            <div class="bg-light p-3 rounded-3 mb-4 border no-print">
-                <div class="row g-2 align-items-center">
-                    <div class="col-12 col-md-4">
-                        <label class="form-label fw-bold small text-muted mb-1"><i class="fa-solid fa-magnifying-glass me-1"></i>Từ khóa tìm kiếm:</label>
-                        <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Nhập tên, SĐT, CCCD, BHXH, Chức danh..." onkeyup="debouncedSearch()">
-                    </div>
-                    <div class="col-6 col-md-2">
-                        <label class="form-label fw-bold small text-muted mb-1"><i class="fa-solid fa-venus-mars me-1"></i>Giới tính:</label>
-                        <select class="form-select form-select-sm" id="genderFilter" onchange="filterData()">
-                            <option value="">-- Tất cả --</option>
-                            <option value="Nam">Nam</option>
-                            <option value="Nữ">Nữ</option>
-                        </select>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <label class="form-label fw-bold small text-muted mb-1"><i class="fa-solid fa-user-shield me-1"></i>Lao động đặc thù:</label>
-                        <select class="form-select form-select-sm" id="typeFilter" onchange="filterData()">
-                            <option value="">-- Tất cả --</option>
-                            <option value="NNĐH">Nặng nhọc độc hại (NNĐH)</option>
-                            <option value="ATV">An toàn vệ sinh viên (ATV)</option>
-                        </select>
-                    </div>
-                    <div class="col-12 col-md-3">
-                        <label class="form-label fw-bold small text-muted mb-1"><i class="fa-solid fa-graduation-cap me-1"></i>Trình độ chuyên môn:</label>
-                        <select class="form-select form-select-sm" id="degreeFilter" onchange="filterData()">
-                            <option value="">-- Tất cả trình độ --</option>
-                        </select>
+        <div class="row g-3 mb-3">
+            <div class="col-12 col-md-6">
+                <div class="card border-0 bg-light p-3">
+                    <h6 class="fw-bold text-muted small mb-2"><i class="fa-solid fa-chart-column me-1"></i>Thống kê biến động tăng nhân sự theo từng Tháng</h6>
+                    <div class="chart-container">
+                        <canvas id="chartMonthlyChanges"></canvas>
                     </div>
                 </div>
             </div>
+            <div class="col-12 col-md-3">
+                <div class="card border-0 bg-light p-3">
+                    <h6 class="fw-bold text-muted small mb-2"><i class="fa-solid fa-venus-mars me-1"></i>Cơ Cấu Giới Tính (Lao động đang làm)</h6>
+                    <div class="chart-container">
+                        <canvas id="chartGender"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-3">
+                <div class="card border-0 bg-light p-3">
+                    <h6 class="fw-bold text-muted small mb-2"><i class="fa-solid fa-user-clock me-1"></i>Dự Báo Nghỉ Hưu Lộ Trình</h6>
+                    <div class="chart-container">
+                        <canvas id="chartRetirement"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-            <!-- Danh Sách Thẻ Nhân Sự Chi Tiết Đơn Vị -->
-            <div class="row g-3" id="employeeCardsGrid"></div>
+        <div class="alert alert-info border-0 shadow-sm mb-0">
+            <h6 class="fw-bold mb-1 text-primary"><i class="fa-solid fa-lightbulb me-2"></i>Khuyến Nghị & Phân Tích Thực Tế:</h6>
+            <div id="aiRecommendationsText" class="small text-dark">
+                Đang phân tích dữ liệu biến động nhân sự...
+            </div>
+        </div>
+    </div>
+
+    <!-- KHỐI 1: DANH SÁCH LIỆT KÊ CÁC ĐƠN VỊ THÀNH VIÊN -->
+    <div class="card main-card p-3 p-md-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2 flex-wrap gap-2">
+            <h5 class="fw-bold text-dark mb-0 fs-6 fs-md-5">
+                <i class="fa-solid fa-list-check text-primary me-2"></i>DANH SÁCH ĐƠN VỊ THÀNH VIÊN (Bấm vào dòng hoặc chọn nút để lọc danh sách)
+            </h5>
+            <button class="btn btn-sm btn-outline-primary fw-bold" onclick="selectUnitFilter('ALL')">
+                <i class="fa-solid fa-users me-1"></i> Xem toàn bộ nhân sự TCT
+            </button>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr class="text-uppercase fs-8 text-muted">
+                        <th style="width: 50px;">STT</th>
+                        <th>Mã ĐV</th>
+                        <th>Tên Đơn Vị Thành Viên</th>
+                        <th class="text-center">Số Lượng Đang Làm</th>
+                        <th class="text-center">Cơ Cấu Nam / Nữ</th>
+                        <th class="text-center">Lao Động Đặc Thù</th>
+                        <th class="text-end">Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody id="unitListTableBody">
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">
+                            <i class="fa-solid fa-spinner fa-spin me-2"></i>Đang tải dữ liệu đơn vị...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- KHỐI 2: DANH SÁCH CHI TIẾT NHÂN SỰ TƯƠNG ỨNG -->
+    <div class="card main-card p-3 p-md-4 mb-4" id="employeeSection">
+        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-3 flex-wrap gap-2">
+            <h5 class="fw-bold text-primary mb-0 fs-5" id="selectedUnitTitle">
+                <i class="fa-solid fa-users me-2"></i>DANH SÁCH NHÂN SỰ CHI TIẾT
+            </h5>
+            <span class="badge bg-primary fs-6" id="showingCountBadge">0 người</span>
+        </div>
+
+        <!-- Thanh Lọc & Tìm Kiếm Nhân Sự -->
+        <div class="bg-light p-3 rounded-3 mb-4 border no-print">
+            <div class="row g-2 align-items-center">
+                <div class="col-12 col-md-3">
+                    <label class="form-label fw-bold small text-muted mb-1"><i class="fa-solid fa-magnifying-glass me-1"></i>Từ khóa tìm kiếm:</label>
+                    <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Nhập tên, SĐT, CCCD, BHXH, Chức danh..." onkeyup="debouncedSearch()">
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label fw-bold small text-muted mb-1"><i class="fa-solid fa-building me-1"></i>Đơn vị đang xem:</label>
+                    <select class="form-select form-select-sm" id="unitFilter" onchange="filterData()">
+                        <option value="ALL">-- Toàn bộ Tổng Công Ty --</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label fw-bold small text-muted mb-1"><i class="fa-solid fa-user-check me-1"></i>Trạng thái làm việc:</label>
+                    <select class="form-select form-select-sm" id="statusFilter" onchange="filterData()">
+                        <option value="Đang làm việc">Đang làm việc</option>
+                        <option value="Đã nghỉ hưu">Đã nghỉ hưu</option>
+                        <option value="Đã nghỉ việc">Đã nghỉ việc</option>
+                        <option value="ALL">-- Tất cả trạng thái --</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label fw-bold small text-muted mb-1"><i class="fa-solid fa-venus-mars me-1"></i>Giới tính:</label>
+                    <select class="form-select form-select-sm" id="genderFilter" onchange="filterData()">
+                        <option value="">-- Tất cả --</option>
+                        <option value="Nam">Nam</option>
+                        <option value="Nữ">Nữ</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <label class="form-label fw-bold small text-muted mb-1"><i class="fa-solid fa-user-shield me-1"></i>Lao động đặc thù:</label>
+                    <select class="form-select form-select-sm" id="typeFilter" onchange="filterData()">
+                        <option value="">-- Tất cả --</option>
+                        <option value="NNĐH">Nặng nhọc độc hại (NNĐH)</option>
+                        <option value="ATV">An toàn vệ sinh viên (ATV)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- BẢNG LIỆT KÊ NHÂN SỰ CHI TIẾT -->
+        <div class="table-responsive">
+            <table class="table table-hover align-middle border mb-0">
+                <thead class="table-light">
+                    <tr class="text-uppercase fs-8 text-muted">
+                        <th style="width: 40px;">STT</th>
+                        <th>Họ và Tên / Chức Danh</th>
+                        <th>Đơn Vị Công Tác</th>
+                        <th>Hợp Đồng & Ngày Vào</th>
+                        <th>Lương CB (Bậc/HS)</th>
+                        <th>HS Phụ Cấp</th>
+                        <th>Định Danh & SĐT</th>
+                        <th class="text-center">Đặc Thù</th>
+                        <th class="text-end" style="width: 170px;">Thao Tác</th>
+                    </tr>
+                </thead>
+                <tbody id="employeeListTableBody">
+                    <tr>
+                        <td colspan="9" class="text-center py-4 text-muted">
+                            Chưa có dữ liệu nhân sự.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -336,10 +420,9 @@
             <button type="button" class="btn-close btn-close-white" onclick="closeEditModal()"></button>
         </div>
         <div class="p-3 p-md-4">
-            <form id="detailForm" onsubmit="return false;">
+            <form id="detailForm" autocomplete="off" onsubmit="return false;">
                 <input type="hidden" id="editEmpGlobalIndex">
                 
-                <!-- Thanh Điều Hướng Các Tab -->
                 <ul class="nav nav-tabs mb-3" id="modalTab" role="tablist">
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active" id="tab-personal-tab" data-bs-toggle="tab" data-bs-target="#tab-personal" type="button" role="tab">
@@ -358,9 +441,7 @@
                     </li>
                 </ul>
 
-                <!-- Nội Dung Các Tab -->
                 <div class="tab-content" id="modalTabContent">
-                    <!-- TAB 1: THÔNG TIN CÁ NHÂN & ĐỊNH DANH -->
                     <div class="tab-pane fade show active" id="tab-personal" role="tabpanel">
                         <div class="row g-2 g-md-3">
                             <div class="col-4 col-md-2">
@@ -413,7 +494,6 @@
                         </div>
                     </div>
 
-                    <!-- TAB 2: HỢP ĐỒNG & CÔNG TÁC -->
                     <div class="tab-pane fade" id="tab-work" role="tabpanel">
                         <div class="row g-2 g-md-3">
                             <div class="col-8 col-md-4">
@@ -468,10 +548,8 @@
                         </div>
                     </div>
 
-                    <!-- TAB 3: CẤU HÌNH LƯƠNG & PHÉP NĂM -->
                     <div class="tab-pane fade" id="tab-salary" role="tabpanel">
                         <div class="row g-2 g-md-3 mb-2">
-                            <!-- Nhóm Lương Cơ Bản -->
                             <div class="col-4 col-md-2">
                                 <label class="form-label fw-bold small">Bậc Lương CB</label>
                                 <input type="text" class="form-control form-control-sm" id="mSalaryStep" placeholder="VD: 1, 2..." onchange="autoSyncOnInput()">
@@ -485,7 +563,6 @@
                                 <input type="text" class="form-control form-control-sm" id="mSalaryGroup" onchange="autoSyncOnInput()">
                             </div>
 
-                            <!-- Nhóm Lương Công Việc -->
                             <div class="col-4 col-md-2">
                                 <label class="form-label fw-bold small">Bậc Lương CV</label>
                                 <input type="text" class="form-control form-control-sm" id="mJobSalaryStep" placeholder="VD: 1, 2..." onchange="autoSyncOnInput()">
@@ -499,14 +576,13 @@
                                 <input type="text" class="form-control form-control-sm" id="mJobSalaryGroup" onchange="autoSyncOnInput()">
                             </div>
 
-                            <!-- Các Khoản Phụ Cấp & Thu Nhập -->
                             <div class="col-6 col-md-3">
                                 <label class="form-label fw-bold small">Hệ số phụ cấp công việc</label>
-                                <input type="number" step="0.01" class="form-control form-control-sm" id="mJobAllowanceCoeff" placeholder="VD: 0.2, 0.5..." onchange="autoSyncOnInput()">
+                                <input type="number" step="0.01" class="form-control form-control-sm" id="mJobAllowanceCoeff" onchange="autoSyncOnInput()">
                             </div>
                             <div class="col-6 col-md-3">
                                 <label class="form-label fw-bold small">Hệ số phụ cấp</label>
-                                <input type="number" step="0.01" class="form-control form-control-sm" id="mAllowanceCoeff" placeholder="VD: 0.1, 0.3..." onchange="autoSyncOnInput()">
+                                <input type="number" step="0.01" class="form-control form-control-sm" id="mAllowanceCoeff" onchange="autoSyncOnInput()">
                             </div>
                             <div class="col-6 col-md-3">
                                 <label class="form-label fw-bold small">Lương SP / Khoán (Đồng)</label>
@@ -517,7 +593,6 @@
                                     <i class="fa-solid fa-calendar-check me-1"></i>Số công phép trong năm
                                 </label>
                                 <input type="number" step="0.5" class="form-control form-control-sm fw-bold text-success border-success" id="mLeaveDays" onchange="autoSyncOnInput()">
-                                <small class="text-muted fs-8 d-block mt-1">Tự động tính theo BLLĐ mới, cho phép sửa tự do</small>
                             </div>
                         </div>
                     </div>
@@ -531,61 +606,156 @@
     </div>
 </div>
 
+<!-- MODAL BẢO MẬT ĐIỀU ĐỘNG NHÂN SỰ -->
+<div class="custom-modal-backdrop" id="transferModal">
+    <div class="custom-modal-content" style="max-width: 550px;">
+        <div class="d-flex justify-content-between align-items-center bg-danger text-white p-3 rounded-top">
+            <h6 class="fw-bold mb-0"><i class="fa-solid fa-right-left me-2"></i>XÁC NHẬN ĐIỀU ĐỘNG NHÂN SỰ</h6>
+            <button type="button" class="btn-close btn-close-white" onclick="closeTransferModal()"></button>
+        </div>
+        <div class="p-4">
+            <div class="alert alert-warning border-0 small mb-3">
+                <i class="fa-solid fa-shield-halved me-1"></i>Yêu cầu <b>Số Quyết định điều động</b> & <b>Mật khẩu Quản trị</b>.
+            </div>
+            
+            <form autocomplete="off" onsubmit="return false;">
+                <input type="hidden" id="transferEmpIndex">
+                
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Nhân sự điều động:</label>
+                    <input type="text" class="form-control form-control-sm fw-bold text-primary" id="transferEmpName" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Đơn vị hiện tại:</label>
+                    <input type="text" class="form-control form-control-sm" id="transferCurrentUnit" readonly>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Đơn vị mới nhận công tác <span class="text-danger">*</span></label>
+                    <select class="form-select form-select-sm" id="transferTargetUnit"></select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Số Quyết định điều động / Văn bản <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control form-control-sm" id="transferDocNo" placeholder="VD: QĐ-123/QĐ-TCT-TNS" autocomplete="off" required>
+                </div>
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label fw-bold small text-danger mb-0"><i class="fa-solid fa-key me-1"></i>Mật khẩu Quản trị <span class="text-danger">*</span></label>
+                        <a href="javascript:void(0)" class="fs-8 text-primary fw-bold" onclick="openResetPasswordModal()">Quên / Khôi phục mật khẩu?</a>
+                    </div>
+                    <input type="password" class="form-control form-control-sm" id="transferPin" placeholder="Nhập mật khẩu quản trị..." autocomplete="new-password" required>
+                </div>
+            </form>
+        </div>
+        <div class="d-flex justify-content-end gap-2 p-3 bg-light rounded-bottom border-top">
+            <button type="button" class="btn btn-sm btn-secondary" onclick="closeTransferModal()">Hủy bỏ</button>
+            <button type="button" class="btn btn-sm btn-danger fw-bold" onclick="executeTransfer()">Xác Nhận Điều Động & Đồng Bộ</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL ĐỔI MẬT KHẨU QUẢN TRỊ -->
+<div class="custom-modal-backdrop" id="changePassModal">
+    <div class="custom-modal-content" style="max-width: 500px;">
+        <div class="d-flex justify-content-between align-items-center bg-dark text-white p-3 rounded-top">
+            <h6 class="fw-bold mb-0"><i class="fa-solid fa-key me-2"></i>ĐỔI MẬT KHẨU QUẢN TRỊ ĐIỀU ĐỘNG</h6>
+            <button type="button" class="btn-close btn-close-white" onclick="closeChangePasswordModal()"></button>
+        </div>
+        <div class="p-4">
+            <form autocomplete="off" onsubmit="return false;">
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Mật khẩu hiện tại <span class="text-danger">*</span></label>
+                    <input type="password" class="form-control form-control-sm" id="oldPassInput" autocomplete="new-password">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Mật khẩu mới <span class="text-danger">*</span></label>
+                    <input type="password" class="form-control form-control-sm" id="newPassInput" autocomplete="new-password">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">Xác nhận mật khẩu mới <span class="text-danger">*</span></label>
+                    <input type="password" class="form-control form-control-sm" id="confirmPassInput" autocomplete="new-password">
+                </div>
+            </form>
+        </div>
+        <div class="d-flex justify-content-end gap-2 p-3 bg-light rounded-bottom border-top">
+            <button type="button" class="btn btn-sm btn-secondary" onclick="closeChangePasswordModal()">Hủy</button>
+            <button type="button" class="btn btn-sm btn-primary fw-bold" onclick="saveNewPassword()">Lưu Mật Khẩu Mới</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL BẢO MẬT KHÔI PHỤC MẬT KHẨU TỐI CAO -->
+<div class="custom-modal-backdrop" id="resetPassModal">
+    <div class="custom-modal-content" style="max-width: 520px;">
+        <div class="d-flex justify-content-between align-items-center bg-dark text-white p-3 rounded-top">
+            <h6 class="fw-bold mb-0 text-warning"><i class="fa-solid fa-user-shield me-2"></i>XÁC THỰC QUẢN TRỊ TỐI CAO KHÔI PHỤC MẬT KHẨU</h6>
+            <button type="button" class="btn-close btn-close-white" onclick="closeResetPasswordModal()"></button>
+        </div>
+        <div class="p-4">
+            <div class="alert alert-danger border-0 small mb-3">
+                <i class="fa-solid fa-lock me-1"></i><b>Quy định Bảo mật:</b> Bắt buộc phải điền <b>đầy đủ cả 3 trường thông tin</b> mới được cấp lại mật khẩu!
+            </div>
+            <form autocomplete="off" onsubmit="return false;">
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-dark">Trường 1: Mã Master Key Tối Cao <span class="text-danger">*</span></label>
+                    <input type="password" class="form-control form-control-sm" id="masterKeyInput" autocomplete="new-password">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-dark">Trường 2: Mã OTP Ngẫu Nhiên Xác Thực <span class="text-danger">*</span></label>
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <div class="captcha-box" id="captchaDisplay">000000</div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="generateRandomOTP()"><i class="fa-solid fa-arrows-rotate"></i></button>
+                    </div>
+                    <input type="text" class="form-control form-control-sm font-monospace" id="otpInput" autocomplete="off">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-dark">Trường 3: Mật Khẩu Mới Đặt Lại <span class="text-danger">*</span></label>
+                    <input type="password" class="form-control form-control-sm" id="resetNewPassInput" autocomplete="new-password">
+                </div>
+            </form>
+        </div>
+        <div class="d-flex justify-content-end gap-2 p-3 bg-light rounded-bottom border-top">
+            <button type="button" class="btn btn-sm btn-secondary" onclick="closeResetPasswordModal()">Hủy bỏ</button>
+            <button type="button" class="btn btn-sm btn-danger fw-bold" onclick="executeResetPassword()">Cấp Lại Mật Khẩu Quản Trị</button>
+        </div>
+    </div>
+</div>
+
 <!-- Bootstrap 5 JS Bundle -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    // URL APPS SCRIPT CỦA ANH
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxfrt-HkdvcGK3xZ2A6zDEQTvGZDGTPgcB1EvIlrbOV3mAYVPULmna6GEoaJIW-t_IU/exec';
+    const MASTER_KEY_HASH = CryptoJS.MD5('VINAPACO_MASTER_2026').toString();
+    
+    let adminPassHash = localStorage.getItem('vnpc_admin_pass_hash') || CryptoJS.MD5('123456').toString();
+    let currentRandomOTP = '';
 
     let globalEmployees = [];
     let currentFilteredEmployees = [];
-    let selectedUnitName = null;
     let isMasked = true;
     let autoSaveTimer = null;
     let searchTimer = null;
 
     let chartGenderInst = null;
     let chartRetireInst = null;
-    let chartSpecialInst = null;
+    let chartMonthlyInst = null;
 
     function debouncedSearch() {
         clearTimeout(searchTimer);
         searchTimer = setTimeout(filterData, 150);
     }
 
-    // ĐIỀU HƯỚNG GIAO DIỆN MÀN HÌNH CHÍNH <=> TRANG ĐƠN VỊ
-    function openUnitPage(uName) {
-        selectedUnitName = uName;
-        document.getElementById('homeView').style.display = 'none';
-        document.getElementById('unitView').style.display = 'block';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        filterData();
-    }
-
-    function backToHomeView() {
-        selectedUnitName = null;
-        document.getElementById('unitView').style.display = 'none';
-        document.getElementById('homeView').style.display = 'block';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        renderUnitCards();
-    }
-
-    // HÀM LƯU CACHE TẠM CÓ XỬ LÝ CHỐNG TRÀN BỘ NHỚ
     function saveLocalCache() {
         if (globalEmployees && globalEmployees.length > 0) {
             try {
                 localStorage.setItem('hr_gdrive_real_data', JSON.stringify(globalEmployees));
+                localStorage.setItem('vnpc_admin_pass_hash', adminPassHash);
             } catch (e) {
-                console.warn('LocalStorage tràn dung lượng, tự động giải phóng cache đệm:', e);
-                try {
-                    localStorage.removeItem('hr_gdrive_real_data');
-                } catch (err) {}
+                console.warn('LocalStorage tràn dung lượng:', e);
             }
         }
     }
 
-    // TỰ ĐỘNG ĐỒNG BỘ NGẦM LÊN GOOGLE DRIVE
     function autoSyncOnInput() {
         saveLocalCache();
         const syncBadge = document.getElementById('driveSyncStatus');
@@ -619,18 +789,13 @@
         }
     }
 
-    // TẢI DỮ LIỆU ĐA TẦNG VƯỢT RÀO CẢN DI ĐỘNG/ZALO (JSONP)
     window.onDriveDataLoaded = function(data) {
         const syncBadge = document.getElementById('driveSyncStatus');
         if (Array.isArray(data) && data.length > 0) {
             globalEmployees = data;
             saveLocalCache();
-            updateDegreeFilterOptions();
-            renderUnitCards();
-            renderChartsAndInsights();
-            if (selectedUnitName) {
-                filterData();
-            }
+            updateUnitFilterOptions();
+            refreshAllDataAndStats();
             if (syncBadge) {
                 syncBadge.className = 'badge bg-success p-2 fs-7';
                 syncBadge.innerHTML = '<i class="fa-solid fa-cloud-check me-1"></i> Đã đọc & Đồng bộ Cloud thành công';
@@ -656,9 +821,8 @@
                 const parsed = JSON.parse(savedData);
                 if (Array.isArray(parsed) && parsed.length > 0) {
                     globalEmployees = parsed;
-                    updateDegreeFilterOptions();
-                    renderUnitCards();
-                    renderChartsAndInsights();
+                    updateUnitFilterOptions();
+                    refreshAllDataAndStats();
                 }
             } catch(e) {}
         }
@@ -676,16 +840,9 @@
         }
     }
 
-    // ĐỌC VÀ ĐỒNG BỘ TỰ ĐỘNG KHI NẠP FILE EXCEL
     function handleExcelUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
-
-        const syncBadge = document.getElementById('driveSyncStatus');
-        if (syncBadge) {
-            syncBadge.className = 'badge bg-info text-white p-2 fs-7 sync-pulse';
-            syncBadge.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Đang đọc & Phân tích file Excel...';
-        }
 
         const reader = new FileReader();
         reader.onload = function(e) {
@@ -737,16 +894,16 @@
             title: findColIdx(['chức danh', 'vị trí']),
             degree: findColIdx(['trình độ', 'chuyên môn']),
             status: findColIdx(['tình trạng', 'công tác']),
-            salaryStep: findColIdx(['bậc lương cb', 'bậc lương cơ bản', 'bậc cb']),
+            salaryStep: findColIdx(['bậc lương cb', 'bậc cb']),
             salaryCoeff: findColIdx(['hệ số lương', 'hs lương', 'lương cb']),
-            salaryGroup: findColIdx(['nhóm lương', 'nhóm lương cb']),
-            jobSalaryStep: findColIdx(['bậc lương cv', 'bậc lương công việc', 'bậc cv']),
+            salaryGroup: findColIdx(['nhóm lương']),
+            jobSalaryStep: findColIdx(['bậc lương cv', 'bậc cv']),
             jobSalaryCoeff: findColIdx(['hệ số lương cv', 'hs cv']),
-            jobSalaryGroup: findColIdx(['nhóm lương cv', 'nhóm lương công việc']),
-            jobAllowanceCoeff: findColIdx(['hệ số phụ cấp công việc', 'phụ cấp cv', 'hs pc cv']),
-            allowanceCoeff: findColIdx(['hệ số phụ cấp', 'phụ cấp', 'hs pc']),
+            jobSalaryGroup: findColIdx(['nhóm lương cv']),
+            jobAllowanceCoeff: findColIdx(['hệ số phụ cấp công việc', 'phụ cấp cv']),
+            allowanceCoeff: findColIdx(['hệ số phụ cấp', 'phụ cấp']),
             productSalary: findColIdx(['sản phẩm', 'khoán']),
-            leaveDays: findColIdx(['phép năm', 'công phép', 'phép']),
+            leaveDays: findColIdx(['phép năm', 'công phép']),
             nndh: findColIdx(['nnđh', 'độc hại']),
             atv: findColIdx(['an toàn', 'atv']),
             retirement: findColIdx(['về hưu', 'hưu'])
@@ -770,6 +927,8 @@
             const genderVal = (colIdx.gender >= 0 && ['X','NỮ','FEMALE','1'].includes(String(row[colIdx.gender]).trim().toUpperCase())) ? 'Nữ' : 'Nam';
             const nndhVal = (colIdx.nndh >= 0 && ['1','X','CÓ'].includes(String(row[colIdx.nndh]).trim().toUpperCase())) ? 'Có' : 'Không';
             
+            let statusVal = colIdx.status >= 0 && row[colIdx.status] ? String(row[colIdx.status]).trim() : 'Đang làm việc';
+
             let retirementVal = colIdx.retirement >= 0 && row[colIdx.retirement] ? formatDateVN(row[colIdx.retirement]) : '';
             if (!retirementVal || retirementVal === '-') {
                 retirementVal = calculateRetirementDateNewLaw(dobFormatted, genderVal, nndhVal);
@@ -797,7 +956,7 @@
                 contractType: colIdx.contractType >= 0 && row[colIdx.contractType] ? String(row[colIdx.contractType]).trim() : 'HĐLĐ Không xác định thời hạn',
                 title: colIdx.title >= 0 && row[colIdx.title] ? String(row[colIdx.title]).trim() : 'Nhân viên',
                 degree: colIdx.degree >= 0 && row[colIdx.degree] ? String(row[colIdx.degree]).trim() : 'Đại học / CĐ',
-                status: colIdx.status >= 0 && row[colIdx.status] ? String(row[colIdx.status]).trim() : 'Đang làm việc',
+                status: statusVal,
                 salaryStep: colIdx.salaryStep >= 0 && row[colIdx.salaryStep] ? String(row[colIdx.salaryStep]).trim() : '',
                 salaryCoeff: colIdx.salaryCoeff >= 0 && row[colIdx.salaryCoeff] ? (parseFloat(row[colIdx.salaryCoeff]) || 2.34) : 2.34,
                 salaryGroup: colIdx.salaryGroup >= 0 && row[colIdx.salaryGroup] ? String(row[colIdx.salaryGroup]).trim() : '',
@@ -817,15 +976,112 @@
         if (parsedList.length > 0) {
             globalEmployees = parsedList;
             autoSyncOnInput();
-            updateDegreeFilterOptions();
-            renderUnitCards();
-            renderChartsAndInsights();
-            alert(`Đã đọc và đồng bộ thành công ${parsedList.length} nhân sự lên Cloud!`);
+            updateUnitFilterOptions();
+            refreshAllDataAndStats();
+            alert(`Đã cập nhật chính xác ${parsedList.length} hồ sơ nhân sự!`);
         }
     }
 
-    function renderChartsAndInsights() {
-        if (globalEmployees.length === 0) return;
+    function refreshAllDataAndStats() {
+        const workingEmps = globalEmployees.filter(e => e.status === 'Đang làm việc' || e.status === 'Tạm hoãn HĐLĐ');
+        const retiredEmps = globalEmployees.filter(e => e.status === 'Đã nghỉ hưu' || e.status === 'Đã nghỉ việc');
+
+        document.getElementById('statWorkingCount').textContent = workingEmps.length;
+        document.getElementById('statRetiredCount').textContent = retiredEmps.length;
+        document.getElementById('statTotalAllCount').textContent = globalEmployees.length;
+        document.getElementById('workingBadgeTitle').textContent = `Đang làm việc: ${workingEmps.length} người`;
+
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1;
+
+        let thisMonthChanges = 0;
+        const monthlyStats = Array(12).fill(0);
+
+        globalEmployees.forEach(e => {
+            if (e.joinDate && e.joinDate.length >= 10) {
+                const parts = e.joinDate.split('/');
+                const m = parseInt(parts[1]);
+                const y = parseInt(parts[2]);
+                if (y === currentYear && m >= 1 && m <= 12) {
+                    monthlyStats[m - 1]++;
+                    if (m === currentMonth) thisMonthChanges++;
+                }
+            }
+        });
+
+        document.getElementById('statMonthlyChange').textContent = `+${thisMonthChanges}`;
+
+        renderChartsAndInsights(workingEmps, monthlyStats);
+        renderUnitSummaryTable();
+        filterData();
+    }
+
+    // RENDER BẢNG LIỆT KÊ TỔNG HỢP THEO ĐƠN VỊ
+    function renderUnitSummaryTable() {
+        const tbody = document.getElementById('unitListTableBody');
+        tbody.innerHTML = '';
+
+        if (globalEmployees.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4 small">Chưa có dữ liệu đơn vị.</td></tr>';
+            return;
+        }
+
+        const unitMap = {};
+        globalEmployees.forEach(e => {
+            const uName = e.unitName ? e.unitName.trim() : 'Đơn vị Khác';
+            if (!unitMap[uName]) {
+                unitMap[uName] = { count: 0, male: 0, female: 0, nndh: 0, atv: 0, code: e.unit || '' };
+            }
+            if (e.status === 'Đang làm việc' || e.status === 'Tạm hoãn HĐLĐ') {
+                unitMap[uName].count++;
+                if (e.gender === 'Nam') unitMap[uName].male++; else unitMap[uName].female++;
+                if (e.nndh === 'Có') unitMap[uName].nndh++;
+                if (e.atv === 'Có') unitMap[uName].atv++;
+            }
+        });
+
+        const sortedUnitNames = Object.keys(unitMap).sort();
+        let rowsHtml = '';
+
+        sortedUnitNames.forEach((uName, idx) => {
+            const uData = unitMap[uName];
+
+            rowsHtml += `
+                <tr class="custom-table-row" style="cursor: pointer;" onclick="selectUnitFilter('${uName.replace(/'/g, "\\'")}')">
+                    <td class="fw-bold text-secondary">${idx + 1}</td>
+                    <td><span class="badge bg-secondary font-monospace">${uData.code || 'ĐV'}</span></td>
+                    <td class="fw-bold text-dark fs-6">${uName}</td>
+                    <td class="text-center fw-bold text-primary fs-6">${uData.count} <small class="text-muted fw-normal fs-8">người</small></td>
+                    <td class="text-center fs-8">
+                        <span class="badge bg-light text-primary border"><i class="fa-solid fa-mars me-1"></i>${uData.male} Nam</span>
+                        <span class="badge bg-light text-danger border ms-1"><i class="fa-solid fa-venus me-1"></i>${uData.female} Nữ</span>
+                    </td>
+                    <td class="text-center fs-8">
+                        ${uData.nndh > 0 ? `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger me-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>${uData.nndh} NNĐH</span>` : ''}
+                        ${uData.atv > 0 ? `<span class="badge bg-success bg-opacity-10 text-success border border-success"><i class="fa-solid fa-shield-cat me-1"></i>${uData.atv} ATV</span>` : ''}
+                    </td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-primary fw-bold" onclick="event.stopPropagation(); selectUnitFilter('${uName.replace(/'/g, "\\'")}')">
+                            Xem danh sách <i class="fa-solid fa-arrow-down ms-1"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+
+        tbody.innerHTML = rowsHtml;
+    }
+
+    function selectUnitFilter(uName) {
+        document.getElementById('unitFilter').value = uName;
+        filterData();
+        const section = document.getElementById('employeeSection');
+        if (section) section.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function renderChartsAndInsights(workingEmps, monthlyStats) {
+        if (!globalEmployees || globalEmployees.length === 0) return;
 
         let male = 0, female = 0;
         let nndh = 0, atv = 0;
@@ -833,7 +1089,7 @@
 
         const currentYear = new Date().getFullYear();
 
-        globalEmployees.forEach(e => {
+        workingEmps.forEach(e => {
             if (e.gender === 'Nam') male++; else female++;
             if (e.nndh === 'Có') nndh++;
             if (e.atv === 'Có') atv++;
@@ -846,6 +1102,23 @@
                     else if (rYear <= currentYear + 5) retire5++;
                 }
             }
+        });
+
+        if (chartMonthlyInst) chartMonthlyInst.destroy();
+        chartMonthlyInst = new Chart(document.getElementById('chartMonthlyChanges'), {
+            type: 'line',
+            data: {
+                labels: ['Thg 1', 'Thg 2', 'Thg 3', 'Thg 4', 'Thg 5', 'Thg 6', 'Thg 7', 'Thg 8', 'Thg 9', 'Thg 10', 'Thg 11', 'Thg 12'],
+                datasets: [{
+                    label: 'Số lao động tiếp nhận/tăng',
+                    data: monthlyStats,
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
         });
 
         if (chartGenderInst) chartGenderInst.destroy();
@@ -868,218 +1141,123 @@
             options: { responsive: true, maintainAspectRatio: false }
         });
 
-        if (chartSpecialInst) chartSpecialInst.destroy();
-        chartSpecialInst = new Chart(document.getElementById('chartSpecialType'), {
-            type: 'pie',
-            data: {
-                labels: ['NNĐH', 'An toàn viên', 'Khác'],
-                datasets: [{
-                    data: [nndh, atv, globalEmployees.length - (nndh + atv)],
-                    backgroundColor: ['#dc3545', '#198754', '#cbd5e1']
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
-
         const aiText = `
-            • <b>Phân bổ lao động:</b> Tỷ lệ Nam/Nữ hiện tại là <b>${male}/${female}</b>. Tỷ lệ lao động trực tiếp NNĐH chiếm <b>${((nndh/globalEmployees.length)*100).toFixed(1)}%</b>.<br>
-            • <b>Dự báo biến động lực lượng:</b> Trong 1-3 năm tới có <b>${retire1 + retire3} cán bộ/công nhân nghỉ hưu</b> theo tuổi quy định. Khuyến nghị Ban Tổ chức Nhân sự lập kế hoạch tuyển dụng bù đắp và đào tạo kế thừa cho các vị trí chủ chốt.<br>
-            • <b>An toàn lao động:</b> Đã kiện toàn <b>${atv} An toàn vệ sinh viên</b> tại các đơn vị thành viên.
+            • <b>Lao động thực tế đang làm việc:</b> <b>${workingEmps.length} người</b> (Nam: <b>${male}</b>, Nữ: <b>${female}</b>). Tỷ lệ lao động NNĐH chiếm <b>${((nndh/workingEmps.length)*100).toFixed(1)}%</b>.<br>
+            • <b>Hồ sơ đã nghỉ hưu / nghỉ việc:</b> <b>${globalEmployees.length - workingEmps.length} hồ sơ</b>.<br>
+            • <b>Dự báo nghỉ hưu:</b> Lộ trình 1-3 năm tới có <b>${retire1 + retire3} người nghỉ hưu</b> theo tuổi quy định.
         `;
         document.getElementById('aiRecommendationsText').innerHTML = aiText;
     }
 
-    function renderUnitCards() {
-        const grid = document.getElementById('unitCardsGrid');
-        grid.innerHTML = '';
-
-        document.getElementById('totalEmpBadge').textContent = `Tổng số: ${globalEmployees.length} người`;
-
-        if (globalEmployees.length === 0) {
-            grid.innerHTML = '<div class="col-12 text-center text-muted py-4 small">Chưa có dữ liệu. Vui lòng nạp file Excel hoặc bấm "Tải lại".</div>';
-            return;
-        }
-
-        const unitMap = {};
-        globalEmployees.forEach(e => {
-            const uName = e.unitName ? e.unitName.trim() : 'Đơn vị Khác';
-            if (!unitMap[uName]) {
-                unitMap[uName] = { count: 0, male: 0, female: 0, nndh: 0, atv: 0, code: e.unit || '' };
-            }
-            unitMap[uName].count++;
-            if (e.gender === 'Nam') unitMap[uName].male++; else unitMap[uName].female++;
-            if (e.nndh === 'Có') unitMap[uName].nndh++;
-            if (e.atv === 'Có') unitMap[uName].atv++;
-        });
-
-        const sortedUnitNames = Object.keys(unitMap).sort();
-        let cardsHtml = '';
-
-        sortedUnitNames.forEach(uName => {
-            const uData = unitMap[uName];
-
-            cardsHtml += `
-                <div class="col-12 col-md-6 col-lg-4">
-                    <div class="unit-card p-3" onclick="openUnitPage('${uName.replace(/'/g, "\\'")}')">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <span class="badge bg-primary text-uppercase fw-bold fs-8">${uData.code ? 'Mã ' + uData.code : 'Đơn vị'}</span>
-                            <span class="fs-5 fw-bold text-primary">${uData.count} <small class="fs-7 text-muted fw-normal">người</small></span>
-                        </div>
-                        <h6 class="fw-bold text-dark text-truncate mb-2 fs-6" title="${uName}">${uName}</h6>
-                        <div class="d-flex gap-2 flex-wrap fs-8">
-                            <span class="badge bg-light text-dark border"><i class="fa-solid fa-mars text-primary me-1"></i>${uData.male} Nam</span>
-                            <span class="badge bg-light text-dark border"><i class="fa-solid fa-venus text-danger me-1"></i>${uData.female} Nữ</span>
-                            ${uData.nndh > 0 ? `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger"><i class="fa-solid fa-triangle-exclamation me-1"></i>${uData.nndh} NNĐH</span>` : ''}
-                            ${uData.atv > 0 ? `<span class="badge bg-success bg-opacity-10 text-success border border-success"><i class="fa-solid fa-shield-cat me-1"></i>${uData.atv} ATV</span>` : ''}
-                        </div>
-                        <div class="mt-2 text-end">
-                            <small class="text-primary fw-bold">Mở trang làm việc riêng <i class="fa-solid fa-arrow-right ms-1"></i></small>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-
-        grid.innerHTML = cardsHtml;
-    }
-
-    function updateDegreeFilterOptions() {
-        const degreeSelect = document.getElementById('degreeFilter');
-        const degrees = [...new Set(globalEmployees.map(e => e.degree).filter(Boolean))].sort();
-        let html = '<option value="">-- Tất cả trình độ --</option>';
-        degrees.forEach(d => html += `<option value="${d}">${d}</option>`);
-        degreeSelect.innerHTML = html;
+    function updateUnitFilterOptions() {
+        const select = document.getElementById('unitFilter');
+        const units = [...new Set(globalEmployees.map(e => e.unitName).filter(Boolean))].sort();
+        let html = '<option value="ALL">-- Toàn bộ Tổng Công Ty --</option>';
+        units.forEach(u => html += `<option value="${u}">${u}</option>`);
+        select.innerHTML = html;
     }
 
     function filterData() {
         const search = document.getElementById('searchInput').value.toLowerCase().trim();
+        const unit = document.getElementById('unitFilter').value;
+        const status = document.getElementById('statusFilter').value;
         const gender = document.getElementById('genderFilter').value;
         const type = document.getElementById('typeFilter').value;
-        const degree = document.getElementById('degreeFilter').value;
 
         currentFilteredEmployees = globalEmployees.filter(e => {
-            const matchUnit = selectedUnitName === 'ALL' || (e.unitName && e.unitName.trim() === selectedUnitName);
             const matchSearch = !search || 
                                 e.name.toLowerCase().includes(search) || 
                                 (e.otherName && e.otherName.toLowerCase().includes(search)) ||
-                                (e.address && e.address.toLowerCase().includes(search)) ||
                                 e.phone.includes(search) || 
                                 e.cccd.includes(search) || 
                                 e.bhxh.includes(search) || 
-                                e.title.toLowerCase().includes(search) ||
-                                (e.unitName && e.unitName.toLowerCase().includes(search));
+                                e.title.toLowerCase().includes(search);
             
+            const matchUnit = (unit === 'ALL') || (e.unitName === unit);
+            const matchStatus = (status === 'ALL') || (!status && (e.status === 'Đang làm việc' || e.status === 'Tạm hoãn HĐLĐ')) || (e.status === status);
             const matchGender = !gender || e.gender === gender;
-            const matchType = !type || 
-                             (type === 'NNĐH' && e.nndh === 'Có') || 
-                             (type === 'ATV' && e.atv === 'Có');
-            const matchDegree = !degree || e.degree === degree;
+            const matchType = !type || (type === 'NNĐH' && e.nndh === 'Có') || (type === 'ATV' && e.atv === 'Có');
 
-            return matchUnit && matchSearch && matchGender && matchType && matchDegree;
+            return matchSearch && matchUnit && matchStatus && matchGender && matchType;
         });
 
-        renderFullInfoEmployeeCards(currentFilteredEmployees);
+        const selectedUnitTitle = (unit === 'ALL') ? 'TOÀN BỘ TỔNG CÔNG TY' : unit;
+        document.getElementById('selectedUnitTitle').innerHTML = `<i class="fa-solid fa-users me-2"></i>DANH SÁCH NHÂN SỰ: <span class="text-uppercase text-danger">${selectedUnitTitle}</span>`;
+        document.getElementById('showingCountBadge').textContent = `${currentFilteredEmployees.length} người`;
+
+        renderFullInfoEmployeeTable(currentFilteredEmployees);
     }
 
-    // HIỂN THỊ ĐẦY ĐỦ VÀ CỤ THỂ THEO MỤC TRÊN THẺ NHÂN SỰ
-    function renderFullInfoEmployeeCards(data) {
-        const grid = document.getElementById('employeeCardsGrid');
-        grid.innerHTML = '';
-
-        document.getElementById('selectedUnitTitle').innerHTML = `<i class="fa-solid fa-building me-2"></i>ĐƠN VỊ: <span class="text-uppercase text-danger">${selectedUnitName === 'ALL' ? 'TOÀN TỔNG CÔNG TY' : selectedUnitName}</span>`;
-        document.getElementById('showingCountBadge').textContent = `${data.length} người`;
+    function renderFullInfoEmployeeTable(data) {
+        const tbody = document.getElementById('employeeListTableBody');
+        tbody.innerHTML = '';
 
         if (data.length === 0) {
-            grid.innerHTML = '<div class="col-12 text-center text-muted py-4 small">Không tìm thấy nhân sự thỏa mãn điều kiện lọc.</div>';
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4 small">Không tìm thấy nhân sự thỏa mãn điều kiện lọc.</td></tr>';
             return;
         }
 
-        let cardsHtml = '';
+        let rowsHtml = '';
         data.forEach((e, idx) => {
-            cardsHtml += `
-                <div class="col-12 col-md-6 col-xl-4">
-                    <div class="emp-card p-3 h-100 d-flex flex-column justify-content-between">
-                        <div>
-                            <!-- Header Thẻ -->
-                            <div class="d-flex justify-content-between align-items-start border-bottom pb-2 mb-2">
-                                <div>
-                                    <h6 class="fw-bold text-primary mb-0 fs-6">${e.name} ${e.otherName ? `<span class="text-muted small fw-normal">(${e.otherName})</span>` : ''}</h6>
-                                    <small class="text-muted"><i class="fa-solid fa-briefcase me-1"></i>${e.title || 'Chưa cập nhật'}</small>
-                                </div>
-                                <span class="badge bg-info text-dark fw-bold text-truncate ms-1" style="max-width: 120px;" title="${e.unitName}">${e.unitName}</span>
-                            </div>
-
-                            <!-- Mục 1: Hợp Đồng & Công Tác -->
-                            <div class="section-box">
-                                <div class="section-title"><i class="fa-solid fa-file-contract me-1"></i>Hợp đồng & Công tác</div>
-                                <div class="row g-1">
-                                    <div class="col-6"><span class="info-label">Vào TCT:</span> <span class="info-value font-monospace">${e.joinDate || '-'}</span></div>
-                                    <div class="col-6"><span class="info-label">Phép năm:</span> <span class="info-value text-success font-monospace fw-bold">${e.leaveDays !== undefined ? e.leaveDays + ' ngày' : '-'}</span></div>
-                                    <div class="col-12"><span class="info-label">Loại HĐ:</span> <span class="info-value text-truncate d-inline-block align-bottom" style="max-width: 180px;" title="${e.contractType}">${e.contractType || '-'}</span></div>
-                                </div>
-                            </div>
-
-                            <!-- Mục 2: Lương Cơ Bản & Lương Công Việc -->
-                            <div class="section-box">
-                                <div class="section-title"><i class="fa-solid fa-calculator me-1"></i>Thang Bảng Lương</div>
-                                <div class="row g-1">
-                                    <div class="col-6">
-                                        <span class="info-label">Lương CB:</span> 
-                                        <span class="info-value font-monospace text-primary">Bậc ${e.salaryStep || '-'}/HS ${e.salaryCoeff || '0'}</span>
-                                        ${e.salaryGroup ? `<small class="text-muted">(${e.salaryGroup})</small>` : ''}
-                                    </div>
-                                    <div class="col-6">
-                                        <span class="info-label">Lương CV:</span> 
-                                        <span class="info-value font-monospace text-primary">Bậc ${e.jobSalaryStep || '-'}/HS ${e.jobSalaryCoeff || '0'}</span>
-                                        ${e.jobSalaryGroup ? `<small class="text-muted">(${e.jobSalaryGroup})</small>` : ''}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Mục 3: Các Hệ Số Phụ Cấp -->
-                            <div class="section-box">
-                                <div class="section-title"><i class="fa-solid fa-coins me-1"></i>Hệ Số Phụ Cấp</div>
-                                <div class="row g-1">
-                                    <div class="col-6"><span class="info-label">HS Phụ cấp CV:</span> <span class="info-value font-monospace fw-bold text-dark">${e.jobAllowanceCoeff || '0'}</span></div>
-                                    <div class="col-6"><span class="info-label">HS Phụ cấp:</span> <span class="info-value font-monospace fw-bold text-dark">${e.allowanceCoeff || '0'}</span></div>
-                                </div>
-                            </div>
-
-                            <!-- Mục 4: Thông Tin Định Danh -->
-                            <div class="section-box">
-                                <div class="section-title"><i class="fa-solid fa-id-card me-1"></i>Định Danh & Liên Hệ</div>
-                                <div class="row g-1">
-                                    <div class="col-6"><span class="info-label">SĐT/Giới tính:</span> <span class="info-value">${e.phone || '-'} (${e.gender || 'Nam'})</span></div>
-                                    <div class="col-6"><span class="info-label">CCCD:</span> <span class="info-value font-monospace">${maskSensitive(e.cccd)}</span></div>
-                                    <div class="col-12"><span class="info-label">BHXH:</span> <span class="info-value font-monospace">${maskSensitive(e.bhxh)}</span></div>
-                                </div>
-                            </div>
-
-                            <!-- Badge Lao Động Đặc Thù & Trạng Thái -->
-                            <div class="mb-2">
-                                ${e.nndh === 'Có' ? '<span class="badge bg-danger me-1">NNĐH</span>' : ''}
-                                ${e.atv === 'Có' ? '<span class="badge bg-success me-1">ATV</span>' : ''}
-                                <span class="badge bg-success bg-opacity-10 text-success fw-bold">${e.status}</span>
-                            </div>
-                        </div>
-
-                        <!-- Nút Sửa Hồ Sơ -->
-                        <div class="pt-2 border-top no-print">
-                            <button class="btn btn-sm btn-primary fw-bold w-100 btn-edit-trigger" data-index="${idx}">
-                                <i class="fa-solid fa-pen-to-square me-1"></i> Xem / Sửa hồ sơ chi tiết
+            rowsHtml += `
+                <tr class="custom-table-row">
+                    <td class="fw-bold text-secondary text-center">${idx + 1}</td>
+                    <td>
+                        <div class="fw-bold text-primary fs-6">${e.name} ${e.otherName ? `<span class="text-muted small fw-normal">(${e.otherName})</span>` : ''}</div>
+                        <small class="text-muted"><i class="fa-solid fa-briefcase me-1"></i>${e.title || 'Chưa cập nhật'}</small>
+                    </td>
+                    <td>
+                        <div class="fw-bold text-dark fs-7">${e.unitName || 'Chưa phân đơn vị'}</div>
+                        <span class="badge bg-secondary font-monospace fs-8">${e.unit || 'ĐV'}</span>
+                    </td>
+                    <td>
+                        <div class="info-value-sm text-truncate" style="max-width: 150px;" title="${e.contractType}">${e.contractType || '-'}</div>
+                        <div class="info-label-sm"><i class="fa-solid fa-calendar me-1"></i>Vào: <span class="font-monospace text-dark fw-bold">${e.joinDate || '-'}</span> | Phép: <span class="text-success fw-bold">${e.leaveDays !== undefined ? e.leaveDays : '-'} ngày</span></div>
+                    </td>
+                    <td>
+                        <div class="info-value-sm font-monospace text-primary">Bậc ${e.salaryStep || '-'}/HS ${e.salaryCoeff || '0'}</div>
+                        <div class="info-label-sm">${e.salaryGroup ? 'Nhóm: ' + e.salaryGroup : ''}</div>
+                    </td>
+                    <td>
+                        <div class="info-label-sm">HS PC CV: <span class="font-monospace fw-bold text-dark">${e.jobAllowanceCoeff || '0'}</span></div>
+                        <div class="info-label-sm">HS PC: <span class="font-monospace fw-bold text-dark">${e.allowanceCoeff || '0'}</span></div>
+                    </td>
+                    <td>
+                        <div class="info-value-sm"><i class="fa-solid fa-phone me-1"></i>${e.phone || '-'} (${e.gender || 'Nam'})</div>
+                        <div class="info-label-sm font-monospace">CCCD: ${maskSensitive(e.cccd)}</div>
+                    </td>
+                    <td class="text-center">
+                        ${e.nndh === 'Có' ? '<span class="badge bg-danger mb-1 d-block">NNĐH</span>' : ''}
+                        ${e.atv === 'Có' ? '<span class="badge bg-success mb-1 d-block">ATV</span>' : ''}
+                        <span class="badge ${e.status === 'Đang làm việc' ? 'bg-success' : 'bg-secondary'} d-block fs-8">${e.status}</span>
+                    </td>
+                    <td class="text-end">
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary fw-bold btn-edit-trigger" data-index="${idx}" title="Sửa hồ sơ">
+                                <i class="fa-solid fa-pen-to-square"></i> Sửa
+                            </button>
+                            <button class="btn btn-outline-danger fw-bold btn-transfer-trigger" data-index="${idx}" title="Điều động nhân sự">
+                                <i class="fa-solid fa-right-left"></i> Điều động
                             </button>
                         </div>
-                    </div>
-                </div>
+                    </td>
+                </tr>
             `;
         });
 
-        grid.innerHTML = cardsHtml;
+        tbody.innerHTML = rowsHtml;
 
         document.querySelectorAll('.btn-edit-trigger').forEach(btn => {
             btn.addEventListener('click', function() {
                 const idx = parseInt(this.getAttribute('data-index'));
                 openEditModal(idx);
+            });
+        });
+
+        document.querySelectorAll('.btn-transfer-trigger').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const idx = parseInt(this.getAttribute('data-index'));
+                openTransferModal(idx);
             });
         });
     }
@@ -1091,11 +1269,9 @@
         const globalIdx = globalEmployees.indexOf(emp);
         document.getElementById('editEmpGlobalIndex').value = globalIdx;
 
-        // Reset về Tab 1
         const firstTab = new bootstrap.Tab(document.getElementById('tab-personal-tab'));
         firstTab.show();
 
-        // Tab 1
         document.getElementById('mStt').value = emp.stt || '';
         document.getElementById('mName').value = emp.name || '';
         document.getElementById('mOtherName').value = emp.otherName || '';
@@ -1107,7 +1283,6 @@
         document.getElementById('mCccd').value = emp.cccd || '';
         document.getElementById('mDob').value = emp.dob || '';
 
-        // Tab 2
         document.getElementById('mUnitName').value = emp.unitName || '';
         document.getElementById('mUnit').value = emp.unit || '';
         document.getElementById('mJoinDate').value = emp.joinDate || '';
@@ -1118,7 +1293,6 @@
         document.getElementById('mNndh').checked = (emp.nndh === 'Có');
         document.getElementById('mAtv').checked = (emp.atv === 'Có');
 
-        // Tab 3
         document.getElementById('mSalaryStep').value = emp.salaryStep || '';
         document.getElementById('mSalaryCoeff').value = emp.salaryCoeff || 0;
         document.getElementById('mSalaryGroup').value = emp.salaryGroup || '';
@@ -1129,7 +1303,6 @@
         document.getElementById('mAllowanceCoeff').value = emp.allowanceCoeff || 0;
         document.getElementById('mProductSalary').value = emp.productSalary || 0;
 
-        // Tính hưu & phép năm
         let retirementVal = emp.retirement;
         if (!retirementVal || retirementVal === '-') {
             retirementVal = calculateRetirementDateNewLaw(emp.dob, emp.gender, emp.nndh);
@@ -1188,14 +1361,142 @@
         };
 
         autoSyncOnInput();
-        updateDegreeFilterOptions();
-        renderUnitCards();
-        renderChartsAndInsights();
+        updateUnitFilterOptions();
+        refreshAllDataAndStats();
         closeEditModal();
-        if (selectedUnitName) filterData();
     }
 
-    // TÍNH PHÉP NĂM TỰ ĐỘNG THEO BỘ LUẬT LAO ĐỘNG MỚI
+    function openTransferModal(filteredIndex) {
+        const emp = currentFilteredEmployees[filteredIndex];
+        if (!emp) return;
+
+        const globalIdx = globalEmployees.indexOf(emp);
+        document.getElementById('transferEmpIndex').value = globalIdx;
+        document.getElementById('transferEmpName').value = emp.name;
+        document.getElementById('transferCurrentUnit').value = emp.unitName;
+        document.getElementById('transferDocNo').value = '';
+        document.getElementById('transferPin').value = '';
+
+        const targetSelect = document.getElementById('transferTargetUnit');
+        const allUnits = [...new Set(globalEmployees.map(e => e.unitName).filter(Boolean))].sort();
+        let html = '';
+        allUnits.forEach(u => {
+            if (u !== emp.unitName) {
+                html += `<option value="${u}">${u}</option>`;
+            }
+        });
+        targetSelect.innerHTML = html;
+
+        document.getElementById('transferModal').style.display = 'flex';
+    }
+
+    function closeTransferModal() {
+        document.getElementById('transferModal').style.display = 'none';
+    }
+
+    function executeTransfer() {
+        const globalIdx = parseInt(document.getElementById('transferEmpIndex').value);
+        const targetUnit = document.getElementById('transferTargetUnit').value;
+        const docNo = document.getElementById('transferDocNo').value.trim();
+        const pinInput = document.getElementById('transferPin').value.trim();
+
+        if (!docNo) return alert('Vui lòng nhập Số Quyết định điều động!');
+        if (!pinInput) return alert('Vui lòng nhập Mật khẩu Quản trị!');
+
+        if (CryptoJS.MD5(pinInput).toString() !== adminPassHash) {
+            return alert('Mật khẩu Quản trị không chính xác!');
+        }
+
+        if (globalIdx >= 0 && globalIdx < globalEmployees.length) {
+            const emp = globalEmployees[globalIdx];
+            const oldUnit = emp.unitName;
+            emp.unitName = targetUnit;
+
+            autoSyncOnInput();
+            refreshAllDataAndStats();
+            closeTransferModal();
+
+            alert(`ĐÃ ĐIỀU ĐỘNG THÀNH CÔNG!\nCán bộ: ${emp.name}\nTừ: ${oldUnit}\nĐến: ${targetUnit}\nSố QĐ: ${docNo}`);
+        }
+    }
+
+    function openChangePasswordModal() {
+        document.getElementById('oldPassInput').value = '';
+        document.getElementById('newPassInput').value = '';
+        document.getElementById('confirmPassInput').value = '';
+        document.getElementById('changePassModal').style.display = 'flex';
+    }
+
+    function closeChangePasswordModal() {
+        document.getElementById('changePassModal').style.display = 'none';
+    }
+
+    function saveNewPassword() {
+        const oldPass = document.getElementById('oldPassInput').value.trim();
+        const newPass = document.getElementById('newPassInput').value.trim();
+        const confirmPass = document.getElementById('confirmPassInput').value.trim();
+
+        if (CryptoJS.MD5(oldPass).toString() !== adminPassHash) {
+            return alert('Mật khẩu hiện tại không chính xác!');
+        }
+        if (!newPass || newPass.length < 4) {
+            return alert('Mật khẩu mới phải có ít nhất 4 ký tự!');
+        }
+        if (newPass !== confirmPass) {
+            return alert('Xác nhận mật khẩu mới không trùng khớp!');
+        }
+
+        adminPassHash = CryptoJS.MD5(newPass).toString();
+        saveLocalCache();
+        closeChangePasswordModal();
+        alert('Đã cập nhật Mật khẩu Quản trị mới thành công!');
+    }
+
+    function generateRandomOTP() {
+        currentRandomOTP = Math.floor(100000 + Math.random() * 900000).toString();
+        document.getElementById('captchaDisplay').textContent = currentRandomOTP;
+    }
+
+    function openResetPasswordModal() {
+        closeTransferModal();
+        document.getElementById('masterKeyInput').value = '';
+        document.getElementById('otpInput').value = '';
+        document.getElementById('resetNewPassInput').value = '';
+        generateRandomOTP();
+        document.getElementById('resetPassModal').style.display = 'flex';
+    }
+
+    function closeResetPasswordModal() {
+        document.getElementById('resetPassModal').style.display = 'none';
+    }
+
+    function executeResetPassword() {
+        const masterKeyInput = document.getElementById('masterKeyInput').value.trim();
+        const otpInput = document.getElementById('otpInput').value.trim();
+        const newPass = document.getElementById('resetNewPassInput').value.trim();
+
+        if (!masterKeyInput || !otpInput || !newPass) {
+            return alert('YÊU CẦU BẢO MẬT: Bắt buộc phải nhập ĐẦY ĐỦ CẢ 3 TRƯỜNG THÔNG TIN!');
+        }
+
+        if (CryptoJS.MD5(masterKeyInput).toString() !== MASTER_KEY_HASH) {
+            return alert('Trường 1 không đúng: Mã Master Key Quản trị Tối Cao không chính xác!');
+        }
+
+        if (otpInput !== currentRandomOTP) {
+            return alert('Trường 2 không đúng: Mã OTP xác thực ngẫu nhiên không đúng!');
+        }
+
+        if (newPass.length < 4) {
+            return alert('Trường 3 không hợp lệ: Mật khẩu mới phải từ 4 ký tự trở lên!');
+        }
+
+        adminPassHash = CryptoJS.MD5(newPass).toString();
+        saveLocalCache();
+        closeResetPasswordModal();
+        alert('CẤP LẠI THÀNH CÔNG!\nĐã cập nhật Mật khẩu Quản trị mới.');
+    }
+
     function calculateAnnualLeaveDays(joinDateStr, isNndh) {
         let baseLeave = (isNndh === 'Có' || isNndh === true) ? 14 : 12;
         if (!joinDateStr || joinDateStr === '-') return baseLeave;
@@ -1211,8 +1512,7 @@
         const yearsOfService = currentYear - joinYear;
 
         if (yearsOfService > 0) {
-            const extraDays = Math.floor(yearsOfService / 5);
-            baseLeave += extraDays;
+            baseLeave += Math.floor(yearsOfService / 5);
         }
 
         return baseLeave;
@@ -1221,8 +1521,7 @@
     function autoCalcLeaveDays() {
         const joinDate = document.getElementById('mJoinDate').value;
         const isNndh = document.getElementById('mNndh').checked;
-        const leaveDays = calculateAnnualLeaveDays(joinDate, isNndh);
-        document.getElementById('mLeaveDays').value = leaveDays;
+        document.getElementById('mLeaveDays').value = calculateAnnualLeaveDays(joinDate, isNndh);
     }
 
     function calculateRetirementDateNewLaw(dobStr, gender, isNndh) {
@@ -1276,9 +1575,8 @@
                 if (Array.isArray(parsed)) {
                     globalEmployees = parsed;
                     autoSyncOnInput();
-                    updateDegreeFilterOptions();
-                    renderUnitCards();
-                    renderChartsAndInsights();
+                    updateUnitFilterOptions();
+                    refreshAllDataAndStats();
                     alert(`Đã khôi phục thành công ${globalEmployees.length} nhân sự!`);
                 }
             } catch (err) { alert('Lỗi đọc file JSON: ' + err.message); }
@@ -1305,7 +1603,7 @@
         const btn = document.getElementById('btnToggleMask');
         btn.className = isMasked ? 'btn btn-sm btn-secondary fw-bold' : 'btn btn-sm btn-danger fw-bold text-white';
         btn.innerHTML = isMasked ? '<i class="fa-solid fa-eye-slash me-1"></i> Ẩn CCCD/BHXH' : '<i class="fa-solid fa-eye me-1"></i> Hiện thông tin';
-        if (selectedUnitName) filterData();
+        filterData();
     }
 
     window.onload = function() {
